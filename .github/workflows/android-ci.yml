@@ -37,39 +37,41 @@ jobs:
       - name: 下载NCNN SDK
         run: |
           mkdir -p core-inference/libs
-          wget -q https://github.com/nihui/ncnn/releases/download/20240102/ncnn-20240102-android-vulkan.zip -O /tmp/ncnn.zip
+          # 下载NCNN Android Vulkan预编译库
+          wget -q https://github.com/Tencent/ncnn/releases/download/20260113/ncnn-android-vulkan.zip -O /tmp/ncnn.zip
           unzip -q /tmp/ncnn.zip -d /tmp/ncnn
-          # 将AAR文件复制到libs目录
-          cp /tmp/ncnn/ncnn-20240102-android-vulkan/armeabi-v7a/lib/libncnn.a core-inference/libs/ || true
           # 将整个NCNN SDK目录复制到jni依赖路径
-          cp -r /tmp/ncnn/ncnn-20240102-android-vulkan core-inference/libs/ncnn-android-vulkan
+          cp -r /tmp/ncnn/ncnn-android-vulkan core-inference/libs/ncnn-android-vulkan
+          echo "NCNN SDK downloaded and extracted"
+          ls -la core-inference/libs/ncnn-android-vulkan/
 
       # 创建NCNN AAR包
       - name: 创建NCNN AAR
         run: |
-          mkdir -p /tmp/ncnn-aar
-          cd /tmp/ncnn-aar
-          mkdir -p jni
+          mkdir -p /tmp/ncnn-aar/jni
           # 复制各ABI的so库
-          for abi in armeabi-v7a arm64-v8a x86_64; do
-            mkdir -p jni/$abi
-            cp /tmp/ncnn/ncnn-20240102-android-vulkan/$abi/lib/libncnn.so jni/$abi/ 2>/dev/null || true
+          for abi in armeabi-v7a arm64-v8a x86 x86_64; do
+            if [ -d "core-inference/libs/ncnn-android-vulkan/$abi" ]; then
+              mkdir -p /tmp/ncnn-aar/jni/$abi
+              cp core-inference/libs/ncnn-android-vulkan/$abi/lib/libncnn.so /tmp/ncnn-aar/jni/$abi/ 2>/dev/null || true
+            fi
           done
           # 创建AndroidManifest.xml
-          echo '<?xml version="1.0" encoding="utf-8"?><manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.tencent.ncnn"/>' > AndroidManifest.xml
-          # 创建classes.jar（空壳）
-          mkdir -p build/classes
-          jar cf classes.jar -C build/classes . 2>/dev/null || jar cf classes.jar .
+          echo '<?xml version="1.0" encoding="utf-8"?><manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.tencent.ncnn"/>' > /tmp/ncnn-aar/AndroidManifest.xml
+          # 创建空的classes.jar
+          mkdir -p /tmp/ncnn-aar/build
+          jar cf /tmp/ncnn-aar/classes.jar -C /tmp/ncnn-aar/build . 2>/dev/null || true
           # 打包AAR
-          zip -r core-inference/libs/ncnn-android.aar AndroidManifest.xml classes.jar jni/
-          cd $GITHUB_WORKSPACE
+          cd /tmp/ncnn-aar
+          zip -r $GITHUB_WORKSPACE/core-inference/libs/ncnn-android.aar AndroidManifest.xml classes.jar jni/
+          echo "NCNN AAR created"
+          ls -la $GITHUB_WORKSPACE/core-inference/libs/
 
       - name: 授予执行权限
         run: chmod +x gradlew
 
       - name: 构建Debug APK
-        run: ./gradlew assembleDebug 2>&1 || true
-        # 首次编译可能因CMake/NCNN路径问题失败，先尝试获取详细错误
+        run: ./gradlew assembleDebug --stacktrace 2>&1
 
       - name: 上传构建日志
         if: always()
