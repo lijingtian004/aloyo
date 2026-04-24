@@ -40,9 +40,9 @@ jobs:
         run: |
           mkdir -p core-inference/libs
           # 使用gh release download从Tencent/ncnn下载
-          gh release download 20260113 --repo Tencent/ncnn --pattern "ncnn-android-vulkan.zip" --dir /tmp --clobber
+          gh release download 20260113 --repo Tencent/ncnn --pattern "ncnn-20260113-android-vulkan.zip" --dir /tmp --clobber
           # 解压
-          unzip -o /tmp/ncnn-android-vulkan.zip -d /tmp/ncnn
+          unzip -o /tmp/ncnn-20260113-android-vulkan.zip -d /tmp/ncnn
           # 查找解压后的目录名
           NCNN_DIR=$(ls /tmp/ncnn/ | head -1)
           echo "NCNN directory: $NCNN_DIR"
