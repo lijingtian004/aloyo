@@ -14,8 +14,8 @@ android {
         // CMake配置 - 编译JNI桥接库
         externalNativeBuild {
             cmake {
-                cppFlags("-std=c++14")
-                arguments("-DANDROID_STL=c++_shared")
+                cppFlags("-std=c++14", "-fopenmp")
+                arguments("-DANDROID_STL=c++_shared", "-DANDROID_OPENMP=ON")
             }
         }
 

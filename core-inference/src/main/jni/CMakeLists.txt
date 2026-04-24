@@ -74,4 +74,6 @@ target_link_libraries(aloyo_inference
     ${vulkan-lib}
     ${android-lib}
     ${z-lib}
+    -fopenmp
+    -static-openmp
 )
