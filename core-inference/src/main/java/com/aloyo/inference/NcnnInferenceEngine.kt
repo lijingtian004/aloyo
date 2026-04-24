@@ -15,6 +15,24 @@ class NcnnInferenceEngine : IInferenceEngine {
 
     companion object {
         private const val TAG = "NcnnInference"
+
+        // 标记本地库是否加载成功
+        @Volatile
+        private var nativeLibLoaded = false
+
+        init {
+            try {
+                System.loadLibrary("ncnn")
+                System.loadLibrary("aloyo_inference")
+                nativeLibLoaded = true
+            } catch (e: UnsatisfiedLinkError) {
+                android.util.Log.w(TAG, "Native libraries not loaded, NCNN inference unavailable", e)
+                nativeLibLoaded = false
+            }
+        }
+
+        // 检查本地库是否可用
+        fun isNativeAvailable(): Boolean = nativeLibLoaded
     }
 
     // NCNN Net对象，通过JNI操作
@@ -172,24 +190,4 @@ class NcnnInferenceEngine : IInferenceEngine {
      * 释放NCNN模型
      */
     private external fun nativeReleaseModel(netPtr: Long)
-
-    companion object {
-        // 标记本地库是否加载成功
-        @Volatile
-        private var nativeLibLoaded = false
-
-        init {
-            try {
-                System.loadLibrary("ncnn")
-                System.loadLibrary("aloyo_inference")
-                nativeLibLoaded = true
-            } catch (e: UnsatisfiedLinkError) {
-                android.util.Log.w(TAG, "Native libraries not loaded, NCNN inference unavailable", e)
-                nativeLibLoaded = false
-            }
-        }
-
-        // 检查本地库是否可用
-        fun isNativeAvailable(): Boolean = nativeLibLoaded
-    }
 }
