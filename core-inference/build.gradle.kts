@@ -62,9 +62,5 @@ android {
 dependencies {
     implementation(project(":common"))
     implementation("androidx.core:core-ktx:1.12.0")
-    // NCNN Android SDK - CI环境自动下载，本地开发需手动放置
-    val ncnnAar = file("libs/ncnn-android.aar")
-    if (ncnnAar.exists()) {
-        implementation(files("libs/ncnn-android.aar"))
-    }
+    // NCNN已通过CMake静态链接到JNI库中，无需AAR依赖
 }

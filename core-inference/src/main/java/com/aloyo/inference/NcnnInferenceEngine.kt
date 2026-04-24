@@ -22,7 +22,7 @@ class NcnnInferenceEngine : IInferenceEngine {
 
         init {
             try {
-                System.loadLibrary("ncnn")
+                // NCNN已静态链接到aloyo_inference中，只需加载一个库
                 System.loadLibrary("aloyo_inference")
                 nativeLibLoaded = true
             } catch (e: UnsatisfiedLinkError) {
