@@ -1,7 +1,7 @@
 # ALOYO Inference JNI - CMake构建配置
 # 编译NCNN推理引擎的JNI桥接库
 
-cmake_minimum_required(VERSION 3.18.1)
+cmake_minimum_required(VERSION 3.22.1)
 project(aloyo_inference)
 
 # 设置C++标准

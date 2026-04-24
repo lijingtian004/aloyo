@@ -76,6 +76,10 @@ jobs:
       - name: 授予执行权限
         run: chmod +x gradlew
 
+      - name: 安装CMake和NDK
+        run: |
+          echo "y" | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "cmake;3.22.1" "ndk;26.1.10909125"
+
       - name: 下载Gradle Wrapper JAR
         run: |
           if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
