@@ -37,11 +37,20 @@ jobs:
       - name: 下载NCNN SDK
         run: |
           mkdir -p core-inference/libs
-          # 下载NCNN Android Vulkan预编译库
-          wget -q https://github.com/Tencent/ncnn/releases/download/20260113/ncnn-android-vulkan.zip -O /tmp/ncnn.zip
-          unzip -q /tmp/ncnn.zip -d /tmp/ncnn
-          # 将整个NCNN SDK目录复制到jni依赖路径
-          cp -r /tmp/ncnn/ncnn-android-vulkan core-inference/libs/ncnn-android-vulkan
+          # 使用curl -L跟随重定向下载NCNN
+          curl -L -o /tmp/ncnn.zip "https://github.com/Tencent/ncnn/releases/download/20260113/ncnn-android-vulkan.zip"
+          # 验证文件下载成功
+          if [ ! -f /tmp/ncnn.zip ] || [ ! -s /tmp/ncnn.zip ]; then
+            echo "ERROR: NCNN download failed, trying alternative URL..."
+            # 尝试旧版本URL
+            curl -L -o /tmp/ncnn.zip "https://github.com/nihui/ncnn/releases/download/20240102/ncnn-20240102-android-vulkan.zip"
+          fi
+          unzip -o /tmp/ncnn.zip -d /tmp/ncnn
+          # 查找解压后的目录名
+          NCNN_DIR=$(ls /tmp/ncnn/ | head -1)
+          echo "NCNN directory: $NCNN_DIR"
+          # 将NCNN SDK目录复制到jni依赖路径
+          cp -r /tmp/ncnn/$NCNN_DIR core-inference/libs/ncnn-android-vulkan
           echo "NCNN SDK downloaded and extracted"
           ls -la core-inference/libs/ncnn-android-vulkan/
 
