@@ -33,19 +33,16 @@ jobs:
           key: gradle-${{ hashFiles('**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: gradle-
 
-      # 下载NCNN Android SDK
+      # 下载NCNN Android SDK - 使用gh CLI
       - name: 下载NCNN SDK
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p core-inference/libs
-          # 使用curl -L跟随重定向下载NCNN
-          curl -L -o /tmp/ncnn.zip "https://github.com/Tencent/ncnn/releases/download/20260113/ncnn-android-vulkan.zip"
-          # 验证文件下载成功
-          if [ ! -f /tmp/ncnn.zip ] || [ ! -s /tmp/ncnn.zip ]; then
-            echo "ERROR: NCNN download failed, trying alternative URL..."
-            # 尝试旧版本URL
-            curl -L -o /tmp/ncnn.zip "https://github.com/nihui/ncnn/releases/download/20240102/ncnn-20240102-android-vulkan.zip"
-          fi
-          unzip -o /tmp/ncnn.zip -d /tmp/ncnn
+          # 使用gh release download从Tencent/ncnn下载
+          gh release download 20260113 --repo Tencent/ncnn --pattern "ncnn-android-vulkan.zip" --dir /tmp --clobber
+          # 解压
+          unzip -o /tmp/ncnn-android-vulkan.zip -d /tmp/ncnn
           # 查找解压后的目录名
           NCNN_DIR=$(ls /tmp/ncnn/ | head -1)
           echo "NCNN directory: $NCNN_DIR"
