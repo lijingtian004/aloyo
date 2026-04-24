@@ -137,7 +137,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="1. 选择YOLO模型\n2. 点击"开始截屏推理"\n3. 授权截屏和悬浮窗权限\n4. 检测结果将以悬浮窗形式显示在屏幕上"
+        android:text="1. 选择YOLO模型\n2. 点击开始截屏推理\n3. 授权截屏和悬浮窗权限\n4. 检测结果将以悬浮窗形式显示在屏幕上"
         android:textSize="13sp"
         android:textColor="#AAAAAA"
         android:lineSpacingExtra="4dp" />
