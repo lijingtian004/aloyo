@@ -273,9 +273,4 @@ class CaptureManager(private val context: Context) : ICaptureSource {
     override fun stopCapture() {
         internalStopCapture()
     }
-
-    /**
-     * 内部停止截屏实现
-     */
-    private fun internalStopCapture() {
 }

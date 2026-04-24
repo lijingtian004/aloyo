@@ -1,0 +1,1279 @@
+﻿2026-04-24T19:43:20.2534464Z Current runner version: '2.333.1'
+2026-04-24T19:43:20.2559535Z ##[group]Runner Image Provisioner
+2026-04-24T19:43:20.2560822Z Hosted Compute Agent
+2026-04-24T19:43:20.2561428Z Version: 20260213.493
+2026-04-24T19:43:20.2562079Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
+2026-04-24T19:43:20.2562732Z Build Date: 2026-02-13T00:28:41Z
+2026-04-24T19:43:20.2563445Z Worker ID: {e440f6e3-8050-4cd7-b027-77d458946512}
+2026-04-24T19:43:20.2564102Z Azure Region: northcentralus
+2026-04-24T19:43:20.2564686Z ##[endgroup]
+2026-04-24T19:43:20.2566372Z ##[group]Operating System
+2026-04-24T19:43:20.2566985Z Ubuntu
+2026-04-24T19:43:20.2567442Z 24.04.4
+2026-04-24T19:43:20.2568198Z LTS
+2026-04-24T19:43:20.2568852Z ##[endgroup]
+2026-04-24T19:43:20.2569370Z ##[group]Runner Image
+2026-04-24T19:43:20.2569899Z Image: ubuntu-24.04
+2026-04-24T19:43:20.2570466Z Version: 20260413.86.1
+2026-04-24T19:43:20.2571724Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260413.86/images/ubuntu/Ubuntu2404-Readme.md
+2026-04-24T19:43:20.2573242Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260413.86
+2026-04-24T19:43:20.2574136Z ##[endgroup]
+2026-04-24T19:43:20.2575314Z ##[group]GITHUB_TOKEN Permissions
+2026-04-24T19:43:20.2577485Z Contents: read
+2026-04-24T19:43:20.2578444Z Metadata: read
+2026-04-24T19:43:20.2579117Z Packages: read
+2026-04-24T19:43:20.2579589Z ##[endgroup]
+2026-04-24T19:43:20.2582124Z Secret source: Actions
+2026-04-24T19:43:20.2583136Z Prepare workflow directory
+2026-04-24T19:43:20.2935681Z Prepare all required actions
+2026-04-24T19:43:20.2976016Z Getting action download info
+2026-04-24T19:43:20.7339949Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+2026-04-24T19:43:20.8569812Z Download action repository 'actions/setup-java@v4' (SHA:c1e323688fd81a25caa38c78aa6df2d33d3e20d9)
+2026-04-24T19:43:21.5005803Z Download action repository 'actions/cache@v4' (SHA:0057852bfaa89a56745cba8c7296529d2fc39830)
+2026-04-24T19:43:21.5971814Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-04-24T19:43:21.8597447Z Complete job name: 构建Debug APK
+2026-04-24T19:43:21.9513229Z ##[group]Run actions/checkout@v4
+2026-04-24T19:43:21.9514525Z with:
+2026-04-24T19:43:21.9515249Z   repository: lijingtian004/aloyo
+2026-04-24T19:43:21.9516534Z   token: ***
+2026-04-24T19:43:21.9517226Z   ssh-strict: true
+2026-04-24T19:43:21.9518150Z   ssh-user: git
+2026-04-24T19:43:21.9518903Z   persist-credentials: true
+2026-04-24T19:43:21.9519737Z   clean: true
+2026-04-24T19:43:21.9520455Z   sparse-checkout-cone-mode: true
+2026-04-24T19:43:21.9521374Z   fetch-depth: 1
+2026-04-24T19:43:21.9522093Z   fetch-tags: false
+2026-04-24T19:43:21.9522825Z   show-progress: true
+2026-04-24T19:43:21.9523566Z   lfs: false
+2026-04-24T19:43:21.9524238Z   submodules: false
+2026-04-24T19:43:21.9524971Z   set-safe-directory: true
+2026-04-24T19:43:21.9526063Z ##[endgroup]
+2026-04-24T19:43:22.0668482Z Syncing repository: lijingtian004/aloyo
+2026-04-24T19:43:22.0671275Z ##[group]Getting Git version info
+2026-04-24T19:43:22.0672490Z Working directory is '/home/runner/work/aloyo/aloyo'
+2026-04-24T19:43:22.0674239Z [command]/usr/bin/git version
+2026-04-24T19:43:22.0718748Z git version 2.53.0
+2026-04-24T19:43:22.0745864Z ##[endgroup]
+2026-04-24T19:43:22.0762494Z Temporarily overriding HOME='/home/runner/work/_temp/400735e6-f25d-45cb-be3c-ea003d08b605' before making global git config changes
+2026-04-24T19:43:22.0765772Z Adding repository directory to the temporary git global config as a safe directory
+2026-04-24T19:43:22.0776227Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/aloyo/aloyo
+2026-04-24T19:43:22.0812426Z Deleting the contents of '/home/runner/work/aloyo/aloyo'
+2026-04-24T19:43:22.0816458Z ##[group]Initializing the repository
+2026-04-24T19:43:22.0820980Z [command]/usr/bin/git init /home/runner/work/aloyo/aloyo
+2026-04-24T19:43:22.0914638Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-04-24T19:43:22.0917477Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-04-24T19:43:22.0920041Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-04-24T19:43:22.0921651Z hint: call:
+2026-04-24T19:43:22.0922892Z hint:
+2026-04-24T19:43:22.0924363Z hint: 	git config --global init.defaultBranch <name>
+2026-04-24T19:43:22.0926137Z hint:
+2026-04-24T19:43:22.0927785Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-04-24T19:43:22.0931203Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-04-24T19:43:22.0933513Z hint:
+2026-04-24T19:43:22.0934552Z hint: 	git branch -m <name>
+2026-04-24T19:43:22.0935821Z hint:
+2026-04-24T19:43:22.0937565Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-04-24T19:43:22.0940727Z Initialized empty Git repository in /home/runner/work/aloyo/aloyo/.git/
+2026-04-24T19:43:22.0943992Z [command]/usr/bin/git remote add origin https://github.com/lijingtian004/aloyo
+2026-04-24T19:43:22.0969011Z ##[endgroup]
+2026-04-24T19:43:22.0971206Z ##[group]Disabling automatic garbage collection
+2026-04-24T19:43:22.0973654Z [command]/usr/bin/git config --local gc.auto 0
+2026-04-24T19:43:22.1007609Z ##[endgroup]
+2026-04-24T19:43:22.1010015Z ##[group]Setting up auth
+2026-04-24T19:43:22.1016473Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-04-24T19:43:22.1052803Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-04-24T19:43:22.1358681Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-04-24T19:43:22.1395631Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-04-24T19:43:22.1627847Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-04-24T19:43:22.1663277Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-04-24T19:43:22.1907788Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-04-24T19:43:22.1947462Z ##[endgroup]
+2026-04-24T19:43:22.1950010Z ##[group]Fetching the repository
+2026-04-24T19:43:22.1959752Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +775ecf7c29b93766ec967232f89b3be30019a320:refs/remotes/origin/main
+2026-04-24T19:43:22.4585418Z From https://github.com/lijingtian004/aloyo
+2026-04-24T19:43:22.4586935Z  * [new ref]         775ecf7c29b93766ec967232f89b3be30019a320 -> origin/main
+2026-04-24T19:43:22.4617486Z ##[endgroup]
+2026-04-24T19:43:22.4619897Z ##[group]Determining the checkout info
+2026-04-24T19:43:22.4622284Z ##[endgroup]
+2026-04-24T19:43:22.4625568Z [command]/usr/bin/git sparse-checkout disable
+2026-04-24T19:43:22.4669311Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-04-24T19:43:22.4700208Z ##[group]Checking out the ref
+2026-04-24T19:43:22.4704702Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2026-04-24T19:43:22.4794936Z Switched to a new branch 'main'
+2026-04-24T19:43:22.4796655Z branch 'main' set up to track 'origin/main'.
+2026-04-24T19:43:22.4804368Z ##[endgroup]
+2026-04-24T19:43:22.4843080Z [command]/usr/bin/git log -1 --format=%H
+2026-04-24T19:43:22.4867816Z 775ecf7c29b93766ec967232f89b3be30019a320
+2026-04-24T19:43:22.5307011Z ##[group]Run actions/setup-java@v4
+2026-04-24T19:43:22.5308252Z with:
+2026-04-24T19:43:22.5308966Z   java-version: 17
+2026-04-24T19:43:22.5309689Z   distribution: temurin
+2026-04-24T19:43:22.5310454Z   java-package: jdk
+2026-04-24T19:43:22.5311174Z   check-latest: false
+2026-04-24T19:43:22.5312231Z   server-id: github
+2026-04-24T19:43:22.5312953Z   server-username: GITHUB_ACTOR
+2026-04-24T19:43:22.5313839Z   server-password: GITHUB_TOKEN
+2026-04-24T19:43:22.5314685Z   overwrite-settings: true
+2026-04-24T19:43:22.5315476Z   job-status: success
+2026-04-24T19:43:22.5316569Z   token: ***
+2026-04-24T19:43:22.5317236Z ##[endgroup]
+2026-04-24T19:43:22.7498399Z ##[group]Installed distributions
+2026-04-24T19:43:22.7566991Z Resolved Java 17.0.18+8 from tool-cache
+2026-04-24T19:43:22.7569150Z Setting Java 17.0.18+8 as the default
+2026-04-24T19:43:22.7583249Z Creating toolchains.xml for JDK version 17 from temurin
+2026-04-24T19:43:22.7665295Z Writing to /home/runner/.m2/toolchains.xml
+2026-04-24T19:43:22.7668925Z 
+2026-04-24T19:43:22.7669614Z Java configuration:
+2026-04-24T19:43:22.7671315Z   Distribution: temurin
+2026-04-24T19:43:22.7672724Z   Version: 17.0.18+8
+2026-04-24T19:43:22.7674583Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+2026-04-24T19:43:22.7676262Z 
+2026-04-24T19:43:22.7677787Z ##[endgroup]
+2026-04-24T19:43:22.7694843Z Creating settings.xml with server-id: github
+2026-04-24T19:43:22.7695983Z Writing to /home/runner/.m2/settings.xml
+2026-04-24T19:43:22.8765063Z ##[group]Run actions/cache@v4
+2026-04-24T19:43:22.8765938Z with:
+2026-04-24T19:43:22.8766652Z   path: ~/.gradle/caches
+~/.gradle/wrapper
+
+2026-04-24T19:43:22.8768478Z   key: gradle-ed712da7857de7a9f20af8410e2dbe44310fc958c3640ffbd6495f1d94e9d251
+2026-04-24T19:43:22.8769929Z   restore-keys: gradle-
+2026-04-24T19:43:22.8770724Z   enableCrossOsArchive: false
+2026-04-24T19:43:22.8771585Z   fail-on-cache-miss: false
+2026-04-24T19:43:22.8772380Z   lookup-only: false
+2026-04-24T19:43:22.8773118Z   save-always: false
+2026-04-24T19:43:22.8773822Z env:
+2026-04-24T19:43:22.8774797Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+2026-04-24T19:43:22.8776450Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+2026-04-24T19:43:22.8777756Z ##[endgroup]
+2026-04-24T19:43:23.1585667Z Cache not found for input keys: gradle-ed712da7857de7a9f20af8410e2dbe44310fc958c3640ffbd6495f1d94e9d251, gradle-
+2026-04-24T19:43:23.1709922Z ##[group]Run mkdir -p core-inference/libs
+2026-04-24T19:43:23.1711136Z [36;1mmkdir -p core-inference/libs[0m
+2026-04-24T19:43:23.1712255Z [36;1m# 使用gh release download从Tencent/ncnn下载[0m
+2026-04-24T19:43:23.1714214Z [36;1mgh release download 20260113 --repo Tencent/ncnn --pattern "ncnn-20260113-android-vulkan.zip" --dir /tmp --clobber[0m
+2026-04-24T19:43:23.1716074Z [36;1m# 解压[0m
+2026-04-24T19:43:23.1717076Z [36;1munzip -o /tmp/ncnn-20260113-android-vulkan.zip -d /tmp/ncnn[0m
+2026-04-24T19:43:23.1718538Z [36;1m# 查找解压后的目录名[0m
+2026-04-24T19:43:23.1719362Z [36;1mNCNN_DIR=$(ls /tmp/ncnn/ | head -1)[0m
+2026-04-24T19:43:23.1720400Z [36;1mecho "NCNN directory: $NCNN_DIR"[0m
+2026-04-24T19:43:23.1721378Z [36;1m# 将NCNN SDK目录复制到jni依赖路径[0m
+2026-04-24T19:43:23.1722606Z [36;1mcp -r /tmp/ncnn/$NCNN_DIR core-inference/libs/ncnn-android-vulkan[0m
+2026-04-24T19:43:23.1724072Z [36;1mecho "NCNN SDK downloaded and extracted"[0m
+2026-04-24T19:43:23.1725347Z [36;1mls -la core-inference/libs/ncnn-android-vulkan/[0m
+2026-04-24T19:43:23.1753393Z shell: /usr/bin/bash -e {0}
+2026-04-24T19:43:23.1754246Z env:
+2026-04-24T19:43:23.1755273Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+2026-04-24T19:43:23.1756961Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+2026-04-24T19:43:23.1759024Z   GH_TOKEN: ***
+2026-04-24T19:43:23.1759726Z ##[endgroup]
+2026-04-24T19:43:23.7048502Z Archive:  /tmp/ncnn-20260113-android-vulkan.zip
+2026-04-24T19:43:23.7050974Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/
+2026-04-24T19:43:23.7053374Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/
+2026-04-24T19:43:23.7060013Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/lib/
+2026-04-24T19:43:23.7080388Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/lib/libOSDependent.a  
+2026-04-24T19:43:23.7644163Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/lib/libncnn.a  
+2026-04-24T19:43:23.7646675Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/lib/libSPIRV.a  
+2026-04-24T19:43:23.7649440Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/lib/libMachineIndependent.a  
+2026-04-24T19:43:23.8005197Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/lib/libglslang.a  
+2026-04-24T19:43:23.8010818Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/lib/libglslang-default-resource-limits.a  
+2026-04-24T19:43:23.8014954Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/lib/pkgconfig/
+2026-04-24T19:43:23.8018377Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/lib/pkgconfig/ncnn.pc  
+2026-04-24T19:43:23.8021305Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/lib/libGenericCodeGen.a  
+2026-04-24T19:43:23.8023690Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/lib/cmake/
+2026-04-24T19:43:23.8025952Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/lib/cmake/ncnn/
+2026-04-24T19:43:23.8028332Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/lib/cmake/ncnn/ncnnConfig.cmake  
+2026-04-24T19:43:23.8030799Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/lib/cmake/ncnn/ncnn.cmake  
+2026-04-24T19:43:23.8033396Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/lib/cmake/ncnn/ncnn-release.cmake  
+2026-04-24T19:43:23.8036113Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/lib/cmake/ncnn/ncnnConfigVersion.cmake  
+2026-04-24T19:43:23.8038937Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/lib/cmake/glslang/
+2026-04-24T19:43:23.8041172Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/lib/cmake/glslang/glslang-targets-release.cmake  
+2026-04-24T19:43:23.8043862Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/lib/cmake/glslang/glslang-config-version.cmake  
+2026-04-24T19:43:23.8047066Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/lib/cmake/glslang/glslang-config.cmake  
+2026-04-24T19:43:23.8051035Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/lib/cmake/glslang/glslang-targets.cmake  
+2026-04-24T19:43:23.8053511Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/
+2026-04-24T19:43:23.8055110Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/
+2026-04-24T19:43:23.8057689Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/command.h  
+2026-04-24T19:43:23.8060768Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/benchmark.h  
+2026-04-24T19:43:23.8063346Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/paramdict.h  
+2026-04-24T19:43:23.8065314Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/blob.h  
+2026-04-24T19:43:23.8067254Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/gpu.h  
+2026-04-24T19:43:23.8070338Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/simplemath.h  
+2026-04-24T19:43:23.8073096Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/c_api.h  
+2026-04-24T19:43:23.8075556Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/platform.h  
+2026-04-24T19:43:23.8078543Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/simplestl.h  
+2026-04-24T19:43:23.8080820Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/allocator.h  
+2026-04-24T19:43:23.8083120Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/pipelinecache.h  
+2026-04-24T19:43:23.8086125Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/cpu.h  
+2026-04-24T19:43:23.8089570Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/vulkan_header_fix.h  
+2026-04-24T19:43:23.8093334Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/layer_type_enum.h  
+2026-04-24T19:43:23.8097453Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/ncnn_export.h  
+2026-04-24T19:43:23.8101285Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/layer.h  
+2026-04-24T19:43:23.8104626Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/option.h  
+2026-04-24T19:43:23.8108465Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/datareader.h  
+2026-04-24T19:43:23.8112110Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/simpleocv.h  
+2026-04-24T19:43:23.8115602Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/mat.h  
+2026-04-24T19:43:23.8119226Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/net.h  
+2026-04-24T19:43:23.8122890Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/layer_shader_type.h  
+2026-04-24T19:43:23.8126912Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/layer_shader_type_enum.h  
+2026-04-24T19:43:23.8131182Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/modelbin.h  
+2026-04-24T19:43:23.8134755Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/layer_type.h  
+2026-04-24T19:43:23.8138622Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/pipeline.h  
+2026-04-24T19:43:23.8142234Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/simplevk.h  
+2026-04-24T19:43:23.8145811Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/simpleomp.h  
+2026-04-24T19:43:23.8149716Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/ncnn/expression.h  
+2026-04-24T19:43:23.8153188Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/glslang/
+2026-04-24T19:43:23.8156508Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/glslang/Include/
+2026-04-24T19:43:23.8160741Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/glslang/Include/visibility.h  
+2026-04-24T19:43:23.8165421Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/glslang/Include/ResourceLimits.h  
+2026-04-24T19:43:23.8170143Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/glslang/Include/glslang_c_interface.h  
+2026-04-24T19:43:23.8174810Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/glslang/Include/glslang_c_shader_types.h  
+2026-04-24T19:43:23.8179208Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/glslang/Public/
+2026-04-24T19:43:23.8183184Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/glslang/Public/resource_limits_c.h  
+2026-04-24T19:43:23.8187567Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/glslang/Public/ResourceLimits.h  
+2026-04-24T19:43:23.8192091Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/glslang/Public/ShaderLang.h  
+2026-04-24T19:43:23.8195910Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/glslang/SPIRV/
+2026-04-24T19:43:23.8199929Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/glslang/SPIRV/SpvTools.h  
+2026-04-24T19:43:23.8204000Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/glslang/SPIRV/disassemble.h  
+2026-04-24T19:43:23.8208377Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/glslang/SPIRV/spirv.hpp11  
+2026-04-24T19:43:23.8212388Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/glslang/SPIRV/Logger.h  
+2026-04-24T19:43:23.8216422Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/glslang/SPIRV/GlslangToSpv.h  
+2026-04-24T19:43:23.8220694Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/glslang/build_info.h  
+2026-04-24T19:43:23.8224628Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/glslang/MachineIndependent/
+2026-04-24T19:43:23.8229611Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/arm64-v8a/include/glslang/MachineIndependent/Versions.h  
+2026-04-24T19:43:23.8233230Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/
+2026-04-24T19:43:23.8235714Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/lib/
+2026-04-24T19:43:23.8238865Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/lib/libOSDependent.a  
+2026-04-24T19:43:23.8876660Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/lib/libncnn.a  
+2026-04-24T19:43:23.8880049Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/lib/libSPIRV.a  
+2026-04-24T19:43:23.8883449Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/lib/libMachineIndependent.a  
+2026-04-24T19:43:23.9541478Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/lib/libglslang.a  
+2026-04-24T19:43:23.9548154Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/lib/libglslang-default-resource-limits.a  
+2026-04-24T19:43:23.9549659Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/lib/pkgconfig/
+2026-04-24T19:43:23.9550946Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/lib/pkgconfig/ncnn.pc  
+2026-04-24T19:43:23.9552252Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/lib/libGenericCodeGen.a  
+2026-04-24T19:43:23.9553434Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/lib/cmake/
+2026-04-24T19:43:23.9554488Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/lib/cmake/ncnn/
+2026-04-24T19:43:23.9555732Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/lib/cmake/ncnn/ncnnConfig.cmake  
+2026-04-24T19:43:23.9557044Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/lib/cmake/ncnn/ncnn.cmake  
+2026-04-24T19:43:23.9558634Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/lib/cmake/ncnn/ncnn-release.cmake  
+2026-04-24T19:43:23.9560135Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/lib/cmake/ncnn/ncnnConfigVersion.cmake  
+2026-04-24T19:43:23.9561444Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/lib/cmake/glslang/
+2026-04-24T19:43:23.9563211Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/lib/cmake/glslang/glslang-targets-release.cmake  
+2026-04-24T19:43:23.9564954Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/lib/cmake/glslang/glslang-config-version.cmake  
+2026-04-24T19:43:23.9566555Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/lib/cmake/glslang/glslang-config.cmake  
+2026-04-24T19:43:23.9568488Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/lib/cmake/glslang/glslang-targets.cmake  
+2026-04-24T19:43:23.9569504Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/
+2026-04-24T19:43:23.9570065Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/
+2026-04-24T19:43:23.9570695Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/command.h  
+2026-04-24T19:43:23.9571374Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/benchmark.h  
+2026-04-24T19:43:23.9572070Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/paramdict.h  
+2026-04-24T19:43:23.9572708Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/blob.h  
+2026-04-24T19:43:23.9573356Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/gpu.h  
+2026-04-24T19:43:23.9574012Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/simplemath.h  
+2026-04-24T19:43:23.9574668Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/c_api.h  
+2026-04-24T19:43:23.9575700Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/platform.h  
+2026-04-24T19:43:23.9576737Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/simplestl.h  
+2026-04-24T19:43:23.9578049Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/allocator.h  
+2026-04-24T19:43:23.9579141Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/pipelinecache.h  
+2026-04-24T19:43:23.9580612Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/cpu.h  
+2026-04-24T19:43:23.9585380Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/vulkan_header_fix.h  
+2026-04-24T19:43:23.9586622Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/layer_type_enum.h  
+2026-04-24T19:43:23.9588100Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/ncnn_export.h  
+2026-04-24T19:43:23.9589216Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/layer.h  
+2026-04-24T19:43:23.9590349Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/option.h  
+2026-04-24T19:43:23.9591493Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/datareader.h  
+2026-04-24T19:43:23.9592584Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/simpleocv.h  
+2026-04-24T19:43:23.9596634Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/mat.h  
+2026-04-24T19:43:23.9598021Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/net.h  
+2026-04-24T19:43:23.9599215Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/layer_shader_type.h  
+2026-04-24T19:43:23.9600497Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/layer_shader_type_enum.h  
+2026-04-24T19:43:23.9601751Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/modelbin.h  
+2026-04-24T19:43:23.9602878Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/layer_type.h  
+2026-04-24T19:43:23.9604077Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/pipeline.h  
+2026-04-24T19:43:23.9609561Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/simplevk.h  
+2026-04-24T19:43:23.9610728Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/simpleomp.h  
+2026-04-24T19:43:23.9611939Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/ncnn/expression.h  
+2026-04-24T19:43:23.9613270Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/glslang/
+2026-04-24T19:43:23.9614450Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/glslang/Include/
+2026-04-24T19:43:23.9615704Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/glslang/Include/visibility.h  
+2026-04-24T19:43:23.9616815Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/glslang/Include/ResourceLimits.h  
+2026-04-24T19:43:23.9618261Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/glslang/Include/glslang_c_interface.h  
+2026-04-24T19:43:23.9619729Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/glslang/Include/glslang_c_shader_types.h  
+2026-04-24T19:43:23.9621039Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/glslang/Public/
+2026-04-24T19:43:23.9622137Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/glslang/Public/resource_limits_c.h  
+2026-04-24T19:43:23.9623020Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/glslang/Public/ResourceLimits.h  
+2026-04-24T19:43:23.9625567Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/glslang/Public/ShaderLang.h  
+2026-04-24T19:43:23.9626660Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/glslang/SPIRV/
+2026-04-24T19:43:23.9628003Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/glslang/SPIRV/SpvTools.h  
+2026-04-24T19:43:23.9629173Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/glslang/SPIRV/disassemble.h  
+2026-04-24T19:43:23.9644056Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/glslang/SPIRV/spirv.hpp11  
+2026-04-24T19:43:23.9645367Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/glslang/SPIRV/Logger.h  
+2026-04-24T19:43:23.9646710Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/glslang/SPIRV/GlslangToSpv.h  
+2026-04-24T19:43:23.9648526Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/glslang/build_info.h  
+2026-04-24T19:43:23.9649337Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/glslang/MachineIndependent/
+2026-04-24T19:43:23.9651000Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/riscv64/include/glslang/MachineIndependent/Versions.h  
+2026-04-24T19:43:23.9652216Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/
+2026-04-24T19:43:23.9653093Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/lib/
+2026-04-24T19:43:23.9653872Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/lib/libOSDependent.a  
+2026-04-24T19:43:24.0792773Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/lib/libncnn.a  
+2026-04-24T19:43:24.0794158Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/lib/libSPIRV.a  
+2026-04-24T19:43:24.0795135Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/lib/libMachineIndependent.a  
+2026-04-24T19:43:24.1181660Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/lib/libglslang.a  
+2026-04-24T19:43:24.1185681Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/lib/libglslang-default-resource-limits.a  
+2026-04-24T19:43:24.1187147Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/lib/pkgconfig/
+2026-04-24T19:43:24.1188383Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/lib/pkgconfig/ncnn.pc  
+2026-04-24T19:43:24.1189667Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/lib/libGenericCodeGen.a  
+2026-04-24T19:43:24.1190669Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/lib/cmake/
+2026-04-24T19:43:24.1191695Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/lib/cmake/ncnn/
+2026-04-24T19:43:24.1192915Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/lib/cmake/ncnn/ncnnConfig.cmake  
+2026-04-24T19:43:24.1194203Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/lib/cmake/ncnn/ncnn.cmake  
+2026-04-24T19:43:24.1195953Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/lib/cmake/ncnn/ncnn-release.cmake  
+2026-04-24T19:43:24.1197273Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/lib/cmake/ncnn/ncnnConfigVersion.cmake  
+2026-04-24T19:43:24.1198584Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/lib/cmake/glslang/
+2026-04-24T19:43:24.1199755Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/lib/cmake/glslang/glslang-targets-release.cmake  
+2026-04-24T19:43:24.1201219Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/lib/cmake/glslang/glslang-config-version.cmake  
+2026-04-24T19:43:24.1202701Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/lib/cmake/glslang/glslang-config.cmake  
+2026-04-24T19:43:24.1203632Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/lib/cmake/glslang/glslang-targets.cmake  
+2026-04-24T19:43:24.1204308Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/
+2026-04-24T19:43:24.1205266Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/
+2026-04-24T19:43:24.1206267Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/command.h  
+2026-04-24T19:43:24.1206985Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/benchmark.h  
+2026-04-24T19:43:24.1208229Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/paramdict.h  
+2026-04-24T19:43:24.1209019Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/blob.h  
+2026-04-24T19:43:24.1209957Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/gpu.h  
+2026-04-24T19:43:24.1210808Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/simplemath.h  
+2026-04-24T19:43:24.1211681Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/c_api.h  
+2026-04-24T19:43:24.1212479Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/platform.h  
+2026-04-24T19:43:24.1213640Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/simplestl.h  
+2026-04-24T19:43:24.1215085Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/allocator.h  
+2026-04-24T19:43:24.1215854Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/pipelinecache.h  
+2026-04-24T19:43:24.1216561Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/cpu.h  
+2026-04-24T19:43:24.1220824Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/vulkan_header_fix.h  
+2026-04-24T19:43:24.1222148Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/layer_type_enum.h  
+2026-04-24T19:43:24.1223193Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/ncnn_export.h  
+2026-04-24T19:43:24.1224180Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/layer.h  
+2026-04-24T19:43:24.1225307Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/option.h  
+2026-04-24T19:43:24.1226065Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/datareader.h  
+2026-04-24T19:43:24.1227132Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/simpleocv.h  
+2026-04-24T19:43:24.1231296Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/mat.h  
+2026-04-24T19:43:24.1232574Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/net.h  
+2026-04-24T19:43:24.1233670Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/layer_shader_type.h  
+2026-04-24T19:43:24.1234923Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/layer_shader_type_enum.h  
+2026-04-24T19:43:24.1236274Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/modelbin.h  
+2026-04-24T19:43:24.1237427Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/layer_type.h  
+2026-04-24T19:43:24.1238316Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/pipeline.h  
+2026-04-24T19:43:24.1243304Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/simplevk.h  
+2026-04-24T19:43:24.1244781Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/simpleomp.h  
+2026-04-24T19:43:24.1245986Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/ncnn/expression.h  
+2026-04-24T19:43:24.1247098Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/glslang/
+2026-04-24T19:43:24.1248117Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/glslang/Include/
+2026-04-24T19:43:24.1249091Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/glslang/Include/visibility.h  
+2026-04-24T19:43:24.1250126Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/glslang/Include/ResourceLimits.h  
+2026-04-24T19:43:24.1251151Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/glslang/Include/glslang_c_interface.h  
+2026-04-24T19:43:24.1252600Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/glslang/Include/glslang_c_shader_types.h  
+2026-04-24T19:43:24.1253935Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/glslang/Public/
+2026-04-24T19:43:24.1255161Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/glslang/Public/resource_limits_c.h  
+2026-04-24T19:43:24.1256073Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/glslang/Public/ResourceLimits.h  
+2026-04-24T19:43:24.1259513Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/glslang/Public/ShaderLang.h  
+2026-04-24T19:43:24.1260518Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/glslang/SPIRV/
+2026-04-24T19:43:24.1261620Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/glslang/SPIRV/SpvTools.h  
+2026-04-24T19:43:24.1262674Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/glslang/SPIRV/disassemble.h  
+2026-04-24T19:43:24.1277267Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/glslang/SPIRV/spirv.hpp11  
+2026-04-24T19:43:24.1278981Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/glslang/SPIRV/Logger.h  
+2026-04-24T19:43:24.1280082Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/glslang/SPIRV/GlslangToSpv.h  
+2026-04-24T19:43:24.1281315Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/glslang/build_info.h  
+2026-04-24T19:43:24.1282087Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/glslang/MachineIndependent/
+2026-04-24T19:43:24.1283899Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86_64/include/glslang/MachineIndependent/Versions.h  
+2026-04-24T19:43:24.1285123Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/
+2026-04-24T19:43:24.1285863Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/lib/
+2026-04-24T19:43:24.1286528Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/lib/libOSDependent.a  
+2026-04-24T19:43:24.1692960Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/lib/libncnn.a  
+2026-04-24T19:43:24.1694296Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/lib/libSPIRV.a  
+2026-04-24T19:43:24.1695392Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/lib/libMachineIndependent.a  
+2026-04-24T19:43:24.2026153Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/lib/libglslang.a  
+2026-04-24T19:43:24.2029789Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/lib/libglslang-default-resource-limits.a  
+2026-04-24T19:43:24.2031269Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/lib/pkgconfig/
+2026-04-24T19:43:24.2032472Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/lib/pkgconfig/ncnn.pc  
+2026-04-24T19:43:24.2033839Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/lib/libGenericCodeGen.a  
+2026-04-24T19:43:24.2036974Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/lib/cmake/
+2026-04-24T19:43:24.2038800Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/lib/cmake/ncnn/
+2026-04-24T19:43:24.2040521Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/lib/cmake/ncnn/ncnnConfig.cmake  
+2026-04-24T19:43:24.2041917Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/lib/cmake/ncnn/ncnn.cmake  
+2026-04-24T19:43:24.2043246Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/lib/cmake/ncnn/ncnn-release.cmake  
+2026-04-24T19:43:24.2044610Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/lib/cmake/ncnn/ncnnConfigVersion.cmake  
+2026-04-24T19:43:24.2045960Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/lib/cmake/glslang/
+2026-04-24T19:43:24.2047442Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/lib/cmake/glslang/glslang-targets-release.cmake  
+2026-04-24T19:43:24.2049047Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/lib/cmake/glslang/glslang-config-version.cmake  
+2026-04-24T19:43:24.2050025Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/lib/cmake/glslang/glslang-config.cmake  
+2026-04-24T19:43:24.2051402Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/lib/cmake/glslang/glslang-targets.cmake  
+2026-04-24T19:43:24.2052504Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/
+2026-04-24T19:43:24.2053123Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/
+2026-04-24T19:43:24.2054179Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/command.h  
+2026-04-24T19:43:24.2055246Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/benchmark.h  
+2026-04-24T19:43:24.2056284Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/paramdict.h  
+2026-04-24T19:43:24.2057433Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/blob.h  
+2026-04-24T19:43:24.2058735Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/gpu.h  
+2026-04-24T19:43:24.2060285Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/simplemath.h  
+2026-04-24T19:43:24.2061453Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/c_api.h  
+2026-04-24T19:43:24.2062307Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/platform.h  
+2026-04-24T19:43:24.2063055Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/simplestl.h  
+2026-04-24T19:43:24.2063795Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/allocator.h  
+2026-04-24T19:43:24.2064545Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/pipelinecache.h  
+2026-04-24T19:43:24.2065266Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/cpu.h  
+2026-04-24T19:43:24.2066431Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/vulkan_header_fix.h  
+2026-04-24T19:43:24.2067819Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/layer_type_enum.h  
+2026-04-24T19:43:24.2069174Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/ncnn_export.h  
+2026-04-24T19:43:24.2070427Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/layer.h  
+2026-04-24T19:43:24.2071618Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/option.h  
+2026-04-24T19:43:24.2072644Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/datareader.h  
+2026-04-24T19:43:24.2073893Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/simpleocv.h  
+2026-04-24T19:43:24.2078128Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/mat.h  
+2026-04-24T19:43:24.2079392Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/net.h  
+2026-04-24T19:43:24.2080563Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/layer_shader_type.h  
+2026-04-24T19:43:24.2081982Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/layer_shader_type_enum.h  
+2026-04-24T19:43:24.2083615Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/modelbin.h  
+2026-04-24T19:43:24.2084794Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/layer_type.h  
+2026-04-24T19:43:24.2085562Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/pipeline.h  
+2026-04-24T19:43:24.2090147Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/simplevk.h  
+2026-04-24T19:43:24.2090979Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/simpleomp.h  
+2026-04-24T19:43:24.2091973Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/ncnn/expression.h  
+2026-04-24T19:43:24.2093046Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/glslang/
+2026-04-24T19:43:24.2094256Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/glslang/Include/
+2026-04-24T19:43:24.2095466Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/glslang/Include/visibility.h  
+2026-04-24T19:43:24.2096674Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/glslang/Include/ResourceLimits.h  
+2026-04-24T19:43:24.2098370Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/glslang/Include/glslang_c_interface.h  
+2026-04-24T19:43:24.2099377Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/glslang/Include/glslang_c_shader_types.h  
+2026-04-24T19:43:24.2101598Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/glslang/Public/
+2026-04-24T19:43:24.2102480Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/glslang/Public/resource_limits_c.h  
+2026-04-24T19:43:24.2103371Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/glslang/Public/ResourceLimits.h  
+2026-04-24T19:43:24.2104750Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/glslang/Public/ShaderLang.h  
+2026-04-24T19:43:24.2106387Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/glslang/SPIRV/
+2026-04-24T19:43:24.2107593Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/glslang/SPIRV/SpvTools.h  
+2026-04-24T19:43:24.2108751Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/glslang/SPIRV/disassemble.h  
+2026-04-24T19:43:24.2122936Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/glslang/SPIRV/spirv.hpp11  
+2026-04-24T19:43:24.2124337Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/glslang/SPIRV/Logger.h  
+2026-04-24T19:43:24.2125671Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/glslang/SPIRV/GlslangToSpv.h  
+2026-04-24T19:43:24.2126732Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/glslang/build_info.h  
+2026-04-24T19:43:24.2127549Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/glslang/MachineIndependent/
+2026-04-24T19:43:24.2129275Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/armeabi-v7a/include/glslang/MachineIndependent/Versions.h  
+2026-04-24T19:43:24.2130500Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/
+2026-04-24T19:43:24.2131167Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/lib/
+2026-04-24T19:43:24.2131769Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/lib/libOSDependent.a  
+2026-04-24T19:43:24.3185246Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/lib/libncnn.a  
+2026-04-24T19:43:24.3186434Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/lib/libSPIRV.a  
+2026-04-24T19:43:24.3187361Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/lib/libMachineIndependent.a  
+2026-04-24T19:43:24.3529760Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/lib/libglslang.a  
+2026-04-24T19:43:24.3532925Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/lib/libglslang-default-resource-limits.a  
+2026-04-24T19:43:24.3534296Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/lib/pkgconfig/
+2026-04-24T19:43:24.3535653Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/lib/pkgconfig/ncnn.pc  
+2026-04-24T19:43:24.3536865Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/lib/libGenericCodeGen.a  
+2026-04-24T19:43:24.3538202Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/lib/cmake/
+2026-04-24T19:43:24.3539217Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/lib/cmake/ncnn/
+2026-04-24T19:43:24.3540406Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/lib/cmake/ncnn/ncnnConfig.cmake  
+2026-04-24T19:43:24.3541691Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/lib/cmake/ncnn/ncnn.cmake  
+2026-04-24T19:43:24.3542958Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/lib/cmake/ncnn/ncnn-release.cmake  
+2026-04-24T19:43:24.3544314Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/lib/cmake/ncnn/ncnnConfigVersion.cmake  
+2026-04-24T19:43:24.3545517Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/lib/cmake/glslang/
+2026-04-24T19:43:24.3546838Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/lib/cmake/glslang/glslang-targets-release.cmake  
+2026-04-24T19:43:24.3549484Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/lib/cmake/glslang/glslang-config-version.cmake  
+2026-04-24T19:43:24.3551057Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/lib/cmake/glslang/glslang-config.cmake  
+2026-04-24T19:43:24.3552321Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/lib/cmake/glslang/glslang-targets.cmake  
+2026-04-24T19:43:24.3553490Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/
+2026-04-24T19:43:24.3554394Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/
+2026-04-24T19:43:24.3555321Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/command.h  
+2026-04-24T19:43:24.3556422Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/benchmark.h  
+2026-04-24T19:43:24.3557819Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/paramdict.h  
+2026-04-24T19:43:24.3559192Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/blob.h  
+2026-04-24T19:43:24.3560237Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/gpu.h  
+2026-04-24T19:43:24.3561373Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/simplemath.h  
+2026-04-24T19:43:24.3562499Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/c_api.h  
+2026-04-24T19:43:24.3563628Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/platform.h  
+2026-04-24T19:43:24.3564718Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/simplestl.h  
+2026-04-24T19:43:24.3565660Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/allocator.h  
+2026-04-24T19:43:24.3566726Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/pipelinecache.h  
+2026-04-24T19:43:24.3567734Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/cpu.h  
+2026-04-24T19:43:24.3569184Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/vulkan_header_fix.h  
+2026-04-24T19:43:24.3570860Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/layer_type_enum.h  
+2026-04-24T19:43:24.3572748Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/ncnn_export.h  
+2026-04-24T19:43:24.3574396Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/layer.h  
+2026-04-24T19:43:24.3576063Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/option.h  
+2026-04-24T19:43:24.3577809Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/datareader.h  
+2026-04-24T19:43:24.3579784Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/simpleocv.h  
+2026-04-24T19:43:24.3581536Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/mat.h  
+2026-04-24T19:43:24.3583087Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/net.h  
+2026-04-24T19:43:24.3585008Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/layer_shader_type.h  
+2026-04-24T19:43:24.3586926Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/layer_shader_type_enum.h  
+2026-04-24T19:43:24.3588949Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/modelbin.h  
+2026-04-24T19:43:24.3590645Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/layer_type.h  
+2026-04-24T19:43:24.3592254Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/pipeline.h  
+2026-04-24T19:43:24.3593909Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/simplevk.h  
+2026-04-24T19:43:24.3595523Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/simpleomp.h  
+2026-04-24T19:43:24.3597116Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/ncnn/expression.h  
+2026-04-24T19:43:24.3598872Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/glslang/
+2026-04-24T19:43:24.3600325Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/glslang/Include/
+2026-04-24T19:43:24.3602031Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/glslang/Include/visibility.h  
+2026-04-24T19:43:24.3603811Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/glslang/Include/ResourceLimits.h  
+2026-04-24T19:43:24.3605726Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/glslang/Include/glslang_c_interface.h  
+2026-04-24T19:43:24.3607823Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/glslang/Include/glslang_c_shader_types.h  
+2026-04-24T19:43:24.3609984Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/glslang/Public/
+2026-04-24T19:43:24.3611829Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/glslang/Public/resource_limits_c.h  
+2026-04-24T19:43:24.3613807Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/glslang/Public/ResourceLimits.h  
+2026-04-24T19:43:24.3616135Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/glslang/Public/ShaderLang.h  
+2026-04-24T19:43:24.3618146Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/glslang/SPIRV/
+2026-04-24T19:43:24.3619858Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/glslang/SPIRV/SpvTools.h  
+2026-04-24T19:43:24.3621665Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/glslang/SPIRV/disassemble.h  
+2026-04-24T19:43:24.3624188Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/glslang/SPIRV/spirv.hpp11  
+2026-04-24T19:43:24.3630478Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/glslang/SPIRV/Logger.h  
+2026-04-24T19:43:24.3631883Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/glslang/SPIRV/GlslangToSpv.h  
+2026-04-24T19:43:24.3633244Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/glslang/build_info.h  
+2026-04-24T19:43:24.3634573Z    creating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/glslang/MachineIndependent/
+2026-04-24T19:43:24.3636065Z   inflating: /tmp/ncnn/ncnn-20260113-android-vulkan/x86/include/glslang/MachineIndependent/Versions.h  
+2026-04-24T19:43:24.3661605Z NCNN directory: ncnn-20260113-android-vulkan
+2026-04-24T19:43:24.4118711Z NCNN SDK downloaded and extracted
+2026-04-24T19:43:24.4135024Z total 28
+2026-04-24T19:43:24.4135757Z drwxr-xr-x 7 runner runner 4096 Apr 24 19:43 .
+2026-04-24T19:43:24.4136552Z drwxr-xr-x 3 runner runner 4096 Apr 24 19:43 ..
+2026-04-24T19:43:24.4137422Z drwxr-xr-x 4 runner runner 4096 Apr 24 19:43 arm64-v8a
+2026-04-24T19:43:24.4138553Z drwxr-xr-x 4 runner runner 4096 Apr 24 19:43 armeabi-v7a
+2026-04-24T19:43:24.4139362Z drwxr-xr-x 4 runner runner 4096 Apr 24 19:43 riscv64
+2026-04-24T19:43:24.4140133Z drwxr-xr-x 4 runner runner 4096 Apr 24 19:43 x86
+2026-04-24T19:43:24.4140908Z drwxr-xr-x 4 runner runner 4096 Apr 24 19:43 x86_64
+2026-04-24T19:43:24.4182121Z ##[group]Run mkdir -p /tmp/ncnn-aar/jni
+2026-04-24T19:43:24.4182608Z [36;1mmkdir -p /tmp/ncnn-aar/jni[0m
+2026-04-24T19:43:24.4182970Z [36;1m# 复制各ABI的so库[0m
+2026-04-24T19:43:24.4183336Z [36;1mfor abi in armeabi-v7a arm64-v8a x86 x86_64; do[0m
+2026-04-24T19:43:24.4183831Z [36;1m  if [ -d "core-inference/libs/ncnn-android-vulkan/$abi" ]; then[0m
+2026-04-24T19:43:24.4184319Z [36;1m    mkdir -p /tmp/ncnn-aar/jni/$abi[0m
+2026-04-24T19:43:24.4184961Z [36;1m    cp core-inference/libs/ncnn-android-vulkan/$abi/lib/libncnn.so /tmp/ncnn-aar/jni/$abi/ 2>/dev/null || true[0m
+2026-04-24T19:43:24.4185577Z [36;1m  fi[0m
+2026-04-24T19:43:24.4185836Z [36;1mdone[0m
+2026-04-24T19:43:24.4186108Z [36;1m# 创建AndroidManifest.xml[0m
+2026-04-24T19:43:24.4187084Z [36;1mecho '<?xml version="1.0" encoding="utf-8"?><manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.tencent.ncnn"/>' > /tmp/ncnn-aar/AndroidManifest.xml[0m
+2026-04-24T19:43:24.4188307Z [36;1m# 创建空的classes.jar[0m
+2026-04-24T19:43:24.4245237Z [36;1mmkdir -p /tmp/ncnn-aar/build[0m
+2026-04-24T19:43:24.4246102Z [36;1mjar cf /tmp/ncnn-aar/classes.jar -C /tmp/ncnn-aar/build . 2>/dev/null || true[0m
+2026-04-24T19:43:24.4246855Z [36;1m# 打包AAR[0m
+2026-04-24T19:43:24.4247252Z [36;1mcd /tmp/ncnn-aar[0m
+2026-04-24T19:43:24.4248317Z [36;1mzip -r $GITHUB_WORKSPACE/core-inference/libs/ncnn-android.aar AndroidManifest.xml classes.jar jni/[0m
+2026-04-24T19:43:24.4249305Z [36;1mecho "NCNN AAR created"[0m
+2026-04-24T19:43:24.4249927Z [36;1mls -la $GITHUB_WORKSPACE/core-inference/libs/[0m
+2026-04-24T19:43:24.4276993Z shell: /usr/bin/bash -e {0}
+2026-04-24T19:43:24.4277501Z env:
+2026-04-24T19:43:24.4278394Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+2026-04-24T19:43:24.4279402Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+2026-04-24T19:43:24.4280163Z ##[endgroup]
+2026-04-24T19:43:24.7023066Z   adding: AndroidManifest.xml (deflated 18%)
+2026-04-24T19:43:24.7030943Z   adding: classes.jar (deflated 46%)
+2026-04-24T19:43:24.7032117Z   adding: jni/ (stored 0%)
+2026-04-24T19:43:24.7032759Z   adding: jni/armeabi-v7a/ (stored 0%)
+2026-04-24T19:43:24.7033513Z   adding: jni/x86_64/ (stored 0%)
+2026-04-24T19:43:24.7034162Z   adding: jni/arm64-v8a/ (stored 0%)
+2026-04-24T19:43:24.7034814Z   adding: jni/x86/ (stored 0%)
+2026-04-24T19:43:24.7035374Z NCNN AAR created
+2026-04-24T19:43:24.7045307Z total 16
+2026-04-24T19:43:24.7045949Z drwxr-xr-x 3 runner runner 4096 Apr 24 19:43 .
+2026-04-24T19:43:24.7046738Z drwxr-xr-x 4 runner runner 4096 Apr 24 19:43 ..
+2026-04-24T19:43:24.7047634Z drwxr-xr-x 7 runner runner 4096 Apr 24 19:43 ncnn-android-vulkan
+2026-04-24T19:43:24.7048857Z -rw-r--r-- 1 runner runner 1380 Apr 24 19:43 ncnn-android.aar
+2026-04-24T19:43:24.7088427Z ##[group]Run chmod +x gradlew
+2026-04-24T19:43:24.7088854Z [36;1mchmod +x gradlew[0m
+2026-04-24T19:43:24.7111760Z shell: /usr/bin/bash -e {0}
+2026-04-24T19:43:24.7112083Z env:
+2026-04-24T19:43:24.7112472Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+2026-04-24T19:43:24.7113081Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+2026-04-24T19:43:24.7113542Z ##[endgroup]
+2026-04-24T19:43:24.7208797Z ##[group]Run if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
+2026-04-24T19:43:24.7209451Z [36;1mif [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then[0m
+2026-04-24T19:43:24.7209935Z [36;1m  echo "Downloading gradle-wrapper.jar..."[0m
+2026-04-24T19:43:24.7210873Z [36;1m  curl -L -o gradle/wrapper/gradle-wrapper.jar "https://raw.githubusercontent.com/nihui/ncnn-android-yolov8/master/gradle/wrapper/gradle-wrapper.jar" 2>/dev/null || \[0m
+2026-04-24T19:43:24.7212239Z [36;1m  curl -L -o gradle/wrapper/gradle-wrapper.jar "https://github.com/nihui/ncnn-android-yolov8/raw/master/gradle/wrapper/gradle-wrapper.jar" 2>/dev/null || \[0m
+2026-04-24T19:43:24.7213380Z [36;1m  wget -q -O gradle/wrapper/gradle-wrapper.jar "https://services.gradle.org/distributions/gradle-8.5-bin.zip" 2>/dev/null[0m
+2026-04-24T19:43:24.7214105Z [36;1m  # 如果还是失败，使用gradle wrapper命令[0m
+2026-04-24T19:43:24.7214744Z [36;1m  if [ ! -f gradle/wrapper/gradle-wrapper.jar ] || [ ! -s gradle/wrapper/gradle-wrapper.jar ]; then[0m
+2026-04-24T19:43:24.7215368Z [36;1m    echo "Using system gradle to generate wrapper..."[0m
+2026-04-24T19:43:24.7215865Z [36;1m    which gradle && gradle wrapper --gradle-version 8.5 || {[0m
+2026-04-24T19:43:24.7216414Z [36;1m      echo "Downloading wrapper jar directly from Gradle distributions..."[0m
+2026-04-24T19:43:24.7216922Z [36;1m      mkdir -p /tmp/gradle-download[0m
+2026-04-24T19:43:24.7217569Z [36;1m      curl -L "https://services.gradle.org/distributions/gradle-8.5-bin.zip" -o /tmp/gradle-download/gradle.zip[0m
+2026-04-24T19:43:24.7218616Z [36;1m      unzip -q /tmp/gradle-download/gradle.zip -d /tmp/gradle-download[0m
+2026-04-24T19:43:24.7219228Z [36;1m      /tmp/gradle-download/gradle-8.5/bin/gradle wrapper --gradle-version 8.5[0m
+2026-04-24T19:43:24.7219703Z [36;1m    }[0m
+2026-04-24T19:43:24.7219949Z [36;1m  fi[0m
+2026-04-24T19:43:24.7220226Z [36;1mfi[0m
+2026-04-24T19:43:24.7220493Z [36;1mls -la gradle/wrapper/[0m
+2026-04-24T19:43:24.7243848Z shell: /usr/bin/bash -e {0}
+2026-04-24T19:43:24.7244171Z env:
+2026-04-24T19:43:24.7244547Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+2026-04-24T19:43:24.7245139Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+2026-04-24T19:43:24.7245602Z ##[endgroup]
+2026-04-24T19:43:24.7294976Z Downloading gradle-wrapper.jar...
+2026-04-24T19:43:24.8915368Z total 72
+2026-04-24T19:43:24.8915878Z drwxr-xr-x 2 runner runner  4096 Apr 24 19:43 .
+2026-04-24T19:43:24.8916378Z drwxr-xr-x 3 runner runner  4096 Apr 24 19:43 ..
+2026-04-24T19:43:24.8916929Z -rw-r--r-- 1 runner runner 59203 Apr 24 19:43 gradle-wrapper.jar
+2026-04-24T19:43:24.8917751Z -rw-r--r-- 1 runner runner   200 Apr 24 19:43 gradle-wrapper.properties
+2026-04-24T19:43:24.8951375Z ##[group]Run ./gradlew assembleDebug --stacktrace 2>&1
+2026-04-24T19:43:24.8951894Z [36;1m./gradlew assembleDebug --stacktrace 2>&1[0m
+2026-04-24T19:43:24.8979390Z shell: /usr/bin/bash -e {0}
+2026-04-24T19:43:24.8979729Z env:
+2026-04-24T19:43:24.8980151Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+2026-04-24T19:43:24.8981056Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+2026-04-24T19:43:24.8981647Z ##[endgroup]
+2026-04-24T19:43:24.9951488Z Downloading https://services.gradle.org/distributions/gradle-8.5-bin.zip
+2026-04-24T19:43:26.8749229Z ............10%.............20%............30%.............40%.............50%............60%.............70%.............80%............90%.............100%
+2026-04-24T19:43:27.9360823Z 
+2026-04-24T19:43:27.9370622Z Welcome to Gradle 8.5!
+2026-04-24T19:43:27.9371518Z 
+2026-04-24T19:43:27.9372111Z Here are the highlights of this release:
+2026-04-24T19:43:27.9373130Z  - Support for running on Java 21
+2026-04-24T19:43:27.9373853Z  - Faster first use with Kotlin DSL
+2026-04-24T19:43:27.9374533Z  - Improved error and warning messages
+2026-04-24T19:43:27.9375003Z 
+2026-04-24T19:43:27.9375532Z For more details see https://docs.gradle.org/8.5/release-notes.html
+2026-04-24T19:43:27.9376448Z 
+2026-04-24T19:43:28.0294142Z Starting a Gradle Daemon (subsequent builds will be faster)
+2026-04-24T19:44:23.7296819Z 
+2026-04-24T19:44:23.7305504Z > Configure project :core-inference
+2026-04-24T19:44:23.7306604Z Checking the license for package NDK (Side by side) 25.1.8937393 in /usr/local/lib/android/sdk/licenses
+2026-04-24T19:44:23.7308046Z License for package NDK (Side by side) 25.1.8937393 accepted.
+2026-04-24T19:44:23.7310135Z Preparing "Install NDK (Side by side) 25.1.8937393 v.25.1.8937393".
+2026-04-24T19:44:34.5329410Z "Install NDK (Side by side) 25.1.8937393 v.25.1.8937393" ready.
+2026-04-24T19:44:34.5330570Z Installing NDK (Side by side) 25.1.8937393 in /usr/local/lib/android/sdk/ndk/25.1.8937393
+2026-04-24T19:44:34.5362629Z "Install NDK (Side by side) 25.1.8937393 v.25.1.8937393" complete.
+2026-04-24T19:44:34.6291036Z "Install NDK (Side by side) 25.1.8937393 v.25.1.8937393" finished.
+2026-04-24T19:44:37.8290805Z 
+2026-04-24T19:44:37.8299096Z > Task :app:preBuild UP-TO-DATE
+2026-04-24T19:44:37.8299784Z > Task :app:preDebugBuild UP-TO-DATE
+2026-04-24T19:44:37.8300257Z > Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+2026-04-24T19:44:37.8300801Z > Task :app:checkKotlinGradlePluginConfigurationErrors
+2026-04-24T19:44:42.9294887Z > Task :app:generateDebugResValues
+2026-04-24T19:44:42.9298414Z > Task :app:dataBindingMergeDependencyArtifactsDebug
+2026-04-24T19:44:42.9299531Z > Task :app:generateDebugResources
+2026-04-24T19:44:42.9300980Z > Task :common:preBuild UP-TO-DATE
+2026-04-24T19:44:42.9302015Z > Task :common:preDebugBuild UP-TO-DATE
+2026-04-24T19:44:42.9303065Z > Task :common:generateDebugResValues
+2026-04-24T19:44:42.9304083Z > Task :common:generateDebugResources
+2026-04-24T19:44:43.0294191Z > Task :common:packageDebugResources
+2026-04-24T19:44:43.0295138Z > Task :core-capture:preBuild UP-TO-DATE
+2026-04-24T19:44:43.0295947Z > Task :core-capture:preDebugBuild UP-TO-DATE
+2026-04-24T19:44:43.0315857Z > Task :core-capture:generateDebugResValues
+2026-04-24T19:44:43.0316733Z > Task :core-capture:generateDebugResources
+2026-04-24T19:44:43.0317398Z > Task :core-capture:packageDebugResources
+2026-04-24T19:44:43.0318135Z > Task :core-inference:preBuild UP-TO-DATE
+2026-04-24T19:44:43.0318672Z > Task :core-inference:preDebugBuild UP-TO-DATE
+2026-04-24T19:44:43.1300088Z > Task :core-inference:generateDebugResValues
+2026-04-24T19:44:43.1328987Z > Task :core-inference:generateDebugResources
+2026-04-24T19:44:43.1331855Z > Task :core-inference:packageDebugResources
+2026-04-24T19:44:43.1358725Z > Task :core-logger:preBuild UP-TO-DATE
+2026-04-24T19:44:43.1369068Z > Task :core-logger:preDebugBuild UP-TO-DATE
+2026-04-24T19:44:43.1369886Z > Task :core-logger:generateDebugResValues
+2026-04-24T19:44:43.1372415Z > Task :core-logger:generateDebugResources
+2026-04-24T19:44:43.1373247Z > Task :core-logger:packageDebugResources
+2026-04-24T19:44:43.1374305Z > Task :core-model:preBuild UP-TO-DATE
+2026-04-24T19:44:43.1404023Z > Task :core-model:preDebugBuild UP-TO-DATE
+2026-04-24T19:44:43.1407097Z > Task :core-model:generateDebugResValues
+2026-04-24T19:44:43.1409769Z > Task :core-model:generateDebugResources
+2026-04-24T19:44:43.1410610Z > Task :core-model:packageDebugResources
+2026-04-24T19:44:43.1411281Z > Task :core-overlay:preBuild UP-TO-DATE
+2026-04-24T19:44:43.1413325Z > Task :core-overlay:preDebugBuild UP-TO-DATE
+2026-04-24T19:44:43.1414052Z > Task :core-overlay:generateDebugResValues
+2026-04-24T19:44:43.1414747Z > Task :core-overlay:generateDebugResources
+2026-04-24T19:44:43.1415433Z > Task :core-overlay:packageDebugResources
+2026-04-24T19:44:44.5303212Z > Task :app:packageDebugResources
+2026-04-24T19:44:45.4319060Z > Task :common:parseDebugLocalResources
+2026-04-24T19:44:45.4394145Z > Task :app:parseDebugLocalResources
+2026-04-24T19:44:45.4438860Z > Task :core-capture:parseDebugLocalResources
+2026-04-24T19:44:45.4468808Z > Task :core-inference:parseDebugLocalResources
+2026-04-24T19:44:45.5339174Z > Task :core-capture:processDebugManifest
+2026-04-24T19:44:45.5399366Z > Task :core-inference:processDebugManifest
+2026-04-24T19:44:45.5421507Z > Task :common:processDebugManifest
+2026-04-24T19:44:45.6329095Z > Task :core-capture:generateDebugRFile
+2026-04-24T19:44:45.6389200Z > Task :common:generateDebugRFile
+2026-04-24T19:44:45.6419388Z > Task :core-inference:generateDebugRFile
+2026-04-24T19:44:45.6478872Z > Task :core-logger:parseDebugLocalResources
+2026-04-24T19:44:45.6549118Z > Task :core-logger:processDebugManifest
+2026-04-24T19:44:45.6568997Z > Task :core-model:parseDebugLocalResources
+2026-04-24T19:44:45.7299752Z > Task :core-model:processDebugManifest
+2026-04-24T19:44:45.7329087Z > Task :core-logger:generateDebugRFile
+2026-04-24T19:44:45.7344249Z > Task :core-overlay:parseDebugLocalResources
+2026-04-24T19:44:45.7345125Z > Task :core-model:generateDebugRFile
+2026-04-24T19:44:45.7345908Z > Task :core-overlay:processDebugManifest
+2026-04-24T19:44:45.7378759Z > Task :core-overlay:generateDebugRFile
+2026-04-24T19:44:45.7386709Z > Task :core-capture:writeDebugAarMetadata
+2026-04-24T19:44:45.7387698Z > Task :common:writeDebugAarMetadata
+2026-04-24T19:44:45.8293362Z > Task :core-inference:writeDebugAarMetadata
+2026-04-24T19:44:45.8294301Z > Task :core-logger:writeDebugAarMetadata
+2026-04-24T19:44:45.8295108Z > Task :core-model:writeDebugAarMetadata
+2026-04-24T19:44:45.8295957Z > Task :core-overlay:writeDebugAarMetadata
+2026-04-24T19:44:45.8296940Z > Task :app:mergeDebugResources
+2026-04-24T19:44:45.9313557Z > Task :app:checkDebugAarMetadata
+2026-04-24T19:44:46.2301933Z > Task :app:dataBindingGenBaseClassesDebug
+2026-04-24T19:44:46.2344590Z > Task :app:mapDebugSourceSetPaths
+2026-04-24T19:44:46.2404314Z > Task :app:createDebugCompatibleScreenManifests
+2026-04-24T19:44:46.2439294Z > Task :app:extractDeepLinksDebug
+2026-04-24T19:44:46.2455360Z > Task :common:extractDeepLinksDebug
+2026-04-24T19:44:46.2455917Z > Task :core-capture:extractDeepLinksDebug
+2026-04-24T19:44:46.2456584Z > Task :core-inference:extractDeepLinksDebug
+2026-04-24T19:44:46.2457119Z > Task :core-logger:extractDeepLinksDebug
+2026-04-24T19:44:46.2457638Z > Task :core-model:extractDeepLinksDebug
+2026-04-24T19:44:46.2458429Z > Task :core-overlay:extractDeepLinksDebug
+2026-04-24T19:44:46.5298307Z > Task :app:processDebugMainManifest
+2026-04-24T19:44:46.6291407Z > Task :app:processDebugManifest
+2026-04-24T19:44:47.0329161Z > Task :common:compileDebugLibraryResources
+2026-04-24T19:44:47.0353663Z > Task :core-capture:compileDebugLibraryResources
+2026-04-24T19:44:47.0382376Z > Task :core-inference:compileDebugLibraryResources
+2026-04-24T19:44:47.0408982Z > Task :core-logger:compileDebugLibraryResources
+2026-04-24T19:44:47.0439007Z > Task :core-model:compileDebugLibraryResources
+2026-04-24T19:44:47.0469630Z > Task :core-overlay:compileDebugLibraryResources
+2026-04-24T19:44:47.0471766Z > Task :app:processDebugManifestForPackage
+2026-04-24T19:44:47.6291623Z > Task :common:checkKotlinGradlePluginConfigurationErrors
+2026-04-24T19:44:48.3298979Z > Task :app:processDebugResources
+2026-04-24T19:44:50.8291730Z > Task :core-capture:checkKotlinGradlePluginConfigurationErrors
+2026-04-24T19:44:50.9292944Z > Task :core-inference:checkKotlinGradlePluginConfigurationErrors
+2026-04-24T19:44:50.9332528Z > Task :common:javaPreCompileDebug
+2026-04-24T19:44:50.9359038Z > Task :core-capture:javaPreCompileDebug
+2026-04-24T19:44:50.9388883Z > Task :core-logger:checkKotlinGradlePluginConfigurationErrors
+2026-04-24T19:44:50.9393135Z > Task :core-inference:javaPreCompileDebug
+2026-04-24T19:44:50.9412548Z > Task :core-model:checkKotlinGradlePluginConfigurationErrors
+2026-04-24T19:44:50.9418605Z > Task :core-logger:javaPreCompileDebug
+2026-04-24T19:44:50.9440052Z > Task :core-model:javaPreCompileDebug
+2026-04-24T19:44:50.9451796Z > Task :core-overlay:checkKotlinGradlePluginConfigurationErrors
+2026-04-24T19:44:50.9452762Z > Task :core-overlay:javaPreCompileDebug
+2026-04-24T19:44:50.9456168Z > Task :app:javaPreCompileDebug
+2026-04-24T19:44:50.9457166Z > Task :app:mergeDebugShaders
+2026-04-24T19:44:50.9457822Z > Task :app:compileDebugShaders NO-SOURCE
+2026-04-24T19:44:50.9458875Z > Task :app:generateDebugAssets UP-TO-DATE
+2026-04-24T19:44:50.9459492Z > Task :common:mergeDebugShaders
+2026-04-24T19:44:50.9460070Z > Task :common:compileDebugShaders NO-SOURCE
+2026-04-24T19:44:50.9460710Z > Task :common:generateDebugAssets UP-TO-DATE
+2026-04-24T19:44:50.9461317Z > Task :common:packageDebugAssets
+2026-04-24T19:44:50.9461884Z > Task :core-capture:mergeDebugShaders
+2026-04-24T19:44:50.9462521Z > Task :core-capture:compileDebugShaders NO-SOURCE
+2026-04-24T19:44:50.9463215Z > Task :core-capture:generateDebugAssets UP-TO-DATE
+2026-04-24T19:44:51.0320890Z > Task :core-capture:packageDebugAssets
+2026-04-24T19:44:51.0379887Z > Task :core-inference:mergeDebugShaders
+2026-04-24T19:44:51.0405201Z > Task :core-inference:compileDebugShaders NO-SOURCE
+2026-04-24T19:44:51.0441746Z > Task :core-inference:generateDebugAssets UP-TO-DATE
+2026-04-24T19:44:51.0442508Z > Task :core-inference:packageDebugAssets
+2026-04-24T19:44:51.0493370Z > Task :core-logger:mergeDebugShaders
+2026-04-24T19:44:51.0535500Z > Task :core-logger:compileDebugShaders NO-SOURCE
+2026-04-24T19:44:51.0553040Z > Task :core-logger:generateDebugAssets UP-TO-DATE
+2026-04-24T19:44:51.0629111Z > Task :core-logger:packageDebugAssets
+2026-04-24T19:44:51.0658891Z > Task :core-model:mergeDebugShaders
+2026-04-24T19:44:51.0690230Z > Task :core-model:compileDebugShaders NO-SOURCE
+2026-04-24T19:44:51.0700024Z > Task :core-model:generateDebugAssets UP-TO-DATE
+2026-04-24T19:44:51.0720823Z > Task :core-model:packageDebugAssets
+2026-04-24T19:44:51.0721526Z > Task :core-overlay:mergeDebugShaders
+2026-04-24T19:44:51.0722525Z > Task :core-overlay:compileDebugShaders NO-SOURCE
+2026-04-24T19:44:51.0723262Z > Task :core-overlay:generateDebugAssets UP-TO-DATE
+2026-04-24T19:44:51.0724046Z > Task :core-overlay:packageDebugAssets
+2026-04-24T19:44:51.2292617Z > Task :app:mergeDebugAssets
+2026-04-24T19:44:51.2295400Z > Task :app:compressDebugAssets
+2026-04-24T19:44:52.1293071Z > Task :app:checkDebugDuplicateClasses
+2026-04-24T19:44:52.2295246Z > Task :app:mergeDebugJniLibFolders
+2026-04-24T19:44:52.2369537Z > Task :common:mergeDebugJniLibFolders
+2026-04-24T19:44:52.2399354Z > Task :common:mergeDebugNativeLibs NO-SOURCE
+2026-04-24T19:44:52.2428734Z > Task :common:copyDebugJniLibsProjectOnly
+2026-04-24T19:44:52.2429624Z > Task :core-capture:mergeDebugJniLibFolders
+2026-04-24T19:44:52.2458925Z > Task :core-capture:mergeDebugNativeLibs NO-SOURCE
+2026-04-24T19:44:52.2482410Z > Task :app:desugarDebugFileDependencies
+2026-04-24T19:44:52.2509139Z > Task :core-capture:copyDebugJniLibsProjectOnly
+2026-04-24T19:45:14.4305087Z > Task :common:compileDebugKotlin
+2026-04-24T19:45:19.5349042Z > Task :common:compileDebugJavaWithJavac NO-SOURCE
+2026-04-24T19:45:19.5350192Z > Task :common:bundleLibCompileToJarDebug
+2026-04-24T19:45:19.5378477Z > Task :common:processDebugJavaRes
+2026-04-24T19:45:22.2292158Z > Task :app:mergeExtDexDebug
+2026-04-24T19:45:23.7318407Z 
+2026-04-24T19:45:23.7378942Z > Task :core-capture:compileDebugKotlin FAILED
+2026-04-24T19:45:23.7439309Z e: file:///home/runner/work/aloyo/aloyo/core-capture/src/main/java/com/aloyo/capture/CaptureManager.kt:281:2 Missing '}
+2026-04-24T19:45:23.7500332Z e: file:///home/runner/work/aloyo/aloyo/core-capture/src/main/java/com/aloyo/capture/CaptureManager.kt:225:5 Conflicting overloads: private final fun internalStopCapture(): Unit defined in com.aloyo.capture.CaptureManager, private final fun internalStopCapture(): Unit defined in com.aloyo.capture.CaptureManager
+2026-04-24T19:45:23.7519581Z e: file:///home/runner/work/aloyo/aloyo/core-capture/src/main/java/com/aloyo/capture/CaptureManager.kt:274:9 Overload resolution ambiguity: 
+2026-04-24T19:45:23.7589204Z private final fun internalStopCapture(): Unit defined in com.aloyo.capture.CaptureManager
+2026-04-24T19:45:23.7619134Z private final fun internalStopCapture(): Unit defined in com.aloyo.capture.CaptureManager
+2026-04-24T19:45:23.7644432Z e: file:///home/runner/work/aloyo/aloyo/core-capture/src/main/java/com/aloyo/capture/CaptureManager.kt:280:5 Conflicting overloads: private final fun internalStopCapture(): Unit defined in com.aloyo.capture.CaptureManager, private final fun internalStopCapture(): Unit defined in com.aloyo.capture.CaptureManager
+2026-04-24T19:45:23.7700123Z e: file:///home/runner/work/aloyo/aloyo/core-capture/src/main/java/com/aloyo/capture/ScreenCaptureService.kt:138:42 Type mismatch: inferred type is com.aloyo.capture.CaptureManager.FrameCallback? but com.aloyo.common.ICaptureSource.FrameCallback? was expected
+2026-04-24T19:45:25.1308661Z 
+2026-04-24T19:45:25.1389192Z > Task :core-inference:compileDebugKotlin FAILED
+2026-04-24T19:45:25.1435317Z e: file:///home/runner/work/aloyo/aloyo/core-inference/src/main/java/com/aloyo/inference/NcnnInferenceEngine.kt:16:15 Conflicting declarations: public companion object, public companion object
+2026-04-24T19:45:25.1479324Z e: file:///home/runner/work/aloyo/aloyo/core-inference/src/main/java/com/aloyo/inference/NcnnInferenceEngine.kt:45:14 Unresolved reference: isNativeAvailable
+2026-04-24T19:45:25.1509527Z e: file:///home/runner/work/aloyo/aloyo/core-inference/src/main/java/com/aloyo/inference/NcnnInferenceEngine.kt:176:5 Only one companion object is allowed per class
+2026-04-24T19:45:25.1559786Z e: file:///home/runner/work/aloyo/aloyo/core-inference/src/main/java/com/aloyo/inference/NcnnInferenceEngine.kt:176:15 Conflicting declarations: public companion object, public companion object
+2026-04-24T19:45:25.1589240Z e: file:///home/runner/work/aloyo/aloyo/core-inference/src/main/java/com/aloyo/inference/NcnnInferenceEngine.kt:187:36 Unresolved reference: TAG
+2026-04-24T19:45:26.5296989Z 
+2026-04-24T19:45:26.5309294Z > Task :core-logger:compileDebugKotlin
+2026-04-24T19:45:26.5317335Z 
+2026-04-24T19:45:26.5345275Z FAILURE: Build completed with 2 failures.
+2026-04-24T19:45:26.6329091Z 
+2026-04-24T19:45:26.6364837Z 1: Task failed with an exception.
+2026-04-24T19:45:26.6498841Z -----------
+2026-04-24T19:45:26.6529168Z * What went wrong:
+2026-04-24T19:45:26.6530303Z Execution failed for task ':core-capture:compileDebugKotlin'.
+2026-04-24T19:45:26.6560717Z > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+2026-04-24T19:45:26.6598869Z    > Compilation error. See log for more details
+2026-04-24T19:45:26.6599569Z 
+2026-04-24T19:45:26.6628931Z * Try:
+2026-04-24T19:45:26.6658947Z > Run with --info or --debug option to get more log output.
+2026-04-24T19:45:26.6688786Z > Run with --scan to get full insights.
+2026-04-24T19:45:26.6706960Z > Get more help at https://help.gradle.org.
+2026-04-24T19:45:26.6744950Z 
+2026-04-24T19:45:26.6758947Z * Exception is:
+2026-04-24T19:45:26.6790971Z org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':core-capture:compileDebugKotlin'.
+2026-04-24T19:45:26.6793454Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecuter.java:148)
+2026-04-24T19:45:26.6795193Z 	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:282)
+2026-04-24T19:45:26.6796583Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:146)
+2026-04-24T19:45:26.6798641Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:134)
+2026-04-24T19:45:26.6800505Z 	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+2026-04-24T19:45:26.6802453Z 	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+2026-04-24T19:45:26.6804339Z 	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+2026-04-24T19:45:26.6806076Z 	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+2026-04-24T19:45:26.6807816Z 	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+2026-04-24T19:45:26.6809766Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+2026-04-24T19:45:26.6811423Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+2026-04-24T19:45:26.6812994Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+2026-04-24T19:45:26.6814861Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+2026-04-24T19:45:26.6816957Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:199)
+2026-04-24T19:45:26.6819137Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+2026-04-24T19:45:26.6820575Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+2026-04-24T19:45:26.6822168Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:157)
+2026-04-24T19:45:26.6823781Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+2026-04-24T19:45:26.6825385Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+2026-04-24T19:45:26.6827123Z 	at org.gradle.internal.operations.DefaultBuildOperationExecutor.call(DefaultBuildOperationExecutor.java:73)
+2026-04-24T19:45:26.6829206Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+2026-04-24T19:45:26.6830644Z 	at org.gradle.execution.plan.LocalTaskNodeExecutor.execute(LocalTaskNodeExecutor.java:42)
+2026-04-24T19:45:26.6832226Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:331)
+2026-04-24T19:45:26.6834059Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:318)
+2026-04-24T19:45:26.6836042Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:314)
+2026-04-24T19:45:26.6837805Z 	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:80)
+2026-04-24T19:45:26.6839731Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:314)
+2026-04-24T19:45:26.6841784Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
+2026-04-24T19:45:26.6843934Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:463)
+2026-04-24T19:45:26.6845510Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:380)
+2026-04-24T19:45:26.6847061Z 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+2026-04-24T19:45:26.6848630Z 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
+2026-04-24T19:45:26.6850685Z Caused by: org.gradle.workers.internal.DefaultWorkerExecutor$WorkExecutionException: A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+2026-04-24T19:45:26.6853057Z 	at org.gradle.workers.internal.DefaultWorkerExecutor$WorkItemExecution.waitForCompletion(DefaultWorkerExecutor.java:283)
+2026-04-24T19:45:26.6854812Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.lambda$waitForItemsAndGatherFailures$2(DefaultAsyncWorkTracker.java:130)
+2026-04-24T19:45:26.6856189Z 	at org.gradle.internal.Factories$1.create(Factories.java:31)
+2026-04-24T19:45:26.6857407Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withoutLocks(DefaultWorkerLeaseService.java:336)
+2026-04-24T19:45:26.6863915Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withoutLocks(DefaultWorkerLeaseService.java:319)
+2026-04-24T19:45:26.6865509Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withoutLock(DefaultWorkerLeaseService.java:324)
+2026-04-24T19:45:26.6867199Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForItemsAndGatherFailures(DefaultAsyncWorkTracker.java:126)
+2026-04-24T19:45:26.6869268Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForItemsAndGatherFailures(DefaultAsyncWorkTracker.java:92)
+2026-04-24T19:45:26.6870884Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForAll(DefaultAsyncWorkTracker.java:78)
+2026-04-24T19:45:26.6872448Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForCompletion(DefaultAsyncWorkTracker.java:66)
+2026-04-24T19:45:26.6873901Z 	at org.gradle.api.internal.tasks.execution.TaskExecution$3.run(TaskExecution.java:256)
+2026-04-24T19:45:26.6875357Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:29)
+2026-04-24T19:45:26.6876946Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:26)
+2026-04-24T19:45:26.6878699Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+2026-04-24T19:45:26.6880130Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+2026-04-24T19:45:26.6881563Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:157)
+2026-04-24T19:45:26.6882980Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+2026-04-24T19:45:26.6884391Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:47)
+2026-04-24T19:45:26.6885731Z 	at org.gradle.internal.operations.DefaultBuildOperationExecutor.run(DefaultBuildOperationExecutor.java:68)
+2026-04-24T19:45:26.6887168Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.executeAction(TaskExecution.java:233)
+2026-04-24T19:45:26.6888695Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.executeActions(TaskExecution.java:216)
+2026-04-24T19:45:26.6890126Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.executeWithPreviousOutputFiles(TaskExecution.java:199)
+2026-04-24T19:45:26.6891455Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.execute(TaskExecution.java:166)
+2026-04-24T19:45:26.6892623Z 	at org.gradle.internal.execution.steps.ExecuteStep.executeInternal(ExecuteStep.java:105)
+2026-04-24T19:45:26.6893720Z 	at org.gradle.internal.execution.steps.ExecuteStep.access$000(ExecuteStep.java:44)
+2026-04-24T19:45:26.6895183Z 	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:59)
+2026-04-24T19:45:26.6896207Z 	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:56)
+2026-04-24T19:45:26.6898183Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+2026-04-24T19:45:26.6900466Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:199)
+2026-04-24T19:45:26.6913915Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+2026-04-24T19:45:26.6915483Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+2026-04-24T19:45:26.6917058Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:157)
+2026-04-24T19:45:26.6919005Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+2026-04-24T19:45:26.6920531Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+2026-04-24T19:45:26.6922149Z 	at org.gradle.internal.operations.DefaultBuildOperationExecutor.call(DefaultBuildOperationExecutor.java:73)
+2026-04-24T19:45:26.6923644Z 	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:56)
+2026-04-24T19:45:26.6924787Z 	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:44)
+2026-04-24T19:45:26.6926177Z 	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.execute(RemovePreviousOutputsStep.java:67)
+2026-04-24T19:45:26.6927853Z 	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.execute(RemovePreviousOutputsStep.java:37)
+2026-04-24T19:45:26.6929659Z 	at org.gradle.internal.execution.steps.CancelExecutionStep.execute(CancelExecutionStep.java:41)
+2026-04-24T19:45:26.6931088Z 	at org.gradle.internal.execution.steps.TimeoutStep.executeWithoutTimeout(TimeoutStep.java:74)
+2026-04-24T19:45:26.6932381Z 	at org.gradle.internal.execution.steps.TimeoutStep.execute(TimeoutStep.java:55)
+2026-04-24T19:45:26.6933660Z 	at org.gradle.internal.execution.steps.CreateOutputsStep.execute(CreateOutputsStep.java:50)
+2026-04-24T19:45:26.6935022Z 	at org.gradle.internal.execution.steps.CreateOutputsStep.execute(CreateOutputsStep.java:28)
+2026-04-24T19:45:26.6936895Z 	at org.gradle.internal.execution.steps.CaptureStateAfterExecutionStep.executeDelegateBroadcastingChanges(CaptureStateAfterExecutionStep.java:100)
+2026-04-24T19:45:26.6939172Z 	at org.gradle.internal.execution.steps.CaptureStateAfterExecutionStep.execute(CaptureStateAfterExecutionStep.java:72)
+2026-04-24T19:45:26.6940964Z 	at org.gradle.internal.execution.steps.CaptureStateAfterExecutionStep.execute(CaptureStateAfterExecutionStep.java:50)
+2026-04-24T19:45:26.6942564Z 	at org.gradle.internal.execution.steps.ResolveInputChangesStep.execute(ResolveInputChangesStep.java:40)
+2026-04-24T19:45:26.6944061Z 	at org.gradle.internal.execution.steps.ResolveInputChangesStep.execute(ResolveInputChangesStep.java:29)
+2026-04-24T19:45:26.6945558Z 	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithoutCache(BuildCacheStep.java:179)
+2026-04-24T19:45:26.6946983Z 	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$execute$1(BuildCacheStep.java:70)
+2026-04-24T19:45:26.6948250Z 	at org.gradle.internal.Either$Right.fold(Either.java:175)
+2026-04-24T19:45:26.6949151Z 	at org.gradle.internal.execution.caching.CachingState.fold(CachingState.java:59)
+2026-04-24T19:45:26.6950229Z 	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:68)
+2026-04-24T19:45:26.6951361Z 	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:46)
+2026-04-24T19:45:26.6952628Z 	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:36)
+2026-04-24T19:45:26.6954303Z 	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:25)
+2026-04-24T19:45:26.6955610Z 	at org.gradle.internal.execution.steps.RecordOutputsStep.execute(RecordOutputsStep.java:36)
+2026-04-24T19:45:26.6957030Z 	at org.gradle.internal.execution.steps.RecordOutputsStep.execute(RecordOutputsStep.java:22)
+2026-04-24T19:45:26.6958681Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.executeBecause(SkipUpToDateStep.java:91)
+2026-04-24T19:45:26.6959966Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.lambda$execute$2(SkipUpToDateStep.java:55)
+2026-04-24T19:45:26.6961283Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:55)
+2026-04-24T19:45:26.6962496Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:37)
+2026-04-24T19:45:26.6963729Z 	at org.gradle.internal.execution.steps.ResolveChangesStep.execute(ResolveChangesStep.java:65)
+2026-04-24T19:45:26.6964965Z 	at org.gradle.internal.execution.steps.ResolveChangesStep.execute(ResolveChangesStep.java:36)
+2026-04-24T19:45:26.6966517Z 	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:37)
+2026-04-24T19:45:26.6968601Z 	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:27)
+2026-04-24T19:45:26.6970393Z 	at org.gradle.internal.execution.steps.ResolveCachingStateStep.execute(ResolveCachingStateStep.java:76)
+2026-04-24T19:45:26.6971889Z 	at org.gradle.internal.execution.steps.ResolveCachingStateStep.execute(ResolveCachingStateStep.java:37)
+2026-04-24T19:45:26.6973200Z 	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:108)
+2026-04-24T19:45:26.6974398Z 	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:55)
+2026-04-24T19:45:26.6975898Z 	at org.gradle.internal.execution.steps.CaptureStateBeforeExecutionStep.execute(CaptureStateBeforeExecutionStep.java:71)
+2026-04-24T19:45:26.6977711Z 	at org.gradle.internal.execution.steps.CaptureStateBeforeExecutionStep.execute(CaptureStateBeforeExecutionStep.java:45)
+2026-04-24T19:45:26.6979659Z 	at org.gradle.internal.execution.steps.SkipEmptyWorkStep.executeWithNonEmptySources(SkipEmptyWorkStep.java:177)
+2026-04-24T19:45:26.6981145Z 	at org.gradle.internal.execution.steps.SkipEmptyWorkStep.execute(SkipEmptyWorkStep.java:86)
+2026-04-24T19:45:26.6982454Z 	at org.gradle.internal.execution.steps.SkipEmptyWorkStep.execute(SkipEmptyWorkStep.java:53)
+2026-04-24T19:45:26.6984143Z 	at org.gradle.internal.execution.steps.RemoveUntrackedExecutionStateStep.execute(RemoveUntrackedExecutionStateStep.java:32)
+2026-04-24T19:45:26.6985996Z 	at org.gradle.internal.execution.steps.RemoveUntrackedExecutionStateStep.execute(RemoveUntrackedExecutionStateStep.java:21)
+2026-04-24T19:45:26.6988098Z 	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsStartedStep.execute(MarkSnapshottingInputsStartedStep.java:38)
+2026-04-24T19:45:26.6990032Z 	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:36)
+2026-04-24T19:45:26.6991792Z 	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:23)
+2026-04-24T19:45:26.6993432Z 	at org.gradle.internal.execution.steps.CleanupStaleOutputsStep.execute(CleanupStaleOutputsStep.java:75)
+2026-04-24T19:45:26.6994932Z 	at org.gradle.internal.execution.steps.CleanupStaleOutputsStep.execute(CleanupStaleOutputsStep.java:41)
+2026-04-24T19:45:26.6996687Z 	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.lambda$execute$2(ExecuteWorkBuildOperationFiringStep.java:66)
+2026-04-24T19:45:26.6998797Z 	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:66)
+2026-04-24T19:45:26.7000588Z 	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:38)
+2026-04-24T19:45:26.7002543Z 	at org.gradle.internal.execution.steps.AssignWorkspaceStep.lambda$execute$0(AssignWorkspaceStep.java:32)
+2026-04-24T19:45:26.7003851Z 	at org.gradle.api.internal.tasks.execution.TaskExecution$4.withWorkspace(TaskExecution.java:293)
+2026-04-24T19:45:26.7005283Z 	at org.gradle.internal.execution.steps.AssignWorkspaceStep.execute(AssignWorkspaceStep.java:30)
+2026-04-24T19:45:26.7006552Z 	at org.gradle.internal.execution.steps.AssignWorkspaceStep.execute(AssignWorkspaceStep.java:21)
+2026-04-24T19:45:26.7007808Z 	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:37)
+2026-04-24T19:45:26.7009355Z 	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:27)
+2026-04-24T19:45:26.7010561Z 	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:47)
+2026-04-24T19:45:26.7011629Z 	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:34)
+2026-04-24T19:45:26.7012822Z 	at org.gradle.internal.execution.impl.DefaultExecutionEngine$1.execute(DefaultExecutionEngine.java:64)
+2026-04-24T19:45:26.7014373Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:145)
+2026-04-24T19:45:26.7016062Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:134)
+2026-04-24T19:45:26.7017807Z 	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+2026-04-24T19:45:26.7019860Z 	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+2026-04-24T19:45:26.7021713Z 	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+2026-04-24T19:45:26.7023387Z 	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+2026-04-24T19:45:26.7025015Z 	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+2026-04-24T19:45:26.7026656Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+2026-04-24T19:45:26.7028397Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+2026-04-24T19:45:26.7029896Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+2026-04-24T19:45:26.7031631Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+2026-04-24T19:45:26.7033578Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:199)
+2026-04-24T19:45:26.7035272Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+2026-04-24T19:45:26.7036766Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+2026-04-24T19:45:26.7038513Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:157)
+2026-04-24T19:45:26.7040112Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+2026-04-24T19:45:26.7041725Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+2026-04-24T19:45:26.7043467Z 	at org.gradle.internal.operations.DefaultBuildOperationExecutor.call(DefaultBuildOperationExecutor.java:73)
+2026-04-24T19:45:26.7045135Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+2026-04-24T19:45:26.7046696Z 	at org.gradle.execution.plan.LocalTaskNodeExecutor.execute(LocalTaskNodeExecutor.java:42)
+2026-04-24T19:45:26.7048577Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:331)
+2026-04-24T19:45:26.7050942Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:318)
+2026-04-24T19:45:26.7053232Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:314)
+2026-04-24T19:45:26.7055083Z 	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:80)
+2026-04-24T19:45:26.7056820Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:314)
+2026-04-24T19:45:26.7058988Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
+2026-04-24T19:45:26.7060746Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:463)
+2026-04-24T19:45:26.7062181Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:380)
+2026-04-24T19:45:26.7063626Z 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+2026-04-24T19:45:26.7065070Z 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
+2026-04-24T19:45:26.7066554Z Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilation error. See log for more details
+2026-04-24T19:45:26.7068210Z 	at org.jetbrains.kotlin.gradle.tasks.TasksUtilsKt.throwExceptionIfCompilationFailed(tasksUtils.kt:20)
+2026-04-24T19:45:26.7069675Z 	at org.jetbrains.kotlin.compilerRunner.GradleKotlinCompilerWork.run(GradleKotlinCompilerWork.kt:141)
+2026-04-24T19:45:26.7071389Z 	at org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction.execute(GradleCompilerRunnerWithWorkers.kt:73)
+2026-04-24T19:45:26.7073063Z 	at org.gradle.workers.internal.DefaultWorkerServer.execute(DefaultWorkerServer.java:63)
+2026-04-24T19:45:26.7074350Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:66)
+2026-04-24T19:45:26.7075685Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:62)
+2026-04-24T19:45:26.7077021Z 	at org.gradle.internal.classloader.ClassLoaderUtils.executeInClassloader(ClassLoaderUtils.java:100)
+2026-04-24T19:45:26.7078595Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.lambda$execute$0(NoIsolationWorkerFactory.java:62)
+2026-04-24T19:45:26.7079864Z 	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:44)
+2026-04-24T19:45:26.7080922Z 	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:41)
+2026-04-24T19:45:26.7082475Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+2026-04-24T19:45:26.7084686Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:199)
+2026-04-24T19:45:26.7086672Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+2026-04-24T19:45:26.7088665Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+2026-04-24T19:45:26.7090432Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:157)
+2026-04-24T19:45:26.7092232Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+2026-04-24T19:45:26.7093930Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+2026-04-24T19:45:26.7095704Z 	at org.gradle.internal.operations.DefaultBuildOperationExecutor.call(DefaultBuildOperationExecutor.java:73)
+2026-04-24T19:45:26.7097350Z 	at org.gradle.workers.internal.AbstractWorker.executeWrappedInBuildOperation(AbstractWorker.java:41)
+2026-04-24T19:45:26.7099445Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.execute(NoIsolationWorkerFactory.java:59)
+2026-04-24T19:45:26.7101162Z 	at org.gradle.workers.internal.DefaultWorkerExecutor.lambda$submitWork$0(DefaultWorkerExecutor.java:170)
+2026-04-24T19:45:26.7102886Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runExecution(DefaultConditionalExecutionQueue.java:187)
+2026-04-24T19:45:26.7104804Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.access$700(DefaultConditionalExecutionQueue.java:120)
+2026-04-24T19:45:26.7106763Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner$1.run(DefaultConditionalExecutionQueue.java:162)
+2026-04-24T19:45:26.7108294Z 	at org.gradle.internal.Factories$1.create(Factories.java:31)
+2026-04-24T19:45:26.7109443Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:264)
+2026-04-24T19:45:26.7110976Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:128)
+2026-04-24T19:45:26.7112545Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:133)
+2026-04-24T19:45:26.7114265Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runBatch(DefaultConditionalExecutionQueue.java:157)
+2026-04-24T19:45:26.7116091Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.run(DefaultConditionalExecutionQueue.java:126)
+2026-04-24T19:45:26.7117251Z 	... 2 more
+2026-04-24T19:45:26.7117553Z 
+2026-04-24T19:45:26.7118051Z ==============================================================================
+2026-04-24T19:45:26.7118582Z 
+2026-04-24T19:45:26.7118898Z 2: Task failed with an exception.
+2026-04-24T19:45:26.7119471Z -----------
+2026-04-24T19:45:26.7119955Z * What went wrong:
+2026-04-24T19:45:26.7120657Z Execution failed for task ':core-inference:compileDebugKotlin'.
+2026-04-24T19:45:26.7122229Z > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+2026-04-24T19:45:26.7123674Z    > Compilation error. See log for more details
+2026-04-24T19:45:26.7124217Z 
+2026-04-24T19:45:26.7124480Z * Try:
+2026-04-24T19:45:26.7125053Z > Run with --info or --debug option to get more log output.
+2026-04-24T19:45:26.7125776Z > Run with --scan to get full insights.
+2026-04-24T19:45:26.7126461Z > Get more help at https://help.gradle.org.
+2026-04-24T19:45:26.7126964Z 
+2026-04-24T19:45:26.7127245Z * Exception is:
+2026-04-24T19:45:26.7128477Z org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':core-inference:compileDebugKotlin'.
+2026-04-24T19:45:26.7130302Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecuter.java:148)
+2026-04-24T19:45:26.7158368Z 	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:282)
+2026-04-24T19:45:26.7159757Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:146)
+2026-04-24T19:45:26.7161389Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:134)
+2026-04-24T19:45:26.7163024Z 	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+2026-04-24T19:45:26.7164851Z 	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+2026-04-24T19:45:26.7166630Z 	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+2026-04-24T19:45:26.7168424Z 	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+2026-04-24T19:45:26.7169963Z 	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+2026-04-24T19:45:26.7172014Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+2026-04-24T19:45:26.7173573Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+2026-04-24T19:45:26.7175327Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+2026-04-24T19:45:26.7177168Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+2026-04-24T19:45:26.7179672Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:199)
+2026-04-24T19:45:26.7181695Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+2026-04-24T19:45:26.7183459Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+2026-04-24T19:45:26.7185207Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:157)
+2026-04-24T19:45:26.7186910Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+2026-04-24T19:45:26.7188813Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+2026-04-24T19:45:26.7190479Z 	at org.gradle.internal.operations.DefaultBuildOperationExecutor.call(DefaultBuildOperationExecutor.java:73)
+2026-04-24T19:45:26.7192172Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+2026-04-24T19:45:26.7193694Z 	at org.gradle.execution.plan.LocalTaskNodeExecutor.execute(LocalTaskNodeExecutor.java:42)
+2026-04-24T19:45:26.7195358Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:331)
+2026-04-24T19:45:26.7197471Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:318)
+2026-04-24T19:45:26.7199738Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:314)
+2026-04-24T19:45:26.7201498Z 	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:80)
+2026-04-24T19:45:26.7203168Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:314)
+2026-04-24T19:45:26.7205121Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
+2026-04-24T19:45:26.7206770Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:463)
+2026-04-24T19:45:26.7208288Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:380)
+2026-04-24T19:45:26.7209685Z 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+2026-04-24T19:45:26.7211031Z 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
+2026-04-24T19:45:26.7212315Z 	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+2026-04-24T19:45:26.7213536Z 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+2026-04-24T19:45:26.7214483Z 	at java.base/java.lang.Thread.run(Thread.java:840)
+2026-04-24T19:45:26.7216243Z Caused by: org.gradle.workers.internal.DefaultWorkerExecutor$WorkExecutionException: A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+2026-04-24T19:45:26.7218774Z 	at org.gradle.workers.internal.DefaultWorkerExecutor$WorkItemExecution.waitForCompletion(DefaultWorkerExecutor.java:283)
+2026-04-24T19:45:26.7220863Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.lambda$waitForItemsAndGatherFailures$2(DefaultAsyncWorkTracker.java:130)
+2026-04-24T19:45:26.7222149Z 	at org.gradle.internal.Factories$1.create(Factories.java:31)
+2026-04-24T19:45:26.7223452Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withoutLocks(DefaultWorkerLeaseService.java:336)
+2026-04-24T19:45:26.7225056Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withoutLocks(DefaultWorkerLeaseService.java:319)
+2026-04-24T19:45:26.7226512Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withoutLock(DefaultWorkerLeaseService.java:324)
+2026-04-24T19:45:26.7228274Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForItemsAndGatherFailures(DefaultAsyncWorkTracker.java:126)
+2026-04-24T19:45:26.7230094Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForItemsAndGatherFailures(DefaultAsyncWorkTracker.java:92)
+2026-04-24T19:45:26.7231740Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForAll(DefaultAsyncWorkTracker.java:78)
+2026-04-24T19:45:26.7233312Z 	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForCompletion(DefaultAsyncWorkTracker.java:66)
+2026-04-24T19:45:26.7234748Z 	at org.gradle.api.internal.tasks.execution.TaskExecution$3.run(TaskExecution.java:256)
+2026-04-24T19:45:26.7236239Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:29)
+2026-04-24T19:45:26.7238143Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:26)
+2026-04-24T19:45:26.7239784Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+2026-04-24T19:45:26.7241422Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+2026-04-24T19:45:26.7243084Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:157)
+2026-04-24T19:45:26.7244751Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+2026-04-24T19:45:26.7246374Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:47)
+2026-04-24T19:45:26.7248301Z 	at org.gradle.internal.operations.DefaultBuildOperationExecutor.run(DefaultBuildOperationExecutor.java:68)
+2026-04-24T19:45:26.7249906Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.executeAction(TaskExecution.java:233)
+2026-04-24T19:45:26.7251308Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.executeActions(TaskExecution.java:216)
+2026-04-24T19:45:26.7252852Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.executeWithPreviousOutputFiles(TaskExecution.java:199)
+2026-04-24T19:45:26.7254374Z 	at org.gradle.api.internal.tasks.execution.TaskExecution.execute(TaskExecution.java:166)
+2026-04-24T19:45:26.7255747Z 	at org.gradle.internal.execution.steps.ExecuteStep.executeInternal(ExecuteStep.java:105)
+2026-04-24T19:45:26.7257592Z 	at org.gradle.internal.execution.steps.ExecuteStep.access$000(ExecuteStep.java:44)
+2026-04-24T19:45:26.7259194Z 	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:59)
+2026-04-24T19:45:26.7260269Z 	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:56)
+2026-04-24T19:45:26.7261721Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+2026-04-24T19:45:26.7263545Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:199)
+2026-04-24T19:45:26.7265171Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+2026-04-24T19:45:26.7266608Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+2026-04-24T19:45:26.7268282Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:157)
+2026-04-24T19:45:26.7270134Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+2026-04-24T19:45:26.7271747Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+2026-04-24T19:45:26.7273536Z 	at org.gradle.internal.operations.DefaultBuildOperationExecutor.call(DefaultBuildOperationExecutor.java:73)
+2026-04-24T19:45:26.7274912Z 	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:56)
+2026-04-24T19:45:26.7276058Z 	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:44)
+2026-04-24T19:45:26.7277436Z 	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.execute(RemovePreviousOutputsStep.java:67)
+2026-04-24T19:45:26.7279302Z 	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.execute(RemovePreviousOutputsStep.java:37)
+2026-04-24T19:45:26.7280788Z 	at org.gradle.internal.execution.steps.CancelExecutionStep.execute(CancelExecutionStep.java:41)
+2026-04-24T19:45:26.7282181Z 	at org.gradle.internal.execution.steps.TimeoutStep.executeWithoutTimeout(TimeoutStep.java:74)
+2026-04-24T19:45:26.7283443Z 	at org.gradle.internal.execution.steps.TimeoutStep.execute(TimeoutStep.java:55)
+2026-04-24T19:45:26.7284685Z 	at org.gradle.internal.execution.steps.CreateOutputsStep.execute(CreateOutputsStep.java:50)
+2026-04-24T19:45:26.7286011Z 	at org.gradle.internal.execution.steps.CreateOutputsStep.execute(CreateOutputsStep.java:28)
+2026-04-24T19:45:26.7288010Z 	at org.gradle.internal.execution.steps.CaptureStateAfterExecutionStep.executeDelegateBroadcastingChanges(CaptureStateAfterExecutionStep.java:100)
+2026-04-24T19:45:26.7290866Z 	at org.gradle.internal.execution.steps.CaptureStateAfterExecutionStep.execute(CaptureStateAfterExecutionStep.java:72)
+2026-04-24T19:45:26.7292877Z 	at org.gradle.internal.execution.steps.CaptureStateAfterExecutionStep.execute(CaptureStateAfterExecutionStep.java:50)
+2026-04-24T19:45:26.7294750Z 	at org.gradle.internal.execution.steps.ResolveInputChangesStep.execute(ResolveInputChangesStep.java:40)
+2026-04-24T19:45:26.7296526Z 	at org.gradle.internal.execution.steps.ResolveInputChangesStep.execute(ResolveInputChangesStep.java:29)
+2026-04-24T19:45:26.7298489Z 	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithoutCache(BuildCacheStep.java:179)
+2026-04-24T19:45:26.7300142Z 	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$execute$1(BuildCacheStep.java:70)
+2026-04-24T19:45:26.7301411Z 	at org.gradle.internal.Either$Right.fold(Either.java:175)
+2026-04-24T19:45:26.7302524Z 	at org.gradle.internal.execution.caching.CachingState.fold(CachingState.java:59)
+2026-04-24T19:45:26.7303878Z 	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:68)
+2026-04-24T19:45:26.7305173Z 	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:46)
+2026-04-24T19:45:26.7306640Z 	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:36)
+2026-04-24T19:45:26.7308568Z 	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:25)
+2026-04-24T19:45:26.7310137Z 	at org.gradle.internal.execution.steps.RecordOutputsStep.execute(RecordOutputsStep.java:36)
+2026-04-24T19:45:26.7311524Z 	at org.gradle.internal.execution.steps.RecordOutputsStep.execute(RecordOutputsStep.java:22)
+2026-04-24T19:45:26.7312960Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.executeBecause(SkipUpToDateStep.java:91)
+2026-04-24T19:45:26.7314454Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.lambda$execute$2(SkipUpToDateStep.java:55)
+2026-04-24T19:45:26.7315657Z 	at java.base/java.util.Optional.orElseGet(Optional.java:364)
+2026-04-24T19:45:26.7316785Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:55)
+2026-04-24T19:45:26.7318345Z 	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:37)
+2026-04-24T19:45:26.7319695Z 	at org.gradle.internal.execution.steps.ResolveChangesStep.execute(ResolveChangesStep.java:65)
+2026-04-24T19:45:26.7321379Z 	at org.gradle.internal.execution.steps.ResolveChangesStep.execute(ResolveChangesStep.java:36)
+2026-04-24T19:45:26.7323203Z 	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:37)
+2026-04-24T19:45:26.7325421Z 	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:27)
+2026-04-24T19:45:26.7327207Z 	at org.gradle.internal.execution.steps.ResolveCachingStateStep.execute(ResolveCachingStateStep.java:76)
+2026-04-24T19:45:26.7328972Z 	at org.gradle.internal.execution.steps.ResolveCachingStateStep.execute(ResolveCachingStateStep.java:37)
+2026-04-24T19:45:26.7330347Z 	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:108)
+2026-04-24T19:45:26.7331543Z 	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:55)
+2026-04-24T19:45:26.7333047Z 	at org.gradle.internal.execution.steps.CaptureStateBeforeExecutionStep.execute(CaptureStateBeforeExecutionStep.java:71)
+2026-04-24T19:45:26.7334873Z 	at org.gradle.internal.execution.steps.CaptureStateBeforeExecutionStep.execute(CaptureStateBeforeExecutionStep.java:45)
+2026-04-24T19:45:26.7336639Z 	at org.gradle.internal.execution.steps.SkipEmptyWorkStep.executeWithNonEmptySources(SkipEmptyWorkStep.java:177)
+2026-04-24T19:45:26.7338351Z 	at org.gradle.internal.execution.steps.SkipEmptyWorkStep.execute(SkipEmptyWorkStep.java:86)
+2026-04-24T19:45:26.7339697Z 	at org.gradle.internal.execution.steps.SkipEmptyWorkStep.execute(SkipEmptyWorkStep.java:53)
+2026-04-24T19:45:26.7341296Z 	at org.gradle.internal.execution.steps.RemoveUntrackedExecutionStateStep.execute(RemoveUntrackedExecutionStateStep.java:32)
+2026-04-24T19:45:26.7343192Z 	at org.gradle.internal.execution.steps.RemoveUntrackedExecutionStateStep.execute(RemoveUntrackedExecutionStateStep.java:21)
+2026-04-24T19:45:26.7345138Z 	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsStartedStep.execute(MarkSnapshottingInputsStartedStep.java:38)
+2026-04-24T19:45:26.7347114Z 	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:36)
+2026-04-24T19:45:26.7349082Z 	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:23)
+2026-04-24T19:45:26.7350842Z 	at org.gradle.internal.execution.steps.CleanupStaleOutputsStep.execute(CleanupStaleOutputsStep.java:75)
+2026-04-24T19:45:26.7352427Z 	at org.gradle.internal.execution.steps.CleanupStaleOutputsStep.execute(CleanupStaleOutputsStep.java:41)
+2026-04-24T19:45:26.7354357Z 	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.lambda$execute$2(ExecuteWorkBuildOperationFiringStep.java:66)
+2026-04-24T19:45:26.7355893Z 	at java.base/java.util.Optional.orElseGet(Optional.java:364)
+2026-04-24T19:45:26.7357338Z 	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:66)
+2026-04-24T19:45:26.7359704Z 	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:38)
+2026-04-24T19:45:26.7361542Z 	at org.gradle.internal.execution.steps.AssignWorkspaceStep.lambda$execute$0(AssignWorkspaceStep.java:32)
+2026-04-24T19:45:26.7363014Z 	at org.gradle.api.internal.tasks.execution.TaskExecution$4.withWorkspace(TaskExecution.java:293)
+2026-04-24T19:45:26.7364449Z 	at org.gradle.internal.execution.steps.AssignWorkspaceStep.execute(AssignWorkspaceStep.java:30)
+2026-04-24T19:45:26.7365896Z 	at org.gradle.internal.execution.steps.AssignWorkspaceStep.execute(AssignWorkspaceStep.java:21)
+2026-04-24T19:45:26.7367305Z 	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:37)
+2026-04-24T19:45:26.7368932Z 	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:27)
+2026-04-24T19:45:26.7370234Z 	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:47)
+2026-04-24T19:45:26.7371849Z 	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:34)
+2026-04-24T19:45:26.7373310Z 	at org.gradle.internal.execution.impl.DefaultExecutionEngine$1.execute(DefaultExecutionEngine.java:64)
+2026-04-24T19:45:26.7375245Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:145)
+2026-04-24T19:45:26.7377152Z 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:134)
+2026-04-24T19:45:26.7379254Z 	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+2026-04-24T19:45:26.7381122Z 	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+2026-04-24T19:45:26.7382969Z 	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+2026-04-24T19:45:26.7384650Z 	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+2026-04-24T19:45:26.7386302Z 	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+2026-04-24T19:45:26.7388367Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+2026-04-24T19:45:26.7390000Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+2026-04-24T19:45:26.7391542Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+2026-04-24T19:45:26.7393319Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+2026-04-24T19:45:26.7395332Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:199)
+2026-04-24T19:45:26.7397145Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+2026-04-24T19:45:26.7398985Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+2026-04-24T19:45:26.7400595Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:157)
+2026-04-24T19:45:26.7402211Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+2026-04-24T19:45:26.7403773Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+2026-04-24T19:45:26.7405329Z 	at org.gradle.internal.operations.DefaultBuildOperationExecutor.call(DefaultBuildOperationExecutor.java:73)
+2026-04-24T19:45:26.7406923Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+2026-04-24T19:45:26.7408575Z 	at org.gradle.execution.plan.LocalTaskNodeExecutor.execute(LocalTaskNodeExecutor.java:42)
+2026-04-24T19:45:26.7410238Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:331)
+2026-04-24T19:45:26.7412161Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:318)
+2026-04-24T19:45:26.7414195Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:314)
+2026-04-24T19:45:26.7416094Z 	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:80)
+2026-04-24T19:45:26.7418145Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:314)
+2026-04-24T19:45:26.7420301Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
+2026-04-24T19:45:26.7422468Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:463)
+2026-04-24T19:45:26.7424123Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:380)
+2026-04-24T19:45:26.7425610Z 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+2026-04-24T19:45:26.7427102Z 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
+2026-04-24T19:45:26.7428897Z 	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+2026-04-24T19:45:26.7430266Z 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+2026-04-24T19:45:26.7431313Z 	at java.base/java.lang.Thread.run(Thread.java:840)
+2026-04-24T19:45:26.7432513Z Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilation error. See log for more details
+2026-04-24T19:45:26.7434149Z 	at org.jetbrains.kotlin.gradle.tasks.TasksUtilsKt.throwExceptionIfCompilationFailed(tasksUtils.kt:20)
+2026-04-24T19:45:26.7435757Z 	at org.jetbrains.kotlin.compilerRunner.GradleKotlinCompilerWork.run(GradleKotlinCompilerWork.kt:141)
+2026-04-24T19:45:26.7437687Z 	at org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction.execute(GradleCompilerRunnerWithWorkers.kt:73)
+2026-04-24T19:45:26.7439687Z 	at org.gradle.workers.internal.DefaultWorkerServer.execute(DefaultWorkerServer.java:63)
+2026-04-24T19:45:26.7441040Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:66)
+2026-04-24T19:45:26.7442461Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:62)
+2026-04-24T19:45:26.7443928Z 	at org.gradle.internal.classloader.ClassLoaderUtils.executeInClassloader(ClassLoaderUtils.java:100)
+2026-04-24T19:45:26.7445424Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.lambda$execute$0(NoIsolationWorkerFactory.java:62)
+2026-04-24T19:45:26.7446793Z 	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:44)
+2026-04-24T19:45:26.7448065Z 	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:41)
+2026-04-24T19:45:26.7449734Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+2026-04-24T19:45:26.7451775Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:199)
+2026-04-24T19:45:26.7453614Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+2026-04-24T19:45:26.7455195Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+2026-04-24T19:45:26.7456777Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:157)
+2026-04-24T19:45:26.7458607Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+2026-04-24T19:45:26.7460237Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+2026-04-24T19:45:26.7461873Z 	at org.gradle.internal.operations.DefaultBuildOperationExecutor.call(DefaultBuildOperationExecutor.java:73)
+2026-04-24T19:45:26.7463559Z 	at org.gradle.workers.internal.AbstractWorker.executeWrappedInBuildOperation(AbstractWorker.java:41)
+2026-04-24T19:45:26.7465149Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.execute(NoIsolationWorkerFactory.java:59)
+2026-04-24T19:45:26.7466734Z 	at org.gradle.workers.internal.DefaultWorkerExecutor.lambda$submitWork$0(DefaultWorkerExecutor.java:170)
+2026-04-24T19:45:26.7468448Z 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+2026-04-24T19:45:26.7470101Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runExecution(DefaultConditionalExecutionQueue.java:187)
+2026-04-24T19:45:26.7472406Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.access$700(DefaultConditionalExecutionQueue.java:120)
+2026-04-24T19:45:26.7474512Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner$1.run(DefaultConditionalExecutionQueue.java:162)
+2026-04-24T19:45:26.7475884Z 	at org.gradle.internal.Factories$1.create(Factories.java:31)
+2026-04-24T19:45:26.7477044Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:264)
+2026-04-24T19:45:26.7478846Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:128)
+2026-04-24T19:45:26.7480474Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:133)
+2026-04-24T19:45:26.7482223Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runBatch(DefaultConditionalExecutionQueue.java:157)
+2026-04-24T19:45:26.7484064Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.run(DefaultConditionalExecutionQueue.java:126)
+2026-04-24T19:45:26.7485543Z 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
+2026-04-24T19:45:26.7486599Z 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+2026-04-24T19:45:26.7487337Z 	... 5 more
+2026-04-24T19:45:26.7487644Z 
+2026-04-24T19:45:26.7488147Z ==============================================================================
+2026-04-24T19:45:26.7488664Z 
+2026-04-24T19:45:26.7488945Z BUILD FAILED in 2m 1s
+2026-04-24T19:45:26.7489440Z 105 actionable tasks: 105 executed
+2026-04-24T19:45:27.1049282Z ##[error]Process completed with exit code 1.
+2026-04-24T19:45:27.1131193Z ##[group]Run actions/upload-artifact@v4
+2026-04-24T19:45:27.1131481Z with:
+2026-04-24T19:45:27.1131653Z   name: build-logs
+2026-04-24T19:45:27.1131848Z   path: **/build/logs/
+2026-04-24T19:45:27.1132051Z   if-no-files-found: warn
+2026-04-24T19:45:27.1132269Z   compression-level: 6
+2026-04-24T19:45:27.1132462Z   overwrite: false
+2026-04-24T19:45:27.1132662Z   include-hidden-files: false
+2026-04-24T19:45:27.1132891Z env:
+2026-04-24T19:45:27.1133172Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+2026-04-24T19:45:27.1133633Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+2026-04-24T19:45:27.1133983Z ##[endgroup]
+2026-04-24T19:45:27.6028728Z ##[warning]No files were found with the provided path: **/build/logs/. No artifacts will be uploaded.
+2026-04-24T19:45:27.6157788Z ##[group]Run actions/upload-artifact@v4
+2026-04-24T19:45:27.6158509Z with:
+2026-04-24T19:45:27.6158717Z   name: aloyo-debug-apk
+2026-04-24T19:45:27.6158958Z   path: app/build/outputs/apk/debug/*.apk
+2026-04-24T19:45:27.6159217Z   if-no-files-found: warn
+2026-04-24T19:45:27.6159433Z   compression-level: 6
+2026-04-24T19:45:27.6159626Z   overwrite: false
+2026-04-24T19:45:27.6159823Z   include-hidden-files: false
+2026-04-24T19:45:27.6160029Z env:
+2026-04-24T19:45:27.6160304Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+2026-04-24T19:45:27.6160761Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+2026-04-24T19:45:27.6161124Z ##[endgroup]
+2026-04-24T19:45:27.8430859Z ##[warning]No files were found with the provided path: app/build/outputs/apk/debug/*.apk. No artifacts will be uploaded.
+2026-04-24T19:45:27.8609131Z Post job cleanup.
+2026-04-24T19:45:28.0513815Z Post job cleanup.
+2026-04-24T19:45:28.1615096Z [command]/usr/bin/git version
+2026-04-24T19:45:28.1660514Z git version 2.53.0
+2026-04-24T19:45:28.1706420Z Temporarily overriding HOME='/home/runner/work/_temp/2465dbd9-dd06-44e8-bfd4-f39243ce9e59' before making global git config changes
+2026-04-24T19:45:28.1707196Z Adding repository directory to the temporary git global config as a safe directory
+2026-04-24T19:45:28.1713928Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/aloyo/aloyo
+2026-04-24T19:45:28.1755387Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-04-24T19:45:28.1791139Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-04-24T19:45:28.2025427Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-04-24T19:45:28.2050081Z http.https://github.com/.extraheader
+2026-04-24T19:45:28.2064149Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-04-24T19:45:28.2101060Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-04-24T19:45:28.2332864Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-04-24T19:45:28.2367462Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-04-24T19:45:28.2732512Z Cleaning up orphan processes
+2026-04-24T19:45:28.3042707Z Terminate orphan process: pid (2440) (java)
+2026-04-24T19:45:28.3065391Z Terminate orphan process: pid (2634) (java)
+2026-04-24T19:45:28.3085652Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/cache@v4, actions/checkout@v4, actions/setup-java@v4, actions/upload-artifact@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
