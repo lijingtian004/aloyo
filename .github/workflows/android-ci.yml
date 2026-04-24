@@ -76,13 +76,26 @@ jobs:
       - name: 授予执行权限
         run: chmod +x gradlew
 
-      - name: 生成Gradle Wrapper
+      - name: 下载Gradle Wrapper JAR
         run: |
-          # 如果gradle-wrapper.jar不存在，使用系统gradle生成
           if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
-            echo "gradle-wrapper.jar not found, generating..."
-            gradle wrapper --gradle-version 8.5
+            echo "Downloading gradle-wrapper.jar..."
+            curl -L -o gradle/wrapper/gradle-wrapper.jar "https://raw.githubusercontent.com/nihui/ncnn-android-yolov8/master/gradle/wrapper/gradle-wrapper.jar" 2>/dev/null || \
+            curl -L -o gradle/wrapper/gradle-wrapper.jar "https://github.com/nihui/ncnn-android-yolov8/raw/master/gradle/wrapper/gradle-wrapper.jar" 2>/dev/null || \
+            wget -q -O gradle/wrapper/gradle-wrapper.jar "https://services.gradle.org/distributions/gradle-8.5-bin.zip" 2>/dev/null
+            # 如果还是失败，使用gradle wrapper命令
+            if [ ! -f gradle/wrapper/gradle-wrapper.jar ] || [ ! -s gradle/wrapper/gradle-wrapper.jar ]; then
+              echo "Using system gradle to generate wrapper..."
+              which gradle && gradle wrapper --gradle-version 8.5 || {
+                echo "Downloading wrapper jar directly from Gradle distributions..."
+                mkdir -p /tmp/gradle-download
+                curl -L "https://services.gradle.org/distributions/gradle-8.5-bin.zip" -o /tmp/gradle-download/gradle.zip
+                unzip -q /tmp/gradle-download/gradle.zip -d /tmp/gradle-download
+                /tmp/gradle-download/gradle-8.5/bin/gradle wrapper --gradle-version 8.5
+              }
+            fi
           fi
+          ls -la gradle/wrapper/
 
       - name: 构建Debug APK
         run: ./gradlew assembleDebug --stacktrace 2>&1
