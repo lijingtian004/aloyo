@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD 14)
 # NCNN SDK路径
 set(NCNN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../libs/ncnn-android-vulkan")
 
-# 根据ABI选择对应的NCNN库
+# 根据ABI选择对应的NCNN库目录
 if(ANDROID_ABI STREQUAL "armeabi-v7a")
     set(NCNN_LIB_DIR "${NCNN_DIR}/armeabi-v7a/lib")
     set(NCNN_INCLUDE_DIR "${NCNN_DIR}/armeabi-v7a/include")
@@ -32,28 +32,9 @@ include_directories(${NCNN_INCLUDE_DIR})
 # 添加JNI源文件
 add_library(aloyo_inference SHARED aloyo_inference_jni.cpp)
 
-# NCNN静态库
-add_library(ncnn STATIC IMPORTED)
-set_target_properties(ncnn PROPERTIES IMPORTED_LOCATION "${NCNN_LIB_DIR}/libncnn.a")
-
-# glslang静态库（Vulkan着色器编译所需）
-add_library(glslang STATIC IMPORTED)
-set_target_properties(glslang PROPERTIES IMPORTED_LOCATION "${NCNN_LIB_DIR}/libglslang.a")
-
-add_library(SPIRV STATIC IMPORTED)
-set_target_properties(SPIRV PROPERTIES IMPORTED_LOCATION "${NCNN_LIB_DIR}/libSPIRV.a")
-
-add_library(MachineIndependent STATIC IMPORTED)
-set_target_properties(MachineIndependent PROPERTIES IMPORTED_LOCATION "${NCNN_LIB_DIR}/libMachineIndependent.a")
-
-add_library(OSDependent STATIC IMPORTED)
-set_target_properties(OSDependent PROPERTIES IMPORTED_LOCATION "${NCNN_LIB_DIR}/libOSDependent.a")
-
-add_library(GenericCodeGen STATIC IMPORTED)
-set_target_properties(GenericCodeGen PROPERTIES IMPORTED_LOCATION "${NCNN_LIB_DIR}/libGenericCodeGen.a")
-
-add_library(glslang-default-resource-limits STATIC IMPORTED)
-set_target_properties(glslang-default-resource-limits PROPERTIES IMPORTED_LOCATION "${NCNN_LIB_DIR}/libglslang-default-resource-limits.a")
+# 使用NCNN动态库（.so），避免静态库的STL兼容性问题
+add_library(ncnn SHARED IMPORTED)
+set_target_properties(ncnn PROPERTIES IMPORTED_LOCATION "${NCNN_LIB_DIR}/libncnn.so")
 
 # 链接Android系统库
 find_library(log-lib log)
@@ -61,21 +42,11 @@ find_library(vulkan-lib vulkan)
 find_library(android-lib android)
 find_library(z-lib z)
 
-# OpenMP支持（Android NDK自带）
-find_package(OpenMP)
-
-# 链接所有依赖（顺序很重要：被依赖的放后面）
+# 链接依赖
 target_link_libraries(aloyo_inference
     ncnn
-    glslang
-    SPIRV
-    MachineIndependent
-    OSDependent
-    GenericCodeGen
-    glslang-default-resource-limits
     ${log-lib}
     ${vulkan-lib}
     ${android-lib}
     ${z-lib}
-    OpenMP::OpenMP_CXX
 )
