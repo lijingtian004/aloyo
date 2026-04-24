@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -20,7 +22,7 @@ android {
             // 从环境变量或local.properties读取签名配置
             val localProps = rootProject.file("local.properties")
             if (localProps.exists()) {
-                val props = java.util.Properties()
+                val props = Properties()
                 props.load(localProps.inputStream())
                 storeFile = file(props.getProperty("keystore.path", "keystore/release.jks"))
                 storePassword = props.getProperty("keystore.password", "")
