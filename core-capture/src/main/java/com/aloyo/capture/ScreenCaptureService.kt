@@ -134,7 +134,7 @@ class ScreenCaptureService : Service() {
     /**
      * 设置截屏帧回调
      */
-    fun setFrameCallback(callback: CaptureManager.FrameCallback?) {
+    fun setFrameCallback(callback: com.aloyo.common.ICaptureSource.FrameCallback?) {
         captureManager?.setFrameCallback(callback)
     }
 

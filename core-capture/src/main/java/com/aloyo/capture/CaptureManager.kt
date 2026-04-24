@@ -245,14 +245,6 @@ class CaptureManager(private val context: Context) : ICaptureSource {
         frameCallback = callback
     }
 
-    /**
-     * 内部帧回调接口
-     */
-    interface FrameCallback {
-        fun onFrame(bitmap: Bitmap, captureTimeMs: Long)
-        fun onError(error: String)
-    }
-
     override fun setCaptureRegion(region: CaptureRegion) {
         captureRegion = region
         // 如果正在截屏，需要重新设置VirtualDisplay
