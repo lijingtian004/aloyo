@@ -76,6 +76,14 @@ jobs:
       - name: 授予执行权限
         run: chmod +x gradlew
 
+      - name: 生成Gradle Wrapper
+        run: |
+          # 如果gradle-wrapper.jar不存在，使用系统gradle生成
+          if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
+            echo "gradle-wrapper.jar not found, generating..."
+            gradle wrapper --gradle-version 8.5
+          fi
+
       - name: 构建Debug APK
         run: ./gradlew assembleDebug --stacktrace 2>&1
 
