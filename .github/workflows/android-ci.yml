@@ -78,7 +78,7 @@ jobs:
 
       - name: 安装CMake和NDK
         run: |
-          echo "y" | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "cmake;3.22.1" "ndk;26.1.10909125"
+          echo "y" | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "cmake;3.22.1" "ndk;27.0.12077973"
 
       - name: 下载Gradle Wrapper JAR
         run: |

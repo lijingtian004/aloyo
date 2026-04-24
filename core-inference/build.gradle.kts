@@ -19,6 +19,9 @@ android {
             }
         }
 
+        // 使用NDK 27匹配NCNN编译版本
+        ndkVersion = "27.0.12077973"
+
         // 支持的ABI
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
