@@ -191,6 +191,16 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
     }
 
     /**
+     * 设置原图尺寸（用于坐标映射）
+     * 截屏图像的分辨率可能与屏幕分辨率不同
+     */
+    fun setSourceSize(srcWidth: Int, srcHeight: Int) {
+        mainHandler.post {
+            overlayView?.setSourceSize(srcWidth, srcHeight)
+        }
+    }
+
+    /**
      * 设置渲染配置
      */
     override fun setConfig(config: OverlayConfig) {

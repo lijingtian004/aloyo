@@ -989,6 +989,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         try {
+            // 设置原图尺寸（用于坐标映射：原图像素→屏幕像素）
+            overlayManager.setSourceSize(bitmap.width, bitmap.height)
+
             // 执行推理
             val (detections, metrics) = inferenceEngine.inferWithMetrics(bitmap)
 
