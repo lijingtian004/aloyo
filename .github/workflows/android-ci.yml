@@ -45,7 +45,9 @@ jobs:
           gradle-version: '8.5'
 
       - name: 构建Debug APK
-        run: gradle assembleDebug --stacktrace --info 2>&1 | tee build-output.log
+        run: |
+          set -o pipefail
+          gradle assembleDebug --stacktrace --info 2>&1 | tee build-output.log
 
       - name: 列出构建输出
         if: always()
