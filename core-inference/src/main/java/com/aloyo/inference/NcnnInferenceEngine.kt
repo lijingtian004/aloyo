@@ -187,7 +187,19 @@ class NcnnInferenceEngine : IInferenceEngine {
         // 后处理：解码、NMS（传递blob形状信息给解码器）
         val srcWidth = bitmap.width
         val srcHeight = bitmap.height
-        return postProc.process(outputData, srcWidth, srcHeight, lastBlobShapes)
+        val detections = postProc.process(outputData, srcWidth, srcHeight, lastBlobShapes)
+
+        // 首次推理时记录前几个检测结果的坐标（诊断用）
+        if (!hasLoggedOutputDiag || detections.isNotEmpty()) {
+            if (detections.isNotEmpty()) {
+                val sampleDets = detections.take(3).joinToString("; ") {
+                    "(${String.format("%.1f", it.x1)},${String.format("%.1f", it.y1)})-(${String.format("%.1f", it.x2)},${String.format("%.1f", it.y2)}) ${it.label}:${String.format("%.2f", it.confidence)}"
+                }
+                android.util.Log.i(TAG, "Sample detections (${detections.size} total): $sampleDets")
+            }
+        }
+
+        return detections
     }
 
     override fun inferWithMetrics(bitmap: Bitmap): Pair<List<Detection>, PerformanceMetrics> {

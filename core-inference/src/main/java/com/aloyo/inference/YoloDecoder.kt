@@ -294,8 +294,27 @@ class UnifiedYoloDecoder : YoloDecoder {
         // 获取该stride对应的锚框尺寸
         val anchors = getAnchorsForStride(stride, config.inputWidth)
 
+        // 先扫描最大objectness值，判断objectness是否有效
+        var maxRawObj = Float.NEGATIVE_INFINITY
+        for (a in 0 until numAnchors) {
+            val objCh = a * v5Attrs + 4
+            if (objCh >= numRows) continue
+            for (i in 0 until minOf(numSpatial, output[objCh].size)) {
+                if (output[objCh][i] > maxRawObj) {
+                    maxRawObj = output[objCh][i]
+                }
+            }
+        }
+        val maxObjSigmoid = sigmoid(maxRawObj)
+
+        // 如果最大objectness的sigmoid值极低（<0.01），说明objectness通道无效
+        // 可能原因：模型训练时未使用objectness、objectness未校准、或输入预处理有误
+        // 此时回退到无objectness模式，直接使用类别置信度（类似YOLOv8）
+        val skipObjectness = maxObjSigmoid < 0.01f
+
         android.util.Log.i(TAG, "V5_MULTI_ANCHOR: numAnchors=$numAnchors, gridH=$gridH, gridW=$gridW, " +
-                "stride=$stride, numSpatial=$numSpatial, anchors=${anchors.toList()}")
+                "stride=$stride, numSpatial=$numSpatial, anchors=${anchors.toList()}, " +
+                "maxRawObj=$maxRawObj, maxObjSigmoid=$maxObjSigmoid, skipObjectness=$skipObjectness")
 
         for (i in 0 until numSpatial) {
             val gridX = i % gridW
@@ -304,18 +323,13 @@ class UnifiedYoloDecoder : YoloDecoder {
             for (a in 0 until numAnchors) {
                 val base = a * v5Attrs
 
-                // 读取objectness并应用sigmoid
-                val rawObj = output[base + 4][i]
-                val objConf = sigmoid(rawObj)
-
-                // 先用objectness预过滤，减少不必要的计算
-                if (objConf < confThresh * 0.1f) continue
-
                 // 读取类别概率并应用sigmoid
                 var maxClassConf = 0f
                 var maxClassId = 0
                 for (c in 0 until config.numClasses) {
-                    val rawCls = output[base + 5 + c][i]
+                    val clsCh = base + 5 + c
+                    if (clsCh >= numRows || i >= output[clsCh].size) continue
+                    val rawCls = output[clsCh][i]
                     val clsConf = sigmoid(rawCls)
                     if (clsConf > maxClassConf) {
                         maxClassConf = clsConf
@@ -323,8 +337,20 @@ class UnifiedYoloDecoder : YoloDecoder {
                     }
                 }
 
-                // 计算最终置信度 = objectness × maxClassConf
-                val finalConf = objConf * maxClassConf
+                // 计算最终置信度
+                val finalConf: Float
+                if (skipObjectness) {
+                    // 无objectness模式：直接使用类别置信度（类似YOLOv8）
+                    finalConf = maxClassConf
+                } else {
+                    // 标准V5模式：objectness × 类别置信度
+                    val rawObj = output[base + 4][i]
+                    val objConf = sigmoid(rawObj)
+                    // 先用objectness预过滤，减少不必要的计算
+                    if (objConf < confThresh * 0.1f) continue
+                    finalConf = objConf * maxClassConf
+                }
+
                 if (finalConf < confThresh) continue
 
                 // 解码坐标（YOLOv5公式）
@@ -353,7 +379,7 @@ class UnifiedYoloDecoder : YoloDecoder {
             }
         }
 
-        android.util.Log.i(TAG, "V5_MULTI_ANCHOR decoded: ${detections.size} raw detections (before NMS)")
+        android.util.Log.i(TAG, "V5_MULTI_ANCHOR decoded: ${detections.size} raw detections (before NMS), skipObj=$skipObjectness")
         return detections
     }
 
