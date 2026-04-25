@@ -2,6 +2,7 @@
 #include <android/log.h>
 #include <string>
 #include <vector>
+#include <cmath>
 
 // NCNN头文件
 #include "ncnn/net.h"
@@ -21,6 +22,10 @@
 static ncnn::Net* getNetFromPtr(jlong ptr) {
     return reinterpret_cast<ncnn::Net*>(ptr);
 }
+
+// 存储上次推理的输出blob形状信息，供Kotlin层查询
+static int s_last_output_blob_count = 0;
+static std::vector<int> s_last_output_shapes; // [c0, h0, w0, c1, h1, w1, ...]
 
 extern "C" {
 
@@ -73,11 +78,12 @@ Java_com_aloyo_inference_NcnnInferenceEngine_nativeLoadModel(
 
 /**
  * 执行NCNN推理
+ * 提取所有输出blob并将通道拼接为Java二维数组
  * @param netPtr NCNN Net指针
  * @param inputData 预处理后的输入数据（CHW格式，BGR通道顺序）
  * @param width 输入宽度
  * @param height 输入高度
- * @return 输出数据二维数组
+ * @return 输出数据二维数组，第一维=通道，第二维=空间(h*w)
  */
 JNIEXPORT jobjectArray JNICALL
 Java_com_aloyo_inference_NcnnInferenceEngine_nativeRunInference(
@@ -121,73 +127,131 @@ Java_com_aloyo_inference_NcnnInferenceEngine_nativeRunInference(
     extractor.input(inputBlobIndex, inputMat);
     LOGI("Input blob index: %d", inputBlobIndex);
 
-    // 使用NCNN自动发现的输出blob索引
+    // 获取所有输出blob索引
     const std::vector<int>& outputIndexes = net->output_indexes();
     if (outputIndexes.empty()) {
         LOGE("No output blob found in model");
         return nullptr;
     }
-    int outputBlobIndex = outputIndexes[0];
+    LOGI("Number of output blobs: %d", (int)outputIndexes.size());
 
-    ncnn::Mat outputMat;
-    int ret = extractor.extract(outputBlobIndex, outputMat);
-    if (ret != 0) {
-        LOGE("Failed to extract output, ret=%d", ret);
+    // 提取所有输出blob
+    s_last_output_shapes.clear();
+    s_last_output_blob_count = 0;
+
+    std::vector<ncnn::Mat> outputMats;
+    int totalChannels = 0;
+
+    for (size_t bi = 0; bi < outputIndexes.size(); bi++) {
+        ncnn::Mat outputMat;
+        int ret = extractor.extract(outputIndexes[bi], outputMat);
+        if (ret != 0) {
+            LOGE("Failed to extract output blob %d (index=%d), ret=%d", (int)bi, outputIndexes[bi], ret);
+            continue;
+        }
+        outputMats.push_back(outputMat);
+        totalChannels += outputMat.c;
+        s_last_output_shapes.push_back(outputMat.c);
+        s_last_output_shapes.push_back(outputMat.h);
+        s_last_output_shapes.push_back(outputMat.w);
+        s_last_output_blob_count++;
+        LOGI("Output blob %d: index=%d, shape=[c=%d, h=%d, w=%d, spatial=%d]",
+             (int)bi, outputIndexes[bi], outputMat.c, outputMat.h, outputMat.w, outputMat.h * outputMat.w);
+    }
+
+    if (outputMats.empty()) {
+        LOGE("No output blobs extracted");
         return nullptr;
     }
-    LOGI("Output blob index: %d", outputBlobIndex);
 
-    // 将输出转换为Java二维数组
-    // outputMat形状: [channels, height, width] 或 [numDetections, attrs]
-    int outChannels = outputMat.c;
-    int outHeight = outputMat.h;
-    int outWidth = outputMat.w;
-
-    // 记录输出形状（帮助诊断解码问题）
-    LOGI("NCNN output shape: c=%d, h=%d, w=%d (total elements per channel: %d)",
-         outChannels, outHeight, outWidth, outHeight * outWidth);
-
-    // 打印前几个通道的前5个值（仅首次推理）
-    static bool has_logged_detail = false;
-    if (!has_logged_detail) {
-        has_logged_detail = true;
-        for (int c = 0; c < outChannels && c < 6; c++) {
-            const ncnn::Mat channelMat = outputMat.channel(c);
-            std::string vals;
-            for (int i = 0; i < outHeight * outWidth && i < 5; i++) {
-                if (i > 0) vals += ", ";
-                char buf[32];
-                snprintf(buf, sizeof(buf), "%.4f", channelMat.row(i / outWidth)[i % outWidth]);
-                vals += buf;
-            }
-            LOGI("  output ch[%d] first values: [%s]", c, vals.c_str());
-        }
-    }
-
-    // 创建Java FloatArray数组
+    // 将所有blob的通道拼接成一个Java二维数组
     jclass floatArrayClass = env->FindClass("[F");
-    jobjectArray resultArray = env->NewObjectArray(outChannels, floatArrayClass, nullptr);
+    jobjectArray resultArray = env->NewObjectArray(totalChannels, floatArrayClass, nullptr);
 
-    for (int c = 0; c < outChannels; c++) {
-        const ncnn::Mat channelMat = outputMat.channel(c);
+    int channelOffset = 0;
+    for (size_t bi = 0; bi < outputMats.size(); bi++) {
+        const ncnn::Mat& outputMat = outputMats[bi];
+        int outChannels = outputMat.c;
+        int outHeight = outputMat.h;
+        int outWidth = outputMat.w;
         int channelDataSize = outHeight * outWidth;
-        jfloatArray channelArray = env->NewFloatArray(channelDataSize);
 
-        jfloat* channelData = new jfloat[channelDataSize];
-        for (int y = 0; y < outHeight; y++) {
-            for (int x = 0; x < outWidth; x++) {
-                channelData[y * outWidth + x] = channelMat.row(y)[x];
+        // 首次推理时打印前几个通道的前5个值（诊断用）
+        static bool has_logged_detail = false;
+        if (!has_logged_detail && bi == 0) {
+            has_logged_detail = true;
+            for (int c = 0; c < outChannels && c < 8; c++) {
+                const ncnn::Mat channelMat = outputMat.channel(c);
+                std::string vals;
+                for (int i = 0; i < channelDataSize && i < 5; i++) {
+                    if (i > 0) vals += ", ";
+                    char buf[32];
+                    snprintf(buf, sizeof(buf), "%.4f", channelMat.row(i / outWidth)[i % outWidth]);
+                    vals += buf;
+                }
+                LOGI("  blob%d ch[%d] first values: [%s]", (int)bi, c, vals.c_str());
+            }
+            // 也打印最后几个通道
+            if (outChannels > 8) {
+                for (int c = outChannels - 4; c < outChannels; c++) {
+                    if (c < 8) continue;
+                    const ncnn::Mat channelMat = outputMat.channel(c);
+                    std::string vals;
+                    for (int i = 0; i < channelDataSize && i < 5; i++) {
+                        if (i > 0) vals += ", ";
+                        char buf[32];
+                        snprintf(buf, sizeof(buf), "%.4f", channelMat.row(i / outWidth)[i % outWidth]);
+                        vals += buf;
+                    }
+                    LOGI("  blob%d ch[%d] first values: [%s]", (int)bi, c, vals.c_str());
+                }
             }
         }
-        env->SetFloatArrayRegion(channelArray, 0, channelDataSize, channelData);
-        delete[] channelData;
 
-        env->SetObjectArrayElement(resultArray, c, channelArray);
-        env->DeleteLocalRef(channelArray);
+        for (int c = 0; c < outChannels; c++) {
+            const ncnn::Mat channelMat = outputMat.channel(c);
+            jfloatArray channelArray = env->NewFloatArray(channelDataSize);
+
+            jfloat* channelData = new jfloat[channelDataSize];
+            for (int y = 0; y < outHeight; y++) {
+                for (int x = 0; x < outWidth; x++) {
+                    channelData[y * outWidth + x] = channelMat.row(y)[x];
+                }
+            }
+            env->SetFloatArrayRegion(channelArray, 0, channelDataSize, channelData);
+            delete[] channelData;
+
+            env->SetObjectArrayElement(resultArray, channelOffset + c, channelArray);
+            env->DeleteLocalRef(channelArray);
+        }
+
+        channelOffset += outChannels;
     }
 
-    LOGI("Inference completed: output shape [%d, %d, %d]", outChannels, outHeight, outWidth);
+    LOGI("Inference completed: %d blobs, %d total channels", (int)outputMats.size(), totalChannels);
     return resultArray;
+}
+
+/**
+ * 获取上次推理的输出blob形状信息
+ * @return IntArray格式: [numBlobs, c0, h0, w0, c1, h1, w1, ...]
+ */
+JNIEXPORT jintArray JNICALL
+Java_com_aloyo_inference_NcnnInferenceEngine_nativeGetLastOutputShape(
+    JNIEnv* env, jobject thiz) {
+    int size = 1 + (int)s_last_output_shapes.size();
+    jintArray result = env->NewIntArray(size);
+    if (result == nullptr) {
+        return nullptr;
+    }
+    jint* data = new jint[size];
+    data[0] = s_last_output_blob_count;
+    for (size_t i = 0; i < s_last_output_shapes.size(); i++) {
+        data[i + 1] = s_last_output_shapes[i];
+    }
+    env->SetIntArrayRegion(result, 0, size, data);
+    delete[] data;
+    return result;
 }
 
 /**

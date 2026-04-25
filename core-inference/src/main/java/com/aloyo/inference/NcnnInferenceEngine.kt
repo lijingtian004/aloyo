@@ -63,6 +63,10 @@ class NcnnInferenceEngine : IInferenceEngine {
     @Volatile
     private var hasLoggedOutputDiag: Boolean = false
 
+    // 上次推理的输出blob形状信息
+    @Volatile
+    private var lastBlobShapes: List<OutputBlobInfo> = emptyList()
+
     override fun initialize(paramPath: String, binPath: String, config: ModelConfig): Boolean {
         if (isInitialized) {
             release()
@@ -158,13 +162,32 @@ class NcnnInferenceEngine : IInferenceEngine {
             }
         }
 
+        // 获取输出blob形状信息（从JNI层查询）
+        val shapeArray = nativeGetLastOutputShape()
+        if (shapeArray != null && shapeArray.size >= 1) {
+            val numBlobs = shapeArray[0]
+            val shapes = mutableListOf<OutputBlobInfo>()
+            var idx = 1
+            for (b in 0 until numBlobs) {
+                if (idx + 2 < shapeArray.size) {
+                    val c = shapeArray[idx]
+                    val h = shapeArray[idx + 1]
+                    val w = shapeArray[idx + 2]
+                    shapes.add(OutputBlobInfo(channels = c, height = h, width = w))
+                    idx += 3
+                }
+            }
+            lastBlobShapes = shapes
+            diagBuilder.append("\n  Blob shapes: $shapes")
+        }
+
         lastOutputDiagInfo = diagBuilder.toString()
         android.util.Log.i(TAG, lastOutputDiagInfo)
 
-        // 后处理：解码、NMS
+        // 后处理：解码、NMS（传递blob形状信息给解码器）
         val srcWidth = bitmap.width
         val srcHeight = bitmap.height
-        return postProc.process(outputData, srcWidth, srcHeight)
+        return postProc.process(outputData, srcWidth, srcHeight, lastBlobShapes)
     }
 
     override fun inferWithMetrics(bitmap: Bitmap): Pair<List<Detection>, PerformanceMetrics> {
@@ -223,6 +246,12 @@ class NcnnInferenceEngine : IInferenceEngine {
      * @return 输出数据数组，null表示失败
      */
     private external fun nativeRunInference(netPtr: Long, inputData: FloatArray, width: Int, height: Int): Array<FloatArray>?
+
+    /**
+     * 获取上次推理的输出blob形状信息
+     * @return IntArray格式: [numBlobs, c0, h0, w0, c1, h1, w1, ...]，null表示无数据
+     */
+    private external fun nativeGetLastOutputShape(): IntArray?
 
     /**
      * 释放NCNN模型

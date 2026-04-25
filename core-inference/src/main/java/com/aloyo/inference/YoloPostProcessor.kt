@@ -26,11 +26,12 @@ class YoloPostProcessor(
      * @param output 模型原始输出
      * @param srcWidth 原图宽度
      * @param srcHeight 原图高度
+     * @param blobShapes 每个输出blob的形状信息列表，为空时自动推断
      * @return 最终的检测结果列表
      */
-    fun process(output: Array<FloatArray>, srcWidth: Int, srcHeight: Int): List<Detection> {
-        // 解码原始输出
-        val rawDetections = decoder.decode(output, config, confidenceThreshold)
+    fun process(output: Array<FloatArray>, srcWidth: Int, srcHeight: Int, blobShapes: List<OutputBlobInfo> = emptyList()): List<Detection> {
+        // 解码原始输出（传递blob形状信息给解码器）
+        val rawDetections = decoder.decode(output, config, confidenceThreshold, blobShapes)
 
         if (rawDetections.isEmpty()) return emptyList()
 
