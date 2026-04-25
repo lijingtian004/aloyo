@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.provider.Settings
+import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
@@ -25,17 +26,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.aloyo.capture.ScreenCaptureService
-import com.aloyo.common.CaptureRegion
-import com.aloyo.common.Detection
 import com.aloyo.common.IInferenceEngine
 import com.aloyo.common.ILogger
-import com.aloyo.common.ModelConfig
 import com.aloyo.common.PerformanceMetrics
 import com.aloyo.inference.NcnnInferenceEngine
 import com.aloyo.model.ModelManager
 import com.aloyo.overlay.OverlayManager
 import java.io.File
-import java.io.FileInputStream
 import java.util.zip.ZipInputStream
 
 /**

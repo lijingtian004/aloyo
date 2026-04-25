@@ -102,14 +102,14 @@ jobs:
           ls -la gradle/wrapper/
 
       - name: 构建Debug APK
-        run: ./gradlew assembleDebug --stacktrace 2>&1
+        run: ./gradlew assembleDebug --stacktrace --info 2>&1 | tee build-output.log
 
       - name: 上传构建日志
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: build-logs
-          path: '**/build/logs/'
+          path: build-output.log
 
       - name: 上传Debug APK
         if: always()
