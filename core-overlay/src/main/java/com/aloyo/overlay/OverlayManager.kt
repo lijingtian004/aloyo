@@ -54,6 +54,9 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
     // 暂停回调
     var onPauseToggle: ((paused: Boolean) -> Unit)? = null
 
+    // 日志回调（用于将诊断日志写入应用日志文件）
+    var onLog: ((String) -> Unit)? = null
+
     /**
      * 创建悬浮窗
      * 同时创建全屏检测覆盖层和可拖拽控制面板
@@ -81,6 +84,7 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
     private fun showDetectionOverlay() {
         overlayView = DetectionOverlayView(context).apply {
             setOverlayConfig(config)
+            onLog = { msg -> this@OverlayManager.onLog?.invoke(msg) }
         }
 
         val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

@@ -5,8 +5,6 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PixelFormat
-import android.graphics.PorterDuff
-import android.util.Log
 import android.view.View
 import com.aloyo.common.Detection
 import com.aloyo.common.OverlayConfig
@@ -49,16 +47,23 @@ class DetectionOverlayView(context: Context) : View(context) {
     @Volatile
     private var srcHeight: Int = 0
 
+    // 诊断：onDraw调用计数
+    private var drawCount = 0
+    private var lastDrawLogTime = 0L
+
+    // 诊断回调（用于将日志写入应用日志文件）
+    var onLog: ((String) -> Unit)? = null
+
     // 绘制画笔 - 检测框（红色醒目）
     private val boxPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 3f
+        strokeWidth = 4f
         color = Color.RED
     }
 
     // 标签文字
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = 24f
+        textSize = 28f
         color = Color.WHITE
         typeface = android.graphics.Typeface.DEFAULT_BOLD
     }
@@ -66,12 +71,12 @@ class DetectionOverlayView(context: Context) : View(context) {
     // 标签背景
     private val textBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = Color.parseColor("#CC000000")
+        color = Color.parseColor("#DD000000")
     }
 
     // 性能指标文字
     private val metricsPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = 18f
+        textSize = 20f
         color = Color.GREEN
         typeface = android.graphics.Typeface.MONOSPACE
     }
@@ -79,19 +84,22 @@ class DetectionOverlayView(context: Context) : View(context) {
     // 性能指标背景
     private val metricsBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = Color.parseColor("#CC000000")
+        color = Color.parseColor("#DD000000")
     }
 
     // 等待数据提示
     private val waitingTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = 20f
+        textSize = 22f
         color = Color.YELLOW
         typeface = android.graphics.Typeface.DEFAULT_BOLD
     }
 
-    // 诊断计数
-    private var drawCount = 0
-    private var lastDrawLogTime = 0L
+    // 始终显示的状态指示器（用于确认悬浮窗可见）
+    private val statusPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = 14f
+        color = Color.parseColor("#88FFFFFF")
+        typeface = android.graphics.Typeface.MONOSPACE
+    }
 
     /**
      * 更新检测结果
@@ -115,8 +123,6 @@ class DetectionOverlayView(context: Context) : View(context) {
 
     /**
      * 设置原图尺寸（用于坐标映射）
-     * @param srcWidth 原图宽度（截屏图像宽度）
-     * @param srcHeight 原图高度（截屏图像高度）
      */
     fun setSourceSize(srcWidth: Int, srcHeight: Int) {
         this.srcWidth = srcWidth
@@ -125,18 +131,34 @@ class DetectionOverlayView(context: Context) : View(context) {
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        // 清除之前的内容
-        canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
+
+        val viewW = width
+        val viewH = height
+
+        // 诊断：首次onDraw和每3秒打印一次
+        drawCount++
+        val now = System.currentTimeMillis()
+        if (drawCount <= 3 || now - lastDrawLogTime >= 3000) {
+            val scaleX = if (srcWidth > 0) viewW.toFloat() / srcWidth else 1f
+            val scaleY = if (srcHeight > 0) viewH.toFloat() / srcHeight else 1f
+            val sample = detections.firstOrNull()
+            val msg = "onDraw: count=$drawCount, view=${viewW}x${viewH}, src=${srcWidth}x${srcHeight}, " +
+                    "scale=${String.format("%.2f", scaleX)}x${String.format("%.2f", scaleY)}, " +
+                    "dets=${detections.size}, hasData=$hasReceivedData, " +
+                    "sample=${sample?.let { "x1=${it.x1},y1=${it.y1},x2=${it.x2},y2=${it.y2},label=${it.label}" } ?: "none"}"
+            onLog?.invoke(msg)
+            lastDrawLogTime = now
+        }
 
         // 如果还没有接收过数据，显示等待提示
         if (!hasReceivedData) {
             drawWaitingHint(canvas)
+            // 始终绘制状态指示器
+            drawStatusIndicator(canvas, viewW, viewH)
             return
         }
 
         // 计算坐标映射比例：原图像素 → 屏幕像素
-        val viewW = width
-        val viewH = height
         val scaleX = if (srcWidth > 0) viewW.toFloat() / srcWidth else 1f
         val scaleY = if (srcHeight > 0) viewH.toFloat() / srcHeight else 1f
 
@@ -148,17 +170,19 @@ class DetectionOverlayView(context: Context) : View(context) {
         // 绘制性能指标
         metrics?.let { drawMetrics(canvas, it) }
 
-        // 诊断日志：每3秒打印一次绘制状态
-        drawCount++
-        val now = System.currentTimeMillis()
-        if (now - lastDrawLogTime >= 3000) {
-            Log.i(TAG, "Draw stats: ${drawCount} draws, ${detections.size} detections, " +
-                    "view=${viewW}x${viewH}, src=${srcWidth}x${srcHeight}, " +
-                    "scale=${String.format("%.2f", scaleX)}x${String.format("%.2f", scaleY)}, " +
-                    "sample=[${detections.firstOrNull()?.let { "x1=${it.x1},y1=${it.y1},x2=${it.x2},y2=${it.y2}" } ?: "none"}]")
-            drawCount = 0
-            lastDrawLogTime = now
-        }
+        // 始终绘制状态指示器
+        drawStatusIndicator(canvas, viewW, viewH)
+    }
+
+    /**
+     * 绘制状态指示器（右下角小字，确认悬浮窗可见）
+     */
+    private fun drawStatusIndicator(canvas: Canvas, viewW: Int, viewH: Int) {
+        val text = "ALOYO | ${detections.size} dets"
+        val textWidth = statusPaint.measureText(text)
+        val x = viewW.toFloat() - textWidth - 12f
+        val y = viewH.toFloat() - 12f
+        canvas.drawText(text, x, y, statusPaint)
     }
 
     /**
@@ -179,10 +203,6 @@ class DetectionOverlayView(context: Context) : View(context) {
 
     /**
      * 绘制单个检测结果
-     * @param canvas 画布
-     * @param detection 检测结果（坐标为原图像素坐标）
-     * @param scaleX X方向缩放比例（屏幕/原图）
-     * @param scaleY Y方向缩放比例（屏幕/原图）
      */
     private fun drawDetection(canvas: Canvas, detection: Detection, scaleX: Float, scaleY: Float) {
         // 将原图像素坐标映射到屏幕像素坐标

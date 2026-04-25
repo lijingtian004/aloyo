@@ -191,6 +191,11 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // 悬浮窗诊断日志回调
+        overlayManager.onLog = { msg ->
+            logger.info(TAG, "OverlayView: $msg")
+        }
+
         // 初始化UI
         initViews()
         initModelSpinner()
