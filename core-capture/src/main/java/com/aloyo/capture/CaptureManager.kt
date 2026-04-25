@@ -62,6 +62,10 @@ class CaptureManager(private val context: Context) : ICaptureSource {
     // 上一帧时间戳，用于计算截屏延迟
     private var lastFrameTimeMs: Long = 0
 
+    // 帧计数（用于诊断日志，每隔一段时间打印一次）
+    private var frameCount = 0
+    private var lastDiagnosticTime = 0L
+
     init {
         initScreenMetrics()
     }
@@ -76,6 +80,7 @@ class CaptureManager(private val context: Context) : ICaptureSource {
         screenWidth = displayMetrics.widthPixels
         screenHeight = displayMetrics.heightPixels
         screenDensity = displayMetrics.densityDpi
+        android.util.Log.i(TAG, "Screen metrics: ${screenWidth}x${screenHeight} @${screenDensity}dpi")
     }
 
     /**
@@ -95,14 +100,16 @@ class CaptureManager(private val context: Context) : ICaptureSource {
             mediaProjection = projectionManager.getMediaProjection(resultCode, resultData)
 
             if (mediaProjection == null) {
-                android.util.Log.e(TAG, "Failed to get MediaProjection")
+                android.util.Log.e(TAG, "Failed to get MediaProjection - resultCode=$resultCode")
                 return false
             }
+
+            android.util.Log.i(TAG, "MediaProjection obtained successfully")
 
             // 注册MediaProjection回调
             mediaProjection?.registerCallback(object : MediaProjection.Callback() {
                 override fun onStop() {
-                    android.util.Log.i(TAG, "MediaProjection stopped")
+                    android.util.Log.w(TAG, "MediaProjection stopped unexpectedly")
                     stopCapture()
                 }
             }, null)
@@ -115,6 +122,7 @@ class CaptureManager(private val context: Context) : ICaptureSource {
             setupVirtualDisplay()
 
             isCapturing = true
+            lastDiagnosticTime = System.currentTimeMillis()
             android.util.Log.i(TAG, "Screen capture started: ${screenWidth}x${screenHeight}")
             return true
         } catch (e: Exception) {
@@ -134,6 +142,8 @@ class CaptureManager(private val context: Context) : ICaptureSource {
             captureRegion
         }
 
+        android.util.Log.i(TAG, "Setting up VirtualDisplay: ${region.width}x${region.height}")
+
         // 创建ImageReader
         imageReader = ImageReader.newInstance(
             region.width,
@@ -147,6 +157,8 @@ class CaptureManager(private val context: Context) : ICaptureSource {
             processImage(reader)
         }, handler)
 
+        android.util.Log.i(TAG, "ImageReader created: ${region.width}x${region.height}, surface=${imageReader?.surface != null}")
+
         // 创建VirtualDisplay
         virtualDisplay = mediaProjection?.createVirtualDisplay(
             VIRTUAL_DISPLAY_NAME,
@@ -155,9 +167,27 @@ class CaptureManager(private val context: Context) : ICaptureSource {
             screenDensity,
             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
             imageReader?.surface,
-            null,
+            object : VirtualDisplay.Callback() {
+                override fun onPaused() {
+                    android.util.Log.w(TAG, "VirtualDisplay paused")
+                }
+
+                override fun onResumed() {
+                    android.util.Log.i(TAG, "VirtualDisplay resumed")
+                }
+
+                override fun onStopped() {
+                    android.util.Log.w(TAG, "VirtualDisplay stopped")
+                }
+            },
             handler
         )
+
+        if (virtualDisplay == null) {
+            android.util.Log.e(TAG, "Failed to create VirtualDisplay!")
+        } else {
+            android.util.Log.i(TAG, "VirtualDisplay created successfully")
+        }
     }
 
     /**
@@ -174,7 +204,24 @@ class CaptureManager(private val context: Context) : ICaptureSource {
             val bitmap = imageToBitmap(image)
             if (bitmap != null) {
                 val captureTimeMs = System.currentTimeMillis() - captureStartTime
-                frameCallback?.onFrame(bitmap, captureTimeMs)
+                val callback = frameCallback
+                if (callback != null) {
+                    callback.onFrame(bitmap, captureTimeMs)
+                } else {
+                    // 没有回调，回收Bitmap
+                    bitmap.recycle()
+                }
+
+                // 诊断日志：每3秒打印一次帧统计
+                frameCount++
+                val now = System.currentTimeMillis()
+                if (now - lastDiagnosticTime >= 3000) {
+                    val elapsed = now - lastDiagnosticTime
+                    val fps = frameCount * 1000f / elapsed
+                    android.util.Log.i(TAG, "Capture stats: ${frameCount} frames in ${elapsed}ms (${String.format("%.1f", fps)} fps), callback=${callback != null}")
+                    frameCount = 0
+                    lastDiagnosticTime = now
+                }
             }
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Error processing captured image", e)
@@ -242,6 +289,7 @@ class CaptureManager(private val context: Context) : ICaptureSource {
     }
 
     override fun setFrameCallback(callback: ICaptureSource.FrameCallback?) {
+        android.util.Log.i(TAG, "setFrameCallback: callback=${callback != null}, isCapturing=$isCapturing")
         frameCallback = callback
     }
 

@@ -966,12 +966,20 @@ class MainActivity : AppCompatActivity() {
         logger.info(TAG, "Capture and inference stopped")
     }
 
+    // 推理帧计数（诊断用）
+    private var inferenceFrameCount = 0
+    private var lastInferenceLogTime = 0L
+
     /**
      * 处理截屏帧回调
      * 将截屏帧送入推理引擎，然后将结果显示在悬浮窗上
      */
     private fun onCaptureFrame(bitmap: Bitmap, captureTimeMs: Long) {
-        if (!isInferenceReady) return
+        if (!isInferenceReady) {
+            // 推理未就绪，回收Bitmap
+            bitmap.recycle()
+            return
+        }
 
         try {
             // 执行推理
@@ -982,6 +990,17 @@ class MainActivity : AppCompatActivity() {
 
             // 更新UI上的性能指标
             updateMetricsUI(metrics)
+
+            // 诊断日志：每3秒打印一次推理统计
+            inferenceFrameCount++
+            val now = System.currentTimeMillis()
+            if (now - lastInferenceLogTime >= 3000) {
+                val elapsed = now - lastInferenceLogTime
+                val fps = inferenceFrameCount * 1000f / elapsed
+                logger.info(TAG, "Inference stats: ${inferenceFrameCount} frames in ${elapsed}ms (${"%.1f".format(fps)} fps), detections=${detections.size}, latency=${metrics.inferenceLatencyMs}ms")
+                inferenceFrameCount = 0
+                lastInferenceLogTime = now
+            }
 
             // 回收Bitmap
             bitmap.recycle()

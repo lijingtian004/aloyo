@@ -31,7 +31,10 @@ class ScreenCaptureService : Service() {
         const val EXTRA_RESULT_CODE = "result_code"
         const val EXTRA_RESULT_DATA = "result_data"
 
-        // 服务运行状态回调
+        // 使用0作为无效值的标记（不能用-1，因为RESULT_OK就是-1）
+        private const val INVALID_RESULT_CODE = 0
+
+        // 服务运行状态
         @Volatile
         var isRunning: Boolean = false
             private set
@@ -70,9 +73,6 @@ class ScreenCaptureService : Service() {
      * 允许外部获取CaptureManager并设置帧回调
      */
     inner class CaptureServiceBinder : Binder() {
-        /**
-         * 获取ScreenCaptureService实例
-         */
         fun getService(): ScreenCaptureService = this@ScreenCaptureService
     }
 
@@ -80,10 +80,12 @@ class ScreenCaptureService : Service() {
         super.onCreate()
         createNotificationChannel()
         isRunning = true
+        android.util.Log.i(TAG, "ScreenCaptureService created")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent == null) {
+            android.util.Log.e(TAG, "onStartCommand: intent is null")
             stopSelf()
             return START_NOT_STICKY
         }
@@ -93,7 +95,7 @@ class ScreenCaptureService : Service() {
         startForeground(NOTIFICATION_ID, notification)
 
         // 获取MediaProjection授权数据
-        val resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, -1)
+        val resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, INVALID_RESULT_CODE)
         val resultData: Intent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.getParcelableExtra(EXTRA_RESULT_DATA, Intent::class.java)
         } else {
@@ -101,20 +103,37 @@ class ScreenCaptureService : Service() {
             intent.getParcelableExtra(EXTRA_RESULT_DATA)
         }
 
-        if (resultCode == -1 || resultData == null) {
-            android.util.Log.e(TAG, "Invalid MediaProjection result data")
+        android.util.Log.i(TAG, "onStartCommand: resultCode=$resultCode, resultData=${resultData != null}")
+
+        // 注意：不能用resultCode == -1判断失败，因为RESULT_OK就是-1
+        // 只有resultCode为默认值0（从未设置）且resultData为null时才是真正的失败
+        if (resultCode == INVALID_RESULT_CODE && resultData == null) {
+            android.util.Log.e(TAG, "Invalid MediaProjection result data: both resultCode and resultData are invalid")
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
+        if (resultData == null) {
+            android.util.Log.e(TAG, "MediaProjection resultData is null")
             stopSelf()
             return START_NOT_STICKY
         }
 
         // 初始化并启动截屏
         captureManager = CaptureManager(this)
-        captureManager?.startCapture(resultCode, resultData)
+        val captureStarted = captureManager?.startCapture(resultCode, resultData) ?: false
+        if (!captureStarted) {
+            android.util.Log.e(TAG, "CaptureManager.startCapture() failed")
+            stopSelf()
+            return START_NOT_STICKY
+        }
 
+        android.util.Log.i(TAG, "Screen capture service started successfully")
         return START_STICKY
     }
 
     override fun onBind(intent: Intent?): IBinder {
+        android.util.Log.i(TAG, "onBind called")
         return binder
     }
 
@@ -122,6 +141,7 @@ class ScreenCaptureService : Service() {
         captureManager?.stopCapture()
         captureManager = null
         isRunning = false
+        android.util.Log.i(TAG, "ScreenCaptureService destroyed")
         super.onDestroy()
     }
 
@@ -160,6 +180,7 @@ class ScreenCaptureService : Service() {
      * 设置截屏帧回调
      */
     fun setFrameCallback(callback: ICaptureSource.FrameCallback?) {
+        android.util.Log.i(TAG, "setFrameCallback: captureManager=${captureManager != null}, callback=${callback != null}")
         captureManager?.setFrameCallback(callback)
     }
 
