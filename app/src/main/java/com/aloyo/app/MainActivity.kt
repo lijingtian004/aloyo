@@ -1004,17 +1004,20 @@ class MainActivity : AppCompatActivity() {
             val (detections, metrics) = inferenceEngine.inferWithMetrics(bitmap)
 
             // 首次推理时记录NCNN输出诊断信息到应用日志
-            if (!hasLoggedNcnnDiag && inferenceEngine is NcnnInferenceEngine) {
-                val diagInfo = inferenceEngine.lastOutputDiagInfo
-                if (diagInfo.isNotEmpty()) {
-                    hasLoggedNcnnDiag = true
-                    logger.info(TAG, "=== NCNN Output Diagnostic ===")
-                    diagInfo.lines().forEach { line ->
-                        logger.info(TAG, line)
-                    }
-                    // 也记录前3个检测的原始坐标
-                    detections.take(3).forEachIndexed { idx, det ->
-                        logger.info(TAG, "  det[$idx]: x1=${det.x1}, y1=${det.y1}, x2=${det.x2}, y2=${det.y2}, label=${det.label}, conf=${det.confidence}")
+            if (!hasLoggedNcnnDiag) {
+                val engine = inferenceEngine
+                if (engine is NcnnInferenceEngine) {
+                    val diagInfo = engine.lastOutputDiagInfo
+                    if (diagInfo.isNotEmpty()) {
+                        hasLoggedNcnnDiag = true
+                        logger.info(TAG, "=== NCNN Output Diagnostic ===")
+                        diagInfo.lines().forEach { line ->
+                            logger.info(TAG, line)
+                        }
+                        // 也记录前3个检测的原始坐标
+                        detections.take(3).forEachIndexed { idx, det ->
+                            logger.info(TAG, "  det[$idx]: x1=${det.x1}, y1=${det.y1}, x2=${det.x2}, y2=${det.y2}, label=${det.label}, conf=${det.confidence}")
+                        }
                     }
                 }
             }
