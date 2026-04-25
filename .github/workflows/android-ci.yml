@@ -24,6 +24,15 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: 缓存Gradle包
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-
+
       # 下载NCNN Android SDK
       - name: 下载NCNN SDK
         env:
@@ -38,16 +47,24 @@ jobs:
           echo "NCNN SDK downloaded and extracted"
           ls -la core-inference/libs/ncnn-android-vulkan/
 
-      # 设置Gradle
-      - name: 设置Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.5'
+      # 生成gradle-wrapper.jar（仓库中不含此文件）
+      - name: 生成Gradle Wrapper
+        run: |
+          GRADLE_VERSION=$(grep distributionUrl gradle/wrapper/gradle-wrapper.properties | sed 's/.*gradle-\([0-9.]*\)-.*/\1/')
+          echo "Gradle version: $GRADLE_VERSION"
+          curl -L "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" -o /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d /tmp/gradle-dist
+          /tmp/gradle-dist/gradle-${GRADLE_VERSION}/bin/gradle wrapper --gradle-version ${GRADLE_VERSION}
+          echo "Wrapper generated:"
+          ls -la gradle/wrapper/
+
+      - name: 授予执行权限
+        run: chmod +x gradlew
 
       - name: 构建Debug APK
         run: |
           set -o pipefail
-          gradle assembleDebug --stacktrace --info 2>&1 | tee build-output.log
+          ./gradlew assembleDebug --stacktrace 2>&1 | tee build-output.log
 
       - name: 列出构建输出
         if: always()
