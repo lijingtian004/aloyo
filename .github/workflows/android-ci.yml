@@ -47,29 +47,19 @@ jobs:
           echo "NCNN SDK downloaded and extracted"
           ls -la core-inference/libs/ncnn-android-vulkan/
 
-      # 确保gradle-wrapper.jar存在（CI环境用gradle命令生成）
-      - name: 生成Gradle Wrapper
-        run: |
-          if [ ! -f gradle/wrapper/gradle-wrapper.jar ] || [ ! -s gradle/wrapper/gradle-wrapper.jar ]; then
-            echo "gradle-wrapper.jar missing or invalid, generating with gradle wrapper command..."
-            # 使用系统安装的gradle或直接下载
-            GRADLE_VERSION=$(grep distributionUrl gradle/wrapper/gradle-wrapper.properties | sed 's/.*gradle-\([0-9.]*\)-bin.*/\1/')
-            echo "Gradle version: $GRADLE_VERSION"
-            # 下载Gradle发行版
-            curl -L "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" -o /tmp/gradle.zip
-            unzip -q /tmp/gradle.zip -d /tmp/gradle-dist
-            # 使用下载的Gradle生成wrapper
-            /tmp/gradle-dist/gradle-${GRADLE_VERSION}/bin/gradle wrapper --gradle-version ${GRADLE_VERSION}
-          fi
-          # 验证wrapper jar
-          echo "gradle-wrapper.jar size: $(stat -c%s gradle/wrapper/gradle-wrapper.jar 2>/dev/null || echo 'missing')"
-          jar tf gradle/wrapper/gradle-wrapper.jar | head -5
-
-      - name: 授予执行权限
-        run: chmod +x gradlew
-
+      # 下载Gradle并直接构建（不依赖gradle-wrapper.jar）
       - name: 构建Debug APK
-        run: ./gradlew assembleDebug --stacktrace 2>&1 | tee build-output.log
+        run: |
+          # 从gradle-wrapper.properties获取Gradle版本
+          GRADLE_VERSION=$(grep distributionUrl gradle/wrapper/gradle-wrapper.properties | sed 's/.*gradle-\([0-9.]*\)-bin.*/\1/')
+          echo "Gradle version: $GRADLE_VERSION"
+          
+          # 下载Gradle发行版
+          curl -L "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" -o /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d /tmp/gradle-dist
+          
+          # 直接用Gradle构建（跳过wrapper）
+          /tmp/gradle-dist/gradle-${GRADLE_VERSION}/bin/gradle assembleDebug --stacktrace 2>&1 | tee build-output.log
 
       - name: 上传构建日志
         if: always()
