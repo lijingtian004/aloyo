@@ -17,6 +17,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.RadioButton
 import android.widget.RadioGroup
+import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
@@ -271,6 +272,17 @@ class MainActivity : AppCompatActivity() {
         // 隐藏悬浮窗
         btnHideOverlay.setOnClickListener {
             overlayManager.hide()
+        }
+
+        // 长按模型Spinner编辑配置
+        modelSpinner.setOnLongClickListener {
+            val modelName = modelSpinner.selectedItem?.toString()
+            if (modelName != null && modelManager.availableModels.contains(modelName)) {
+                showModelConfigEditor(modelName)
+            } else {
+                Toast.makeText(this, "请先选择一个模型", Toast.LENGTH_SHORT).show()
+            }
+            true
         }
     }
 
@@ -553,6 +565,9 @@ class MainActivity : AppCompatActivity() {
             if (index >= 0) {
                 modelSpinner.setSelection(index)
             }
+
+            // 导入成功后弹出配置编辑对话框
+            showModelConfigEditor(modelName)
         } catch (e: Exception) {
             updateStatus("模型导入失败")
             Toast.makeText(this, "导入失败: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -610,6 +625,9 @@ class MainActivity : AppCompatActivity() {
             if (index >= 0) {
                 modelSpinner.setSelection(index)
             }
+
+            // 导入成功后弹出配置编辑对话框
+            showModelConfigEditor(modelName)
         } catch (e: Exception) {
             updateStatus("模型导入失败")
             Toast.makeText(this, "导入失败: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -639,6 +657,159 @@ class MainActivity : AppCompatActivity() {
 
         destFile.writeText(configJson)
         logger.info(TAG, "Generated default config for $yoloVersion")
+    }
+
+    /**
+     * 显示模型配置编辑对话框
+     * 允许用户编辑：YOLO版本、输入尺寸、类别数、置信度/NMS阈值、类别标签
+     * @param modelName 模型名称
+     */
+    private fun showModelConfigEditor(modelName: String) {
+        val config = modelManager.getModelConfig(modelName) ?: return
+        val configFile = File(filesDir, "imported_models/$modelName/config.json")
+
+        val scrollView = ScrollView(this)
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(48, 24, 48, 24)
+        }
+
+        // YOLO版本
+        layout.addView(TextView(this).apply { text = "YOLO版本（决定解码方式）:" })
+        val versionRadioGroup = RadioGroup(this)
+        val versions = listOf("yolov5", "yolov7", "yolov8")
+        versions.forEachIndexed { index, version ->
+            RadioButton(this).apply {
+                text = version
+                id = index
+                // 根据当前config的version字段匹配
+                val currentVersion = config.version.lowercase()
+                isChecked = currentVersion.contains(version.removePrefix("yolo"))
+            }.also { versionRadioGroup.addView(it) }
+        }
+        layout.addView(versionRadioGroup)
+
+        // 输入宽度
+        layout.addView(TextView(this).apply { text = "输入宽度:"; setPadding(0, 16, 0, 4) })
+        val etWidth = EditText(this).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            hint = "640"
+            setText(config.inputWidth.toString())
+        }
+        layout.addView(etWidth)
+
+        // 输入高度
+        layout.addView(TextView(this).apply { text = "输入高度:"; setPadding(0, 8, 0, 4) })
+        val etHeight = EditText(this).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            hint = "640"
+            setText(config.inputHeight.toString())
+        }
+        layout.addView(etHeight)
+
+        // 类别数
+        layout.addView(TextView(this).apply { text = "检测类别数:"; setPadding(0, 8, 0, 4) })
+        val etNumClasses = EditText(this).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            hint = "80"
+            setText(config.numClasses.toString())
+        }
+        layout.addView(etNumClasses)
+
+        // 置信度阈值
+        layout.addView(TextView(this).apply { text = "置信度阈值 (0-1):"; setPadding(0, 8, 0, 4) })
+        val etConfThresh = EditText(this).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+            hint = "0.5"
+            setText(config.confidenceThreshold.toString())
+        }
+        layout.addView(etConfThresh)
+
+        // NMS阈值
+        layout.addView(TextView(this).apply { text = "NMS阈值 (0-1):"; setPadding(0, 8, 0, 4) })
+        val etNmsThresh = EditText(this).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+            hint = "0.4"
+            setText(config.nmsThreshold.toString())
+        }
+        layout.addView(etNmsThresh)
+
+        // 类别标签
+        layout.addView(TextView(this).apply {
+            text = "类别标签（每行一个，顺序对应类别ID）:"
+            setPadding(0, 16, 0, 4)
+        })
+        val etLabels = EditText(this).apply {
+            hint = "person\ncar\ndog\n..."
+            setText(config.labels.joinToString("\n"))
+            setLines(8)
+            setMinLines(4)
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            setPadding(16, 8, 16, 8)
+            setBackgroundResource(android.R.drawable.edit_text)
+        }
+        layout.addView(etLabels)
+
+        scrollView.addView(layout)
+
+        AlertDialog.Builder(this)
+            .setTitle("模型配置 - $modelName")
+            .setMessage("请检查并修改模型配置，确保与实际模型匹配：")
+            .setView(scrollView)
+            .setPositiveButton("保存") { _, _ ->
+                // 读取编辑后的值
+                val selectedVersionId = versionRadioGroup.checkedRadioButtonId
+                val yoloVersion = when (selectedVersionId) {
+                    0 -> "yolov5"
+                    1 -> "yolov7"
+                    else -> "yolov8"
+                }
+                val inputWidth = etWidth.text.toString().toIntOrNull() ?: 640
+                val inputHeight = etHeight.text.toString().toIntOrNull() ?: 640
+                val numClasses = etNumClasses.text.toString().toIntOrNull() ?: 80
+                val confThresh = etConfThresh.text.toString().toFloatOrNull() ?: 0.5f
+                val nmsThresh = etNmsThresh.text.toString().toFloatOrNull() ?: 0.4f
+                val labels = etLabels.text.toString().lines().filter { it.isNotBlank() }
+
+                // 如果标签数量与类别数不匹配，提示
+                if (labels.size != numClasses && labels.isNotEmpty()) {
+                    Toast.makeText(
+                        this,
+                        "标签数量(${labels.size})与类别数($numClasses)不匹配，请检查",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+
+                // 生成新的config.json
+                val newConfigJson = buildString {
+                    append("{\n")
+                    append("    \"version\": \"${yoloVersion}n\",\n")
+                    append("    \"inputWidth\": $inputWidth,\n")
+                    append("    \"inputHeight\": $inputHeight,\n")
+                    append("    \"numClasses\": $numClasses,\n")
+                    append("    \"confidenceThreshold\": $confThresh,\n")
+                    append("    \"nmsThreshold\": $nmsThresh,\n")
+                    append("    \"labels\": [\n")
+                    labels.forEachIndexed { index, label ->
+                        append("        \"$label\"")
+                        if (index < labels.size - 1) append(",")
+                        append("\n")
+                    }
+                    append("    ]\n")
+                    append("}")
+                }
+
+                configFile.writeText(newConfigJson)
+
+                // 刷新模型缓存
+                modelManager.refreshModelList()
+
+                updateStatus("模型配置已更新: $modelName")
+                Toast.makeText(this, "配置已保存", Toast.LENGTH_SHORT).show()
+                logger.info(TAG, "Model config updated: $modelName")
+            }
+            .setNegativeButton("跳过", null)
+            .show()
     }
 
     /**
