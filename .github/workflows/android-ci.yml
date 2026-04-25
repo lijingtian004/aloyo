@@ -39,17 +39,31 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p core-inference/libs
-          # 从Tencent/ncnn下载指定版本的Android Vulkan SDK
           gh release download 20260113 --repo Tencent/ncnn --pattern "ncnn-20260113-android-vulkan.zip" --dir /tmp --clobber
-          # 解压
           unzip -o /tmp/ncnn-20260113-android-vulkan.zip -d /tmp/ncnn
-          # 查找解压后的目录名
           NCNN_DIR=$(ls /tmp/ncnn/ | head -1)
           echo "NCNN directory: $NCNN_DIR"
-          # 将NCNN SDK目录复制到jni依赖路径
           cp -r /tmp/ncnn/$NCNN_DIR core-inference/libs/ncnn-android-vulkan
           echo "NCNN SDK downloaded and extracted"
           ls -la core-inference/libs/ncnn-android-vulkan/
+
+      # 确保gradle-wrapper.jar存在（CI环境用gradle命令生成）
+      - name: 生成Gradle Wrapper
+        run: |
+          if [ ! -f gradle/wrapper/gradle-wrapper.jar ] || [ ! -s gradle/wrapper/gradle-wrapper.jar ]; then
+            echo "gradle-wrapper.jar missing or invalid, generating with gradle wrapper command..."
+            # 使用系统安装的gradle或直接下载
+            GRADLE_VERSION=$(grep distributionUrl gradle/wrapper/gradle-wrapper.properties | sed 's/.*gradle-\([0-9.]*\)-bin.*/\1/')
+            echo "Gradle version: $GRADLE_VERSION"
+            # 下载Gradle发行版
+            curl -L "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" -o /tmp/gradle.zip
+            unzip -q /tmp/gradle.zip -d /tmp/gradle-dist
+            # 使用下载的Gradle生成wrapper
+            /tmp/gradle-dist/gradle-${GRADLE_VERSION}/bin/gradle wrapper --gradle-version ${GRADLE_VERSION}
+          fi
+          # 验证wrapper jar
+          echo "gradle-wrapper.jar size: $(stat -c%s gradle/wrapper/gradle-wrapper.jar 2>/dev/null || echo 'missing')"
+          jar tf gradle/wrapper/gradle-wrapper.jar | head -5
 
       - name: 授予执行权限
         run: chmod +x gradlew

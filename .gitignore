@@ -22,3 +22,5 @@ local.properties
 /core-overlay/build/
 /core-model/build/
 /core-logger/build/
+gradle-temp/
+*.log
