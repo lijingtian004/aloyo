@@ -54,6 +54,15 @@ class NcnnInferenceEngine : IInferenceEngine {
     private var preProcessor: YoloPreProcessor? = null
     private var postProcessor: YoloPostProcessor? = null
 
+    // 诊断信息：上次推理的NCNN输出形状和原始值（用于日志诊断）
+    @Volatile
+    var lastOutputDiagInfo: String = ""
+        private set
+
+    // 是否已记录过输出诊断（仅首次推理时记录详细值）
+    @Volatile
+    private var hasLoggedOutputDiag: Boolean = false
+
     override fun initialize(paramPath: String, binPath: String, config: ModelConfig): Boolean {
         if (isInitialized) {
             release()
@@ -113,8 +122,44 @@ class NcnnInferenceEngine : IInferenceEngine {
             return emptyList()
         }
 
-        // 记录输出维度信息（帮助诊断解码问题）
-        android.util.Log.i(TAG, "NCNN output: ${outputData.size} channels, each ${outputData[0].size} elements")
+        // 构建输出诊断信息
+        val numRows = outputData.size
+        val numCols = if (numRows > 0) outputData[0].size else 0
+        val config = modelConfig
+        val v8Attrs = if (config != null) 4 + config.numClasses else -1
+        val v5Attrs = if (config != null) 5 + config.numClasses else -1
+
+        val diagBuilder = StringBuilder()
+        diagBuilder.append("NCNN output shape: [$numRows x $numCols]")
+        diagBuilder.append(", numClasses=${config?.numClasses}, v8Attrs=$v8Attrs, v5Attrs=$v5Attrs")
+
+        // 首次推理时记录每个通道的前5个原始值
+        if (!hasLoggedOutputDiag) {
+            hasLoggedOutputDiag = true
+            diagBuilder.append("\n")
+            for (c in 0 until minOf(numRows, 8)) {
+                val vals = (0 until minOf(numCols, 5)).joinToString(", ") {
+                    String.format("%.4f", outputData[c][it])
+                }
+                diagBuilder.append("  ch[$c]: [$vals...]")
+                if (c < minOf(numRows, 8) - 1) diagBuilder.append("\n")
+            }
+
+            // 也记录最后几个通道的值（可能是类别概率）
+            if (numRows > 8) {
+                diagBuilder.append("\n")
+                for (c in maxOf(numRows - 4, 8) until numRows) {
+                    val vals = (0 until minOf(numCols, 5)).joinToString(", ") {
+                        String.format("%.4f", outputData[c][it])
+                    }
+                    diagBuilder.append("  ch[$c]: [$vals...]")
+                    if (c < numRows - 1) diagBuilder.append("\n")
+                }
+            }
+        }
+
+        lastOutputDiagInfo = diagBuilder.toString()
+        android.util.Log.i(TAG, lastOutputDiagInfo)
 
         // 后处理：解码、NMS
         val srcWidth = bitmap.width

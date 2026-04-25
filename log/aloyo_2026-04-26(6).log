@@ -1,0 +1,52 @@
+2026-04-26 03:23:39.019 [INFO] ALoyoApp: ALOYO Application starting...
+2026-04-26 03:23:39.019 [INFO] ALoyoApp: App version: 1.0.0
+2026-04-26 03:23:39.019 [INFO] ALoyoApp: Device: OnePlus PKR110
+2026-04-26 03:23:39.019 [INFO] ALoyoApp: Android: 15 (API 35)
+2026-04-26 03:23:39.019 [INFO] ALoyoApp: ALOYO Application initialized
+2026-04-26 03:23:39.113 [INFO] MainActivity: MainActivity created
+2026-04-26 03:24:10.514 [INFO] MainActivity: Model imported successfully: wa
+2026-04-26 03:24:11.566 [INFO] MainActivity: Model config updated: wa
+2026-04-26 03:24:17.357 [INFO] MainActivity: Loading model: wa
+2026-04-26 03:24:17.388 [INFO] MainActivity: Model loaded successfully: wa
+2026-04-26 03:24:21.356 [INFO] MainActivity: Overlay permission granted
+2026-04-26 03:24:21.402 [INFO] MainActivity: OverlayView: onDraw: count=1, view=1264x2584, src=0x0, scale=1.00x1.00, dets=0, hasData=false, sample=none
+2026-04-26 03:24:24.700 [INFO] MainActivity: Capture and inference started
+2026-04-26 03:24:24.700 [INFO] MainActivity: MediaProjection permission granted
+2026-04-26 03:24:24.716 [INFO] MainActivity: OverlayView: onDraw: count=1, view=1264x2584, src=0x0, scale=1.00x1.00, dets=0, hasData=false, sample=none
+2026-04-26 03:24:24.780 [INFO] MainActivity: CaptureService bound and callback set
+2026-04-26 03:24:24.865 [INFO] MainActivity: Inference stats: 1 frames in 1777145064865ms (0.0 fps), detections=161, latency=37ms
+2026-04-26 03:24:24.876 [INFO] MainActivity: OverlayView: onDraw: count=2, view=1264x2584, src=1264x2780, scale=1.00x0.93, dets=161, hasData=true, sample=x1=0.0,y1=0.0,x2=0.0,y2=0.0,label=Head
+2026-04-26 03:24:24.909 [INFO] MainActivity: OverlayView: onDraw: count=3, view=1264x2584, src=1264x2780, scale=1.00x0.93, dets=163, hasData=true, sample=x1=0.0,y1=0.0,x2=0.0,y2=5.26001,label=Head
+2026-04-26 03:24:27.867 [INFO] MainActivity: Inference stats: 93 frames in 3002ms (31.0 fps), detections=169, latency=14ms
+2026-04-26 03:24:27.917 [INFO] MainActivity: OverlayView: onDraw: count=96, view=1264x2584, src=1264x2780, scale=1.00x0.93, dets=172, hasData=true, sample=x1=0.0,y1=0.0,x2=0.0,y2=5.8644867,label=Head
+2026-04-26 03:24:30.882 [INFO] MainActivity: Inference stats: 91 frames in 3015ms (30.2 fps), detections=215, latency=10ms
+2026-04-26 03:24:30.927 [INFO] MainActivity: OverlayView: onDraw: count=187, view=1264x2584, src=1264x2780, scale=1.00x0.93, dets=215, hasData=true, sample=x1=0.0,y1=0.0,x2=0.0,y2=0.0,label=Head
+2026-04-26 03:24:33.887 [INFO] MainActivity: Inference stats: 70 frames in 3005ms (23.3 fps), detections=126, latency=25ms
+2026-04-26 03:24:33.978 [INFO] MainActivity: OverlayView: onDraw: count=259, view=2640x1264, src=1264x2780, scale=2.09x0.45, dets=194, hasData=true, sample=x1=0.0,y1=0.0,x2=0.0,y2=4.719162,label=Head
+2026-04-26 03:24:36.918 [INFO] MainActivity: Inference stats: 96 frames in 3031ms (31.7 fps), detections=222, latency=9ms
+2026-04-26 03:24:36.998 [INFO] MainActivity: OverlayView: onDraw: count=356, view=2640x1264, src=1264x2780, scale=2.09x0.45, dets=226, hasData=true, sample=x1=0.0,y1=0.0,x2=0.0,y2=1.0180664,label=Head
+2026-04-26 03:24:39.927 [INFO] MainActivity: Inference stats: 63 frames in 3009ms (20.9 fps), detections=206, latency=21ms
+2026-04-26 03:24:40.033 [INFO] MainActivity: OverlayView: onDraw: count=419, view=2640x1264, src=1264x2780, scale=2.09x0.45, dets=206, hasData=true, sample=x1=0.0,y1=0.0,x2=0.0,y2=6.9654036,label=Head
+2026-04-26 03:24:42.964 [INFO] MainActivity: Inference stats: 61 frames in 3037ms (20.1 fps), detections=194, latency=13ms
+2026-04-26 03:24:43.068 [INFO] MainActivity: OverlayView: onDraw: count=480, view=2640x1264, src=1264x2780, scale=2.09x0.45, dets=191, hasData=true, sample=x1=0.0,y1=0.0,x2=0.0,y2=0.0,label=Head
+2026-04-26 03:24:45.993 [INFO] MainActivity: Inference stats: 58 frames in 3029ms (19.1 fps), detections=198, latency=19ms
+2026-04-26 03:24:46.102 [INFO] MainActivity: OverlayView: onDraw: count=538, view=2640x1264, src=1264x2780, scale=2.09x0.45, dets=194, hasData=true, sample=x1=0.0,y1=0.0,x2=0.0,y2=0.0,label=Head
+2026-04-26 03:24:49.022 [INFO] MainActivity: Inference stats: 56 frames in 3029ms (18.5 fps), detections=194, latency=11ms
+2026-04-26 03:24:49.103 [INFO] MainActivity: OverlayView: onDraw: count=594, view=2640x1264, src=1264x2780, scale=2.09x0.45, dets=194, hasData=true, sample=x1=0.0,y1=0.0,x2=0.0,y2=0.0,label=Head
+2026-04-26 03:24:52.040 [INFO] MainActivity: Inference stats: 82 frames in 3018ms (27.2 fps), detections=193, latency=9ms
+2026-04-26 03:24:52.110 [INFO] MainActivity: OverlayView: onDraw: count=676, view=2640x1264, src=1264x2780, scale=2.09x0.45, dets=193, hasData=true, sample=x1=0.0,y1=0.0,x2=0.0,y2=0.0,label=Head
+2026-04-26 03:24:55.070 [INFO] MainActivity: Inference stats: 97 frames in 3030ms (32.0 fps), detections=194, latency=12ms
+2026-04-26 03:24:55.158 [INFO] MainActivity: OverlayView: onDraw: count=773, view=2640x1264, src=1264x2780, scale=2.09x0.45, dets=205, hasData=true, sample=x1=0.0,y1=0.0,x2=0.0,y2=0.0,label=Head
+2026-04-26 03:24:58.078 [INFO] MainActivity: Inference stats: 79 frames in 3008ms (26.3 fps), detections=197, latency=14ms
+2026-04-26 03:24:58.168 [INFO] MainActivity: OverlayView: onDraw: count=852, view=2640x1264, src=1264x2780, scale=2.09x0.45, dets=199, hasData=true, sample=x1=0.0,y1=0.0,x2=0.0,y2=0.0,label=Head
+2026-04-26 03:25:01.121 [INFO] MainActivity: Inference stats: 79 frames in 3043ms (26.0 fps), detections=235, latency=23ms
+2026-04-26 03:25:01.178 [INFO] MainActivity: OverlayView: onDraw: count=930, view=2640x1264, src=1264x2780, scale=2.09x0.45, dets=229, hasData=true, sample=x1=0.0,y1=0.0,x2=0.0,y2=2.2800446,label=Head
+2026-04-26 03:25:04.140 [INFO] MainActivity: Inference stats: 77 frames in 3018ms (25.5 fps), detections=224, latency=12ms
+2026-04-26 03:25:04.188 [INFO] MainActivity: OverlayView: onDraw: count=1007, view=2640x1264, src=1264x2780, scale=2.09x0.45, dets=224, hasData=true, sample=x1=0.0,y1=0.0,x2=0.0,y2=4.347992,label=Head
+2026-04-26 03:25:07.162 [INFO] MainActivity: Inference stats: 79 frames in 3023ms (26.1 fps), detections=228, latency=13ms
+2026-04-26 03:25:07.215 [INFO] MainActivity: OverlayView: onDraw: count=1086, view=2640x1264, src=1264x2780, scale=2.09x0.45, dets=227, hasData=true, sample=x1=0.0,y1=0.0,x2=0.0,y2=2.2058105,label=Head
+2026-04-26 03:25:10.206 [INFO] MainActivity: Inference stats: 76 frames in 3044ms (25.0 fps), detections=230, latency=13ms
+2026-04-26 03:25:10.259 [INFO] MainActivity: OverlayView: onDraw: count=1162, view=2640x1264, src=1264x2780, scale=2.09x0.45, dets=224, hasData=true, sample=x1=0.0,y1=0.0,x2=0.0,y2=2.0043182,label=Head
+2026-04-26 03:25:13.223 [INFO] MainActivity: Inference stats: 76 frames in 3017ms (25.2 fps), detections=205, latency=16ms
+2026-04-26 03:25:15.578 [INFO] MainActivity: Capture and inference stopped
+2026-04-26 03:25:15.588 [ERROR] MainActivity: Capture error: Image is already closed
