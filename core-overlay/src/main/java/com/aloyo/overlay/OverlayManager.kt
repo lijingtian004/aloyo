@@ -3,6 +3,8 @@ package com.aloyo.overlay
 import android.content.Context
 import android.graphics.PixelFormat
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.WindowManager
 import com.aloyo.common.Detection
@@ -24,6 +26,9 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
 
     // WindowManager实例
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+
+    // 主线程Handler，用于从后台线程更新UI
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     // 全屏检测覆盖层（不可触摸，纯显示）
     private var overlayView: DetectionOverlayView? = null
@@ -175,11 +180,14 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
     /**
      * 更新检测结果
      * 同时更新检测覆盖层和控制面板的性能指标
+     * 注意：此方法可能从后台线程调用，UI更新必须post到主线程
      */
     override fun updateDetections(detections: List<Detection>, metrics: PerformanceMetrics) {
-        overlayView?.updateDetections(detections, metrics)
-        // 更新控制面板上的性能指标
-        controlPanel?.updateMetrics(metrics.fps, metrics.inferenceLatencyMs)
+        // 从后台线程调用时，post到主线程执行UI更新
+        mainHandler.post {
+            overlayView?.updateDetections(detections, metrics)
+            controlPanel?.updateMetrics(metrics.fps, metrics.inferenceLatencyMs)
+        }
     }
 
     /**
@@ -187,7 +195,9 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
      */
     override fun setConfig(config: OverlayConfig) {
         this.config = config
-        overlayView?.setOverlayConfig(config)
+        mainHandler.post {
+            overlayView?.setOverlayConfig(config)
+        }
     }
 
     /**
