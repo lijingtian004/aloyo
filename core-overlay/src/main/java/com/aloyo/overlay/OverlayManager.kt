@@ -80,6 +80,7 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
     /**
      * 创建全屏检测覆盖层
      * FLAG_NOT_TOUCHABLE：触摸穿透到下层应用
+     * 使用MATCH_PARENT使窗口自动适配屏幕旋转
      */
     private fun showDetectionOverlay() {
         overlayView = DetectionOverlayView(context).apply {
@@ -94,12 +95,10 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
             WindowManager.LayoutParams.TYPE_PHONE
         }
 
-        val displayMetrics = android.util.DisplayMetrics()
-        windowManager.defaultDisplay.getRealMetrics(displayMetrics)
-
+        // 使用MATCH_PARENT，窗口自动填满屏幕，旋转时无需手动更新尺寸
         overlayLayoutParams = WindowManager.LayoutParams(
-            displayMetrics.widthPixels,
-            displayMetrics.heightPixels,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
             type,
             // 全屏检测层：不可触摸，让触摸穿透到下层应用
             WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
