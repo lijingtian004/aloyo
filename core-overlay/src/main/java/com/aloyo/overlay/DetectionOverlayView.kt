@@ -26,6 +26,11 @@ class DetectionOverlayView(context: Context) : View(context) {
         private const val TAG = "DetectionOverlayView"
     }
 
+    init {
+        // 强制使用软件渲染，解决Android 15上硬件加速导致悬浮窗不可见的问题
+        setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+    }
+
     // 当前检测结果
     @Volatile
     private var detections: List<Detection> = emptyList()
@@ -94,11 +99,24 @@ class DetectionOverlayView(context: Context) : View(context) {
         typeface = android.graphics.Typeface.DEFAULT_BOLD
     }
 
+    // 诊断边框画笔（确认悬浮窗可见）
+    private val diagBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+        color = Color.parseColor("#44FF0000")
+    }
+
     // 始终显示的状态指示器（用于确认悬浮窗可见）
     private val statusPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = 14f
-        color = Color.parseColor("#88FFFFFF")
+        textSize = 18f
+        color = Color.parseColor("#CCFFFFFF")
         typeface = android.graphics.Typeface.MONOSPACE
+    }
+
+    // 状态指示器背景
+    private val statusBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = Color.parseColor("#99000000")
     }
 
     /**
@@ -135,6 +153,9 @@ class DetectionOverlayView(context: Context) : View(context) {
         val viewW = width
         val viewH = height
 
+        // 始终绘制诊断边框（确认悬浮窗可见）
+        canvas.drawRect(0f, 0f, viewW.toFloat(), viewH.toFloat(), diagBorderPaint)
+
         // 诊断：首次onDraw和每3秒打印一次
         drawCount++
         val now = System.currentTimeMillis()
@@ -153,7 +174,6 @@ class DetectionOverlayView(context: Context) : View(context) {
         // 如果还没有接收过数据，显示等待提示
         if (!hasReceivedData) {
             drawWaitingHint(canvas)
-            // 始终绘制状态指示器
             drawStatusIndicator(canvas, viewW, viewH)
             return
         }
@@ -180,9 +200,22 @@ class DetectionOverlayView(context: Context) : View(context) {
     private fun drawStatusIndicator(canvas: Canvas, viewW: Int, viewH: Int) {
         val text = "ALOYO | ${detections.size} dets"
         val textWidth = statusPaint.measureText(text)
-        val x = viewW.toFloat() - textWidth - 12f
-        val y = viewH.toFloat() - 12f
-        canvas.drawText(text, x, y, statusPaint)
+        val textHeight = statusPaint.fontMetrics.let { it.descent - it.ascent }
+        val padding = 8f
+        val x = viewW.toFloat() - textWidth - padding * 2 - 12f
+        val y = viewH.toFloat() - textHeight - padding * 2 - 12f
+
+        // 绘制背景
+        canvas.drawRect(
+            x - padding,
+            y - padding,
+            viewW.toFloat() - 12f + padding,
+            viewH.toFloat() - 12f + padding,
+            statusBgPaint
+        )
+
+        // 绘制文字
+        canvas.drawText(text, x, y + textHeight, statusPaint)
     }
 
     /**

@@ -110,14 +110,44 @@ Java_com_aloyo_inference_NcnnInferenceEngine_nativeRunInference(
 
     // 创建提取器
     ncnn::Extractor extractor = net->create_extractor();
-    extractor.input("in0", inputMat);
+
+    // 尝试常见的输入blob名称
+    const char* inputNames[] = {"in0", "images", "input", "data", "x"};
+    bool inputSet = false;
+    for (const char* name : inputNames) {
+        int ret = extractor.input(name, inputMat);
+        if (ret == 0) {
+            LOGI("Input blob name: %s", name);
+            inputSet = true;
+            break;
+        }
+    }
+    if (!inputSet) {
+        // 使用索引方式设置输入
+        extractor.input(0, inputMat);
+        LOGI("Input blob set by index 0");
+    }
 
     // 获取输出
     ncnn::Mat outputMat;
-    int ret = extractor.extract("out0", outputMat);
-    if (ret != 0) {
-        LOGE("Failed to extract output, ret=%d", ret);
-        return nullptr;
+    const char* outputNames[] = {"out0", "output", "output0", "pred", "proto"};
+    bool outputExtracted = false;
+    for (const char* name : outputNames) {
+        int ret = extractor.extract(name, outputMat);
+        if (ret == 0) {
+            LOGI("Output blob name: %s", name);
+            outputExtracted = true;
+            break;
+        }
+    }
+    if (!outputExtracted) {
+        // 使用索引方式提取输出
+        int ret = extractor.extract(0, outputMat);
+        if (ret != 0) {
+            LOGE("Failed to extract any output, ret=%d", ret);
+            return nullptr;
+        }
+        LOGI("Output blob extracted by index 0");
     }
 
     // 将输出转换为Java二维数组
@@ -125,6 +155,27 @@ Java_com_aloyo_inference_NcnnInferenceEngine_nativeRunInference(
     int outChannels = outputMat.c;
     int outHeight = outputMat.h;
     int outWidth = outputMat.w;
+
+    // 记录输出形状（帮助诊断解码问题）
+    LOGI("NCNN output shape: c=%d, h=%d, w=%d (total elements per channel: %d)",
+         outChannels, outHeight, outWidth, outHeight * outWidth);
+
+    // 打印前几个通道的前5个值（仅首次推理）
+    static bool has_logged_detail = false;
+    if (!has_logged_detail) {
+        has_logged_detail = true;
+        for (int c = 0; c < outChannels && c < 6; c++) {
+            const ncnn::Mat channelMat = outputMat.channel(c);
+            std::string vals;
+            for (int i = 0; i < outHeight * outWidth && i < 5; i++) {
+                if (i > 0) vals += ", ";
+                char buf[32];
+                snprintf(buf, sizeof(buf), "%.4f", channelMat.row(i / outWidth)[i % outWidth]);
+                vals += buf;
+            }
+            LOGI("  output ch[%d] first values: [%s]", c, vals.c_str());
+        }
+    }
 
     // 创建Java FloatArray数组
     jclass floatArrayClass = env->FindClass("[F");

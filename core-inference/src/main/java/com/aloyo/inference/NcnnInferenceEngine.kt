@@ -80,19 +80,9 @@ class NcnnInferenceEngine : IInferenceEngine {
             // 初始化预处理器
             preProcessor = YoloPreProcessor(config.inputWidth, config.inputHeight)
 
-            // 根据模型版本创建对应的后处理器
-            postProcessor = when {
-                config.version.contains("v5", ignoreCase = true) ->
-                    YoloPostProcessor(YoloV5Decoder(), config, confidenceThreshold, nmsThreshold)
-                config.version.contains("v7", ignoreCase = true) ->
-                    YoloPostProcessor(YoloV7Decoder(), config, confidenceThreshold, nmsThreshold)
-                config.version.contains("v8", ignoreCase = true) ->
-                    YoloPostProcessor(YoloV8Decoder(), config, confidenceThreshold, nmsThreshold)
-                else -> {
-                    android.util.Log.w(TAG, "Unknown YOLO version: ${config.version}, defaulting to v8 decoder")
-                    YoloPostProcessor(YoloV8Decoder(), config, confidenceThreshold, nmsThreshold)
-                }
-            }
+            // 根据模型版本创建对应的后处理器（统一解码器自动检测输出格式）
+            val decoder = UnifiedYoloDecoder()
+            postProcessor = YoloPostProcessor(decoder, config, confidenceThreshold, nmsThreshold)
 
             isInitialized = true
             android.util.Log.i(TAG, "NCNN engine initialized with model: ${config.version}")
@@ -122,6 +112,9 @@ class NcnnInferenceEngine : IInferenceEngine {
             android.util.Log.w(TAG, "NCNN inference returned null")
             return emptyList()
         }
+
+        // 记录输出维度信息（帮助诊断解码问题）
+        android.util.Log.i(TAG, "NCNN output: ${outputData.size} channels, each ${outputData[0].size} elements")
 
         // 后处理：解码、NMS
         val srcWidth = bitmap.width

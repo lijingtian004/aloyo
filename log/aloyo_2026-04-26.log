@@ -1,0 +1,11 @@
+2026-04-26 01:37:38.811 [INFO] ALoyoApp: ALOYO Application starting...
+2026-04-26 01:37:38.811 [INFO] ALoyoApp: App version: 1.0.0
+2026-04-26 01:37:38.811 [INFO] ALoyoApp: Device: OnePlus PKR110
+2026-04-26 01:37:38.811 [INFO] ALoyoApp: Android: 15 (API 35)
+2026-04-26 01:37:38.811 [INFO] ALoyoApp: ALOYO Application initialized
+2026-04-26 01:37:38.893 [INFO] MainActivity: MainActivity created
+2026-04-26 01:37:48.395 [INFO] MainActivity: Loading model: wa
+2026-04-26 01:37:48.442 [INFO] MainActivity: Model loaded successfully: wa
+2026-04-26 01:37:50.139 [INFO] MainActivity: Capture and inference started
+2026-04-26 01:37:50.139 [INFO] MainActivity: MediaProjection permission granted
+2026-04-26 01:37:50.158 [INFO] MainActivity: CaptureService bound and callback set

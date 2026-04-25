@@ -1,0 +1,29 @@
+2026-04-26 02:14:29.183 [INFO] ALoyoApp: ALOYO Application starting...
+2026-04-26 02:14:29.183 [INFO] ALoyoApp: App version: 1.0.0
+2026-04-26 02:14:29.183 [INFO] ALoyoApp: Device: OnePlus PKR110
+2026-04-26 02:14:29.183 [INFO] ALoyoApp: Android: 15 (API 35)
+2026-04-26 02:14:29.183 [INFO] ALoyoApp: ALOYO Application initialized
+2026-04-26 02:14:29.270 [INFO] MainActivity: MainActivity created
+2026-04-26 02:14:35.859 [INFO] MainActivity: Model imported successfully: wa
+2026-04-26 02:14:51.066 [INFO] MainActivity: Loading model: wa
+2026-04-26 02:14:51.104 [INFO] MainActivity: Model loaded successfully: wa
+2026-04-26 02:15:00.429 [INFO] MainActivity: Overlay permission granted
+2026-04-26 02:15:05.356 [INFO] MainActivity: Capture and inference started
+2026-04-26 02:15:05.356 [INFO] MainActivity: MediaProjection permission granted
+2026-04-26 02:15:05.412 [INFO] MainActivity: CaptureService bound and callback set
+2026-04-26 02:15:05.458 [INFO] MainActivity: Inference stats: 1 frames in 1777140905458ms (0.0 fps), detections=19, latency=19ms
+2026-04-26 02:15:08.460 [INFO] MainActivity: Inference stats: 103 frames in 3002ms (34.3 fps), detections=21, latency=10ms
+2026-04-26 02:15:11.581 [INFO] MainActivity: Inference stats: 91 frames in 3121ms (29.2 fps), detections=23, latency=109ms
+2026-04-26 02:15:14.589 [INFO] MainActivity: Inference stats: 87 frames in 3008ms (28.9 fps), detections=10, latency=10ms
+2026-04-26 02:15:17.589 [INFO] MainActivity: Inference stats: 67 frames in 3000ms (22.3 fps), detections=8, latency=13ms
+2026-04-26 02:15:20.618 [INFO] MainActivity: Inference stats: 60 frames in 3029ms (19.8 fps), detections=9, latency=16ms
+2026-04-26 02:15:23.624 [INFO] MainActivity: Inference stats: 60 frames in 3006ms (20.0 fps), detections=9, latency=13ms
+2026-04-26 02:15:26.631 [INFO] MainActivity: Inference stats: 57 frames in 3007ms (19.0 fps), detections=7, latency=17ms
+2026-04-26 02:15:29.654 [INFO] MainActivity: Inference stats: 92 frames in 3023ms (30.4 fps), detections=8, latency=7ms
+2026-04-26 02:15:32.682 [INFO] MainActivity: Inference stats: 86 frames in 3028ms (28.4 fps), detections=9, latency=10ms
+2026-04-26 02:15:35.705 [INFO] MainActivity: Inference stats: 81 frames in 3023ms (26.8 fps), detections=9, latency=9ms
+2026-04-26 02:15:38.731 [INFO] MainActivity: Inference stats: 78 frames in 3026ms (25.8 fps), detections=11, latency=10ms
+2026-04-26 02:15:41.768 [INFO] MainActivity: Inference stats: 78 frames in 3037ms (25.7 fps), detections=9, latency=10ms
+2026-04-26 02:15:44.770 [INFO] MainActivity: Inference stats: 75 frames in 3002ms (25.0 fps), detections=9, latency=8ms
+2026-04-26 02:15:47.801 [INFO] MainActivity: Inference stats: 94 frames in 3030ms (31.0 fps), detections=16, latency=8ms
+2026-04-26 02:15:50.338 [INFO] MainActivity: Capture and inference stopped
