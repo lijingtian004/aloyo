@@ -111,44 +111,31 @@ Java_com_aloyo_inference_NcnnInferenceEngine_nativeRunInference(
     // 创建提取器
     ncnn::Extractor extractor = net->create_extractor();
 
-    // 尝试常见的输入blob名称
-    const char* inputNames[] = {"in0", "images", "input", "data", "x"};
-    bool inputSet = false;
-    for (const char* name : inputNames) {
-        int ret = extractor.input(name, inputMat);
-        if (ret == 0) {
-            LOGI("Input blob name: %s", name);
-            inputSet = true;
-            break;
-        }
+    // 使用NCNN自动发现的输入blob索引
+    const std::vector<int>& inputIndexes = net->input_indexes();
+    if (inputIndexes.empty()) {
+        LOGE("No input blob found in model");
+        return nullptr;
     }
-    if (!inputSet) {
-        // 使用索引方式设置输入
-        extractor.input(0, inputMat);
-        LOGI("Input blob set by index 0");
-    }
+    int inputBlobIndex = inputIndexes[0];
+    extractor.input(inputBlobIndex, inputMat);
+    LOGI("Input blob index: %d", inputBlobIndex);
 
-    // 获取输出
+    // 使用NCNN自动发现的输出blob索引
+    const std::vector<int>& outputIndexes = net->output_indexes();
+    if (outputIndexes.empty()) {
+        LOGE("No output blob found in model");
+        return nullptr;
+    }
+    int outputBlobIndex = outputIndexes[0];
+
     ncnn::Mat outputMat;
-    const char* outputNames[] = {"out0", "output", "output0", "pred", "proto"};
-    bool outputExtracted = false;
-    for (const char* name : outputNames) {
-        int ret = extractor.extract(name, outputMat);
-        if (ret == 0) {
-            LOGI("Output blob name: %s", name);
-            outputExtracted = true;
-            break;
-        }
+    int ret = extractor.extract(outputBlobIndex, outputMat);
+    if (ret != 0) {
+        LOGE("Failed to extract output, ret=%d", ret);
+        return nullptr;
     }
-    if (!outputExtracted) {
-        // 使用索引方式提取输出
-        int ret = extractor.extract(0, outputMat);
-        if (ret != 0) {
-            LOGE("Failed to extract any output, ret=%d", ret);
-            return nullptr;
-        }
-        LOGI("Output blob extracted by index 0");
-    }
+    LOGI("Output blob index: %d", outputBlobIndex);
 
     // 将输出转换为Java二维数组
     // outputMat形状: [channels, height, width] 或 [numDetections, attrs]
