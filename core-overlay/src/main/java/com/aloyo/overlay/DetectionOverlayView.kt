@@ -6,11 +6,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PixelFormat
 import android.graphics.PorterDuff
-import android.os.Build
-import android.view.Gravity
-import android.view.MotionEvent
 import android.view.View
-import android.view.WindowManager
 import com.aloyo.common.Detection
 import com.aloyo.common.OverlayConfig
 import com.aloyo.common.PerformanceMetrics
@@ -18,7 +14,7 @@ import com.aloyo.common.PerformanceMetrics
 /**
  * 检测结果悬浮窗视图
  * 在屏幕上绘制检测框、标签、置信度和性能指标
- * 支持拖拽移动和点击操作
+ * 使用FLAG_NOT_TOUCHABLE，不拦截触摸事件
  */
 class DetectionOverlayView(context: Context) : View(context) {
 
@@ -36,6 +32,10 @@ class DetectionOverlayView(context: Context) : View(context) {
 
     // 渲染配置
     private var config: OverlayConfig = OverlayConfig()
+
+    // 是否曾接收过数据
+    @Volatile
+    private var hasReceivedData: Boolean = false
 
     // 绘制画笔
     private val boxPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -66,6 +66,13 @@ class DetectionOverlayView(context: Context) : View(context) {
         color = 0x99000000.toInt()
     }
 
+    // 等待数据提示的画笔
+    private val waitingTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = 16f
+        color = 0xAAFFFFFF.toInt()
+        typeface = android.graphics.Typeface.DEFAULT
+    }
+
     // 视图尺寸
     private var viewWidth: Int = 0
     private var viewHeight: Int = 0
@@ -74,17 +81,13 @@ class DetectionOverlayView(context: Context) : View(context) {
     private var scaleX: Float = 1f
     private var scaleY: Float = 1f
 
-    // 拖拽相关
-    private var isDragging = false
-    private var lastTouchX = 0f
-    private var lastTouchY = 0f
-
     /**
      * 更新检测结果
      */
     fun updateDetections(detections: List<Detection>, metrics: PerformanceMetrics? = null) {
         this.detections = detections
         this.metrics = metrics
+        this.hasReceivedData = true
         invalidate()
     }
 
@@ -116,6 +119,12 @@ class DetectionOverlayView(context: Context) : View(context) {
         // 清除之前的内容
         canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
 
+        // 如果还没有接收过数据，显示等待提示
+        if (!hasReceivedData) {
+            drawWaitingHint(canvas)
+            return
+        }
+
         // 绘制检测框
         for (detection in detections) {
             drawDetection(canvas, detection)
@@ -123,6 +132,25 @@ class DetectionOverlayView(context: Context) : View(context) {
 
         // 绘制性能指标
         metrics?.let { drawMetrics(canvas, it) }
+    }
+
+    /**
+     * 绘制等待数据提示
+     * 在屏幕左上角显示"等待数据..."提示
+     */
+    private fun drawWaitingHint(canvas: Canvas) {
+        val hintText = "ALOYO 等待截屏数据..."
+        val textWidth = waitingTextPaint.measureText(hintText)
+        val textHeight = waitingTextPaint.fontMetrics.let { it.descent - it.ascent }
+        val bgLeft = 8f
+        val bgTop = 8f
+        val bgRight = bgLeft + textWidth + 16f
+        val bgBottom = bgTop + textHeight + 8f
+
+        // 绘制背景
+        canvas.drawRect(bgLeft, bgTop, bgRight, bgBottom, metricsBgPaint)
+        // 绘制文字
+        canvas.drawText(hintText, bgLeft + 8f, bgTop + textHeight, waitingTextPaint)
     }
 
     /**
@@ -193,45 +221,5 @@ class DetectionOverlayView(context: Context) : View(context) {
             val y = bgTop + lineHeight * (index + 1)
             canvas.drawText(line, bgLeft + 8f, y, metricsPaint)
         }
-    }
-
-    /**
-     * 处理触摸事件，支持拖拽移动
-     */
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        when (event.action) {
-            MotionEvent.ACTION_DOWN -> {
-                isDragging = true
-                lastTouchX = event.rawX
-                lastTouchY = event.rawY
-                return true
-            }
-            MotionEvent.ACTION_MOVE -> {
-                if (isDragging) {
-                    val dx = event.rawX - lastTouchX
-                    val dy = event.rawY - lastTouchY
-                    updateViewPosition(dx, dy)
-                    lastTouchX = event.rawX
-                    lastTouchY = event.rawY
-                }
-                return true
-            }
-            MotionEvent.ACTION_UP -> {
-                isDragging = false
-                return true
-            }
-        }
-        return super.onTouchEvent(event)
-    }
-
-    /**
-     * 更新悬浮窗位置
-     */
-    private fun updateViewPosition(dx: Float, dy: Float) {
-        val params = layoutParams as? WindowManager.LayoutParams ?: return
-        params.x += dx.toInt()
-        params.y += dy.toInt()
-        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        windowManager.updateViewLayout(this, params)
     }
 }

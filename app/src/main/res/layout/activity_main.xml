@@ -35,13 +35,29 @@
         android:textColor="#FFFFFF"
         android:layout_marginBottom="8dp" />
 
-    <Spinner
-        android:id="@+id/spinner_model"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:background="#16213E"
-        android:popupBackground="#16213E"
-        android:layout_marginBottom="16dp" />
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="16dp">
+
+        <Spinner
+            android:id="@+id/spinner_model"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:background="#16213E"
+            android:popupBackground="#16213E" />
+
+        <Button
+            android:id="@+id/btn_import_model"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:text="导入模型"
+            android:backgroundTint="#0F3460"
+            android:textColor="#FFFFFF"
+            android:layout_marginStart="8dp" />
+    </LinearLayout>
 
     <!-- 控制按钮区域 -->
     <LinearLayout
@@ -137,7 +153,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="1. 选择YOLO模型\n2. 点击开始截屏推理\n3. 授权截屏和悬浮窗权限\n4. 检测结果将以悬浮窗形式显示在屏幕上"
+        android:text="1. 点击「导入模型」选择param/bin/config文件\n2. 选择已导入的YOLO模型\n3. 点击开始截屏推理\n4. 授权截屏和悬浮窗权限\n5. 检测结果将以悬浮窗形式显示在屏幕上"
         android:textSize="13sp"
         android:textColor="#AAAAAA"
         android:lineSpacingExtra="4dp" />

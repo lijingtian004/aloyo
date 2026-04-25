@@ -12,8 +12,9 @@ import com.aloyo.common.PerformanceMetrics
 
 /**
  * 悬浮窗管理器
- * 负责悬浮窗的创建、显示、隐藏和更新
- * 管理WindowManager.LayoutParams和悬浮窗生命周期
+ * 使用双悬浮窗方案：
+ * 1. 全屏检测覆盖层（FLAG_NOT_TOUCHABLE）：绘制检测框和标签，触摸穿透
+ * 2. 可拖拽控制面板（可交互）：显示性能指标、暂停/继续、隐藏按钮
  */
 class OverlayManager(private val context: Context) : IOverlayRenderer {
 
@@ -24,11 +25,13 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
     // WindowManager实例
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
-    // 悬浮窗视图
+    // 全屏检测覆盖层（不可触摸，纯显示）
     private var overlayView: DetectionOverlayView? = null
+    private var overlayLayoutParams: WindowManager.LayoutParams? = null
 
-    // 悬浮窗布局参数
-    private var layoutParams: WindowManager.LayoutParams? = null
+    // 可拖拽控制面板（可交互）
+    private var controlPanel: OverlayControlPanel? = null
+    private var controlLayoutParams: WindowManager.LayoutParams? = null
 
     // 渲染配置
     private var config: OverlayConfig = OverlayConfig()
@@ -38,9 +41,17 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
     override var isShowing: Boolean = false
         private set
 
+    // 暂停状态
+    @Volatile
+    var isPaused: Boolean = false
+        private set
+
+    // 暂停回调
+    var onPauseToggle: ((paused: Boolean) -> Unit)? = null
+
     /**
      * 创建悬浮窗
-     * 需要在UI线程调用
+     * 同时创建全屏检测覆盖层和可拖拽控制面板
      */
     override fun show() {
         if (isShowing) {
@@ -49,45 +60,93 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
         }
 
         try {
-            // 创建悬浮窗视图
-            overlayView = DetectionOverlayView(context).apply {
-                setOverlayConfig(config)
-            }
-
-            // 设置布局参数
-            val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            } else {
-                @Suppress("DEPRECATION")
-                WindowManager.LayoutParams.TYPE_PHONE
-            }
-
-            val displayMetrics = android.util.DisplayMetrics()
-            windowManager.defaultDisplay.getRealMetrics(displayMetrics)
-
-            layoutParams = WindowManager.LayoutParams(
-                displayMetrics.widthPixels,
-                displayMetrics.heightPixels,
-                type,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-                PixelFormat.TRANSLUCENT
-            ).apply {
-                gravity = Gravity.TOP or Gravity.START
-                x = 0
-                y = 0
-            }
-
-            // 添加悬浮窗
-            windowManager.addView(overlayView, layoutParams)
+            showDetectionOverlay()
+            showControlPanel()
             isShowing = true
-
-            android.util.Log.i(TAG, "Overlay shown")
+            android.util.Log.i(TAG, "Overlay shown (detection + control panel)")
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Error showing overlay", e)
         }
+    }
+
+    /**
+     * 创建全屏检测覆盖层
+     * FLAG_NOT_TOUCHABLE：触摸穿透到下层应用
+     */
+    private fun showDetectionOverlay() {
+        overlayView = DetectionOverlayView(context).apply {
+            setOverlayConfig(config)
+        }
+
+        val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        } else {
+            @Suppress("DEPRECATION")
+            WindowManager.LayoutParams.TYPE_PHONE
+        }
+
+        val displayMetrics = android.util.DisplayMetrics()
+        windowManager.defaultDisplay.getRealMetrics(displayMetrics)
+
+        overlayLayoutParams = WindowManager.LayoutParams(
+            displayMetrics.widthPixels,
+            displayMetrics.heightPixels,
+            type,
+            // 全屏检测层：不可触摸，让触摸穿透到下层应用
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            x = 0
+            y = 0
+        }
+
+        windowManager.addView(overlayView, overlayLayoutParams)
+    }
+
+    /**
+     * 创建可拖拽控制面板
+     * 可交互：支持拖拽移动、暂停/继续、隐藏操作
+     */
+    private fun showControlPanel() {
+        controlPanel = OverlayControlPanel(context).apply {
+            onActionListener = object : OverlayControlPanel.OnActionListener {
+                override fun onPauseToggle(paused: Boolean) {
+                    this@OverlayManager.isPaused = paused
+                    this@OverlayManager.onPauseToggle?.invoke(paused)
+                }
+
+                override fun onHideClicked() {
+                    hide()
+                }
+            }
+        }
+
+        val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        } else {
+            @Suppress("DEPRECATION")
+            WindowManager.LayoutParams.TYPE_PHONE
+        }
+
+        controlLayoutParams = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            type,
+            // 控制面板：可交互，但不阻挡其他区域触摸
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            x = 16
+            y = 100
+        }
+
+        windowManager.addView(controlPanel, controlLayoutParams)
     }
 
     /**
@@ -97,13 +156,16 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
         if (!isShowing) return
 
         try {
-            overlayView?.let {
-                windowManager.removeView(it)
-            }
+            overlayView?.let { windowManager.removeView(it) }
             overlayView = null
-            layoutParams = null
-            isShowing = false
+            overlayLayoutParams = null
 
+            controlPanel?.let { windowManager.removeView(it) }
+            controlPanel = null
+            controlLayoutParams = null
+
+            isShowing = false
+            isPaused = false
             android.util.Log.i(TAG, "Overlay hidden")
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Error hiding overlay", e)
@@ -112,9 +174,12 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
 
     /**
      * 更新检测结果
+     * 同时更新检测覆盖层和控制面板的性能指标
      */
     override fun updateDetections(detections: List<Detection>, metrics: PerformanceMetrics) {
         overlayView?.updateDetections(detections, metrics)
+        // 更新控制面板上的性能指标
+        controlPanel?.updateMetrics(metrics.fps, metrics.inferenceLatencyMs)
     }
 
     /**

@@ -6,14 +6,18 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import com.aloyo.common.CaptureRegion
+import com.aloyo.common.ICaptureSource
 
 /**
  * 截屏前台服务
  * MediaProjection需要在前台服务中运行
  * 通过通知栏显示服务运行状态
+ * 支持绑定，允许外部获取CaptureManager设置帧回调
  */
 class ScreenCaptureService : Service() {
 
@@ -58,6 +62,20 @@ class ScreenCaptureService : Service() {
     // 截屏管理器实例
     private var captureManager: CaptureManager? = null
 
+    // 服务绑定Binder
+    private val binder = CaptureServiceBinder()
+
+    /**
+     * 服务绑定Binder
+     * 允许外部获取CaptureManager并设置帧回调
+     */
+    inner class CaptureServiceBinder : Binder() {
+        /**
+         * 获取ScreenCaptureService实例
+         */
+        fun getService(): ScreenCaptureService = this@ScreenCaptureService
+    }
+
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
@@ -76,7 +94,12 @@ class ScreenCaptureService : Service() {
 
         // 获取MediaProjection授权数据
         val resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, -1)
-        val resultData: Intent? = intent.getParcelableExtra(EXTRA_RESULT_DATA)
+        val resultData: Intent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra(EXTRA_RESULT_DATA, Intent::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableExtra(EXTRA_RESULT_DATA)
+        }
 
         if (resultCode == -1 || resultData == null) {
             android.util.Log.e(TAG, "Invalid MediaProjection result data")
@@ -91,7 +114,9 @@ class ScreenCaptureService : Service() {
         return START_STICKY
     }
 
-    override fun onBind(intent: Intent?): IBinder? = null
+    override fun onBind(intent: Intent?): IBinder {
+        return binder
+    }
 
     override fun onDestroy() {
         captureManager?.stopCapture()
@@ -134,14 +159,14 @@ class ScreenCaptureService : Service() {
     /**
      * 设置截屏帧回调
      */
-    fun setFrameCallback(callback: com.aloyo.common.ICaptureSource.FrameCallback?) {
+    fun setFrameCallback(callback: ICaptureSource.FrameCallback?) {
         captureManager?.setFrameCallback(callback)
     }
 
     /**
      * 设置截屏区域
      */
-    fun setCaptureRegion(region: com.aloyo.common.CaptureRegion) {
+    fun setCaptureRegion(region: CaptureRegion) {
         captureManager?.setCaptureRegion(region)
     }
 }
