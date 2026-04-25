@@ -19,6 +19,7 @@ import android.widget.LinearLayout
 import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.ScrollView
+import android.widget.SeekBar
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
@@ -78,6 +79,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnHideOverlay: Button
     private lateinit var tvStatus: TextView
     private lateinit var tvMetrics: TextView
+    private lateinit var seekbarConfidence: SeekBar
+    private lateinit var seekbarNms: SeekBar
+    private lateinit var tvConfValue: TextView
+    private lateinit var tvNmsValue: TextView
 
     // 运行状态
     private var isCapturing = false
@@ -206,6 +211,38 @@ class MainActivity : AppCompatActivity() {
         btnHideOverlay = findViewById(R.id.btn_hide_overlay)
         tvStatus = findViewById(R.id.tv_status)
         tvMetrics = findViewById(R.id.tv_metrics)
+        seekbarConfidence = findViewById(R.id.seekbar_confidence)
+        seekbarNms = findViewById(R.id.seekbar_nms)
+        tvConfValue = findViewById(R.id.tv_conf_value)
+        tvNmsValue = findViewById(R.id.tv_nms_value)
+
+        // 置信度阈值滑块：0-100 映射到 0.0-1.0
+        seekbarConfidence.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val value = progress / 100f
+                tvConfValue.text = String.format("%.2f", value)
+                // 实时更新推理引擎的置信度阈值
+                if (isInferenceReady) {
+                    inferenceEngine.setConfidenceThreshold(value)
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
+        // NMS阈值滑块：0-100 映射到 0.0-1.0
+        seekbarNms.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val value = progress / 100f
+                tvNmsValue.text = String.format("%.2f", value)
+                // 实时更新推理引擎的NMS阈值
+                if (isInferenceReady) {
+                    inferenceEngine.setNmsThreshold(value)
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
 
         updateStatus("就绪")
     }
@@ -853,6 +890,13 @@ class MainActivity : AppCompatActivity() {
         }
 
         isInferenceReady = true
+
+        // 同步SeekBar到模型配置的阈值
+        seekbarConfidence.progress = (config.confidenceThreshold * 100).toInt()
+        seekbarNms.progress = (config.nmsThreshold * 100).toInt()
+        tvConfValue.text = String.format("%.2f", config.confidenceThreshold)
+        tvNmsValue.text = String.format("%.2f", config.nmsThreshold)
+
         updateStatus("模型已加载: $modelName")
         logger.info(TAG, "Model loaded successfully: $modelName")
         return true

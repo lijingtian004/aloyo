@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp"
     android:background="#1A1A2E">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
 
     <!-- 标题 -->
     <TextView
@@ -59,12 +63,89 @@
             android:layout_marginStart="8dp" />
     </LinearLayout>
 
+    <!-- 推理参数调节区域 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="推理参数"
+        android:textSize="16sp"
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="8dp" />
+
+    <!-- 置信度阈值 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="4dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="置信度阈值: "
+            android:textColor="#CCCCCC"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tv_conf_value"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="0.50"
+            android:textColor="#00FF00"
+            android:textSize="14sp"
+            android:fontFamily="monospace" />
+    </LinearLayout>
+
+    <SeekBar
+        android:id="@+id/seekbar_confidence"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="100"
+        android:progress="50"
+        android:layout_marginBottom="8dp" />
+
+    <!-- NMS阈值 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="4dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="NMS阈值: "
+            android:textColor="#CCCCCC"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tv_nms_value"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="0.40"
+            android:textColor="#00FF00"
+            android:textSize="14sp"
+            android:fontFamily="monospace" />
+    </LinearLayout>
+
+    <SeekBar
+        android:id="@+id/seekbar_nms"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="100"
+        android:progress="40"
+        android:layout_marginBottom="16dp" />
+
     <!-- 控制按钮区域 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginBottom="16dp">
+        android:layout_marginBottom="8dp">
 
         <Button
             android:id="@+id/btn_start_capture"
@@ -74,7 +155,7 @@
             android:text="开始截屏推理"
             android:backgroundTint="#0F3460"
             android:textColor="#FFFFFF"
-            android:layout_marginEnd="8dp" />
+            android:layout_marginEnd="4dp" />
 
         <Button
             android:id="@+id/btn_stop_capture"
@@ -84,7 +165,7 @@
             android:text="停止"
             android:backgroundTint="#E94560"
             android:textColor="#FFFFFF"
-            android:layout_marginStart="8dp" />
+            android:layout_marginStart="4dp" />
     </LinearLayout>
 
     <LinearLayout
@@ -101,7 +182,7 @@
             android:text="显示悬浮窗"
             android:backgroundTint="#533483"
             android:textColor="#FFFFFF"
-            android:layout_marginEnd="8dp" />
+            android:layout_marginEnd="4dp" />
 
         <Button
             android:id="@+id/btn_hide_overlay"
@@ -111,7 +192,7 @@
             android:text="隐藏悬浮窗"
             android:backgroundTint="#533483"
             android:textColor="#FFFFFF"
-            android:layout_marginStart="8dp" />
+            android:layout_marginStart="4dp" />
     </LinearLayout>
 
     <!-- 状态显示区域 -->
@@ -132,7 +213,7 @@
         android:textSize="14sp"
         android:textColor="#00FF00"
         android:fontFamily="monospace"
-        android:layout_marginBottom="24dp" />
+        android:layout_marginBottom="16dp" />
 
     <!-- 分隔线 -->
     <View
@@ -153,9 +234,46 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="1. 点击「导入模型」选择param/bin/config文件\n2. 选择已导入的YOLO模型\n3. 点击开始截屏推理\n4. 授权截屏和悬浮窗权限\n5. 检测结果将以悬浮窗形式显示在屏幕上"
+        android:text="1. 点击「导入模型」选择ZIP压缩包或单独文件\n2. 导入后编辑模型配置（类别标签等）\n3. 调节置信度/NMS阈值\n4. 点击开始截屏推理\n5. 悬浮窗可拖拽、暂停、隐藏\n6. 长按模型选择框可重新编辑配置"
         android:textSize="13sp"
         android:textColor="#AAAAAA"
-        android:lineSpacingExtra="4dp" />
+        android:lineSpacingExtra="4dp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- config.json模板说明 -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#333355"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="config.json 模板"
+        android:textSize="16sp"
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text='{\n  "version": "yolov8n",\n  "inputWidth": 640,\n  "inputHeight": 640,\n  "numClasses": 80,\n  "confidenceThreshold": 0.5,\n  "nmsThreshold": 0.4,\n  "labels": ["person", "car", ...]\n}'
+        android:textSize="12sp"
+        android:textColor="#88AACC"
+        android:fontFamily="monospace"
+        android:background="#16213E"
+        android:padding="12dp"
+        android:lineSpacingExtra="2dp"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="• version: 模型版本(yolov5/yolov7/yolov8)，决定解码方式\n• inputWidth/Height: 模型输入尺寸，影响推理精度和速度\n• numClasses: 检测类别数，必须与模型一致\n• confidenceThreshold: 置信度阈值(0-1)，越高过滤越严格\n• nmsThreshold: NMS阈值(0-1)，越低去重越严格\n• labels: 类别标签列表，顺序对应类别ID\n\n注意：置信度和NMS阈值可在运行时通过滑块实时调节，无需修改config.json"
+        android:textSize="12sp"
+        android:textColor="#888888"
+        android:lineSpacingExtra="2dp" />
 
 </LinearLayout>
+</ScrollView>
