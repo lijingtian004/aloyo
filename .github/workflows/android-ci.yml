@@ -33,13 +33,13 @@ jobs:
           key: gradle-${{ hashFiles('**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: gradle-
 
-      # 下载NCNN Android SDK - 使用gh CLI
+      # 下载NCNN Android SDK
       - name: 下载NCNN SDK
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p core-inference/libs
-          # 使用gh release download从Tencent/ncnn下载
+          # 从Tencent/ncnn下载指定版本的Android Vulkan SDK
           gh release download 20260113 --repo Tencent/ncnn --pattern "ncnn-20260113-android-vulkan.zip" --dir /tmp --clobber
           # 解压
           unzip -o /tmp/ncnn-20260113-android-vulkan.zip -d /tmp/ncnn
@@ -51,58 +51,11 @@ jobs:
           echo "NCNN SDK downloaded and extracted"
           ls -la core-inference/libs/ncnn-android-vulkan/
 
-      # 创建NCNN AAR包
-      - name: 创建NCNN AAR
-        run: |
-          mkdir -p /tmp/ncnn-aar/jni
-          # 复制各ABI的so库
-          for abi in armeabi-v7a arm64-v8a x86 x86_64; do
-            if [ -d "core-inference/libs/ncnn-android-vulkan/$abi" ]; then
-              mkdir -p /tmp/ncnn-aar/jni/$abi
-              cp core-inference/libs/ncnn-android-vulkan/$abi/lib/libncnn.so /tmp/ncnn-aar/jni/$abi/ 2>/dev/null || true
-            fi
-          done
-          # 创建AndroidManifest.xml
-          echo '<?xml version="1.0" encoding="utf-8"?><manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.tencent.ncnn"/>' > /tmp/ncnn-aar/AndroidManifest.xml
-          # 创建空的classes.jar
-          mkdir -p /tmp/ncnn-aar/build
-          jar cf /tmp/ncnn-aar/classes.jar -C /tmp/ncnn-aar/build . 2>/dev/null || true
-          # 打包AAR
-          cd /tmp/ncnn-aar
-          zip -r $GITHUB_WORKSPACE/core-inference/libs/ncnn-android.aar AndroidManifest.xml classes.jar jni/
-          echo "NCNN AAR created"
-          ls -la $GITHUB_WORKSPACE/core-inference/libs/
-
       - name: 授予执行权限
         run: chmod +x gradlew
 
-      - name: 安装CMake和NDK
-        run: |
-          echo "y" | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "cmake;3.22.1" "ndk;27.0.12077973"
-
-      - name: 下载Gradle Wrapper JAR
-        run: |
-          if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
-            echo "Downloading gradle-wrapper.jar..."
-            curl -L -o gradle/wrapper/gradle-wrapper.jar "https://raw.githubusercontent.com/nihui/ncnn-android-yolov8/master/gradle/wrapper/gradle-wrapper.jar" 2>/dev/null || \
-            curl -L -o gradle/wrapper/gradle-wrapper.jar "https://github.com/nihui/ncnn-android-yolov8/raw/master/gradle/wrapper/gradle-wrapper.jar" 2>/dev/null || \
-            wget -q -O gradle/wrapper/gradle-wrapper.jar "https://services.gradle.org/distributions/gradle-8.5-bin.zip" 2>/dev/null
-            # 如果还是失败，使用gradle wrapper命令
-            if [ ! -f gradle/wrapper/gradle-wrapper.jar ] || [ ! -s gradle/wrapper/gradle-wrapper.jar ]; then
-              echo "Using system gradle to generate wrapper..."
-              which gradle && gradle wrapper --gradle-version 8.5 || {
-                echo "Downloading wrapper jar directly from Gradle distributions..."
-                mkdir -p /tmp/gradle-download
-                curl -L "https://services.gradle.org/distributions/gradle-8.5-bin.zip" -o /tmp/gradle-download/gradle.zip
-                unzip -q /tmp/gradle-download/gradle.zip -d /tmp/gradle-download
-                /tmp/gradle-download/gradle-8.5/bin/gradle wrapper --gradle-version 8.5
-              }
-            fi
-          fi
-          ls -la gradle/wrapper/
-
       - name: 构建Debug APK
-        run: ./gradlew assembleDebug --stacktrace --info 2>&1 | tee build-output.log
+        run: ./gradlew assembleDebug --stacktrace 2>&1 | tee build-output.log
 
       - name: 上传构建日志
         if: always()
@@ -112,7 +65,6 @@ jobs:
           path: build-output.log
 
       - name: 上传Debug APK
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: aloyo-debug-apk
