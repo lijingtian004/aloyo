@@ -14,6 +14,9 @@ import android.provider.Settings
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
@@ -30,6 +33,9 @@ import com.aloyo.common.PerformanceMetrics
 import com.aloyo.inference.NcnnInferenceEngine
 import com.aloyo.model.ModelManager
 import com.aloyo.overlay.OverlayManager
+import java.io.File
+import java.io.FileInputStream
+import java.util.zip.ZipInputStream
 
 /**
  * 主界面Activity
@@ -42,6 +48,20 @@ class MainActivity : AppCompatActivity() {
         private const val TAG = "MainActivity"
         private const val REQUEST_MEDIA_PROJECTION = 1001
         private const val REQUEST_OVERLAY_PERMISSION = 1002
+
+        // YOLOv8 COCO 80类默认标签
+        private val DEFAULT_COCO_LABELS = listOf(
+            "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat",
+            "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat",
+            "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack",
+            "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball",
+            "kite", "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket",
+            "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple",
+            "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair",
+            "couch", "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse",
+            "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator",
+            "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"
+        )
     }
 
     // 核心组件
@@ -110,43 +130,38 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // SAF文件选择器：依次选择param、bin、config文件
-    private var importParamUri: Uri? = null
-    private var importBinUri: Uri? = null
-    private var importConfigUri: Uri? = null
+    // 选择zip压缩包的launcher
+    private val pickZipLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let {
+            updateStatus("正在解析压缩包...")
+            importFromZip(it)
+        }
+    }
 
-    // 选择param文件的launcher
+    // 选择param文件的launcher（单独文件模式）
     private val pickParamLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let {
-            importParamUri = it
+            pendingParamUri = it
             updateStatus("已选择param文件，请选择bin文件")
-            // 继续选择bin文件
             pickBinLauncher.launch(arrayOf("*/*"))
         }
     }
 
     // 选择bin文件的launcher
+    private var pendingParamUri: Uri? = null
     private val pickBinLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
-        uri?.let {
-            importBinUri = it
-            updateStatus("已选择bin文件，请选择config.json文件")
-            // 继续选择config文件
-            pickConfigLauncher.launch(arrayOf("application/json", "*/*"))
-        }
-    }
-
-    // 选择config文件的launcher
-    private val pickConfigLauncher = registerForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri: Uri? ->
-        uri?.let {
-            importConfigUri = it
-            // 三个文件都选完了，弹出命名对话框
-            showModelNameDialog()
+        uri?.let { binUri ->
+            val paramUri = pendingParamUri
+            if (paramUri != null) {
+                // param和bin都选完了，弹出命名对话框
+                showModelNameDialog(paramUri, binUri)
+            }
         }
     }
 
@@ -223,9 +238,9 @@ class MainActivity : AppCompatActivity() {
      * 初始化按钮事件
      */
     private fun initButtons() {
-        // 导入模型按钮
+        // 导入模型按钮 - 弹出选择导入方式对话框
         btnImportModel.setOnClickListener {
-            startImportModelFlow()
+            showImportMethodDialog()
         }
 
         // 开始截屏推理（自动加载模型）
@@ -260,23 +275,130 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * 开始导入模型流程
-     * 使用SAF文件选择器依次选择param、bin、config三个文件
+     * 显示导入方式选择对话框
+     * 支持zip压缩包导入和单独文件导入
      */
-    private fun startImportModelFlow() {
-        importParamUri = null
-        importBinUri = null
-        importConfigUri = null
-        updateStatus("请选择模型param文件")
-        // 先选择param文件
-        pickParamLauncher.launch(arrayOf("*/*"))
+    private fun showImportMethodDialog() {
+        val options = arrayOf(
+            "从ZIP压缩包导入（推荐）",
+            "分别选择param和bin文件"
+        )
+
+        AlertDialog.Builder(this)
+            .setTitle("选择导入方式")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> {
+                        updateStatus("请选择模型ZIP压缩包")
+                        pickZipLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed", "*/*"))
+                    }
+                    1 -> {
+                        updateStatus("请选择模型param文件")
+                        pendingParamUri = null
+                        pickParamLauncher.launch(arrayOf("*/*"))
+                    }
+                }
+            }
+            .show()
     }
 
     /**
-     * 显示模型命名对话框
-     * 用户输入模型名称后执行导入
+     * 从ZIP压缩包导入模型
+     * 自动解压并查找param、bin、config文件
+     * config.json可选，没有时使用默认配置
      */
-    private fun showModelNameDialog() {
+    private fun importFromZip(zipUri: Uri) {
+        try {
+            val tempDir = File(cacheDir, "model_import_temp")
+            tempDir.deleteRecursively()
+            tempDir.mkdirs()
+
+            var paramFile: File? = null
+            var binFile: File? = null
+            var configFile: File? = null
+
+            // 解压ZIP，查找模型文件
+            contentResolver.openInputStream(zipUri)?.use { input ->
+                ZipInputStream(input).use { zipStream ->
+                    var entry = zipStream.nextEntry
+                    while (entry != null) {
+                        val entryName = entry.name.lowercase()
+                        // 跳过目录和隐藏文件
+                        if (!entry.isDirectory && !entryName.contains("__macosx") && !entryName.startsWith(".")) {
+                            val fileName = File(entry.name).name
+
+                            when {
+                                // 匹配param文件（.param）
+                                entryName.endsWith(".param") && paramFile == null -> {
+                                    val dest = File(tempDir, fileName)
+                                    dest.outputStream().use { output -> zipStream.copyTo(output) }
+                                    paramFile = dest
+                                }
+                                // 匹配bin文件（.bin）
+                                entryName.endsWith(".bin") && binFile == null -> {
+                                    val dest = File(tempDir, fileName)
+                                    dest.outputStream().use { output -> zipStream.copyTo(output) }
+                                    binFile = dest
+                                }
+                                // 匹配config文件（.json）
+                                entryName.endsWith(".json") && configFile == null -> {
+                                    val dest = File(tempDir, fileName)
+                                    dest.outputStream().use { output -> zipStream.copyTo(output) }
+                                    configFile = dest
+                                }
+                            }
+                        }
+                        zipStream.closeEntry()
+                        entry = zipStream.nextEntry
+                    }
+                }
+            }
+
+            // 校验必需文件
+            if (paramFile == null || binFile == null) {
+                val missing = mutableListOf<String>()
+                if (paramFile == null) missing.add(".param文件")
+                if (binFile == null) missing.add(".bin文件")
+                Toast.makeText(this, "压缩包中未找到: ${missing.joinToString("、")}", Toast.LENGTH_LONG).show()
+                updateStatus("导入失败：缺少模型文件")
+                tempDir.deleteRecursively()
+                return
+            }
+
+            // config可选，没有时提示使用默认配置
+            if (configFile == null) {
+                AlertDialog.Builder(this)
+                    .setTitle("未找到config.json")
+                    .setMessage("压缩包中没有config.json配置文件。\n\n" +
+                            "config.json用于告诉推理引擎：\n" +
+                            "• 模型输入尺寸（默认640×640）\n" +
+                            "• 检测类别数量（默认80类COCO）\n" +
+                            "• 类别标签名称\n" +
+                            "• 置信度/NMS阈值\n\n" +
+                            "是否使用YOLOv8默认配置（640×640，COCO 80类）？")
+                    .setPositiveButton("使用默认配置") { _, _ ->
+                        showModelNameDialogWithFiles(paramFile!!, binFile!!, null)
+                    }
+                    .setNegativeButton("取消导入") { _, _ ->
+                        tempDir.deleteRecursively()
+                        updateStatus("已取消导入")
+                    }
+                    .show()
+            } else {
+                showModelNameDialogWithFiles(paramFile!!, binFile!!, configFile)
+            }
+
+        } catch (e: Exception) {
+            Toast.makeText(this, "解压失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            updateStatus("导入失败")
+            logger.error(TAG, "Error importing from zip", e)
+        }
+    }
+
+    /**
+     * 显示模型命名对话框（单独文件模式）
+     */
+    private fun showModelNameDialog(paramUri: Uri, binUri: Uri) {
         val input = EditText(this).apply {
             hint = "例如: yolov8n_custom"
             setPadding(48, 24, 48, 24)
@@ -284,7 +406,9 @@ class MainActivity : AppCompatActivity() {
 
         AlertDialog.Builder(this)
             .setTitle("为模型命名")
-            .setMessage("请输入导入模型的名称（仅用于显示，不能与已有模型重名）")
+            .setMessage("请输入导入模型的名称（不能与已有模型重名）\n\n" +
+                    "注意：未选择config.json，将使用YOLOv8默认配置\n" +
+                    "（640×640，COCO 80类，置信度0.5，NMS 0.4）")
             .setView(input)
             .setPositiveButton("导入") { _, _ ->
                 val modelName = input.text.toString().trim()
@@ -296,57 +420,180 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this, "模型名称已存在，请换一个", Toast.LENGTH_SHORT).show()
                     return@setPositiveButton
                 }
-                performImport(modelName)
+                performImportFromUris(modelName, paramUri, binUri, null)
             }
             .setNegativeButton("取消", null)
             .show()
     }
 
     /**
-     * 执行模型导入
-     * 将SAF选择的文件复制到应用私有目录
+     * 显示模型命名对话框（ZIP解压后模式）
+     * 支持选择YOLO版本以生成正确的默认config
      */
-    private fun performImport(modelName: String) {
-        val paramUri = importParamUri
-        val binUri = importBinUri
-        val configUri = importConfigUri
-
-        if (paramUri == null || binUri == null || configUri == null) {
-            Toast.makeText(this, "文件选择不完整，请重新导入", Toast.LENGTH_SHORT).show()
-            return
+    private fun showModelNameDialogWithFiles(paramFile: File, binFile: File, configFile: File?) {
+        val dialogView = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(48, 24, 48, 0)
         }
 
+        val nameInput = EditText(this).apply {
+            hint = "例如: yolov8n_custom"
+        }
+        dialogView.addView(nameInput)
+
+        // 如果没有config，让用户选择YOLO版本
+        if (configFile == null) {
+            val versionLabel = TextView(this).apply {
+                text = "选择YOLO版本："
+                setPadding(0, 16, 0, 8)
+            }
+            dialogView.addView(versionLabel)
+
+            val radioGroup = RadioGroup(this)
+            val versions = listOf("YOLOv5", "YOLOv7", "YOLOv8")
+            versions.forEachIndexed { index, version ->
+                RadioButton(this).apply {
+                    text = version
+                    id = index
+                    if (index == 2) isChecked = true // 默认选中YOLOv8
+                }.also { radioGroup.addView(it) }
+            }
+            radioGroup.id = View.generateViewId()
+            dialogView.addView(radioGroup)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("为模型命名")
+            .setView(dialogView)
+            .setPositiveButton("导入") { _, _ ->
+                val modelName = nameInput.text.toString().trim()
+                if (modelName.isEmpty()) {
+                    Toast.makeText(this, "模型名称不能为空", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                if (modelManager.availableModels.contains(modelName)) {
+                    Toast.makeText(this, "模型名称已存在，请换一个", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+
+                // 获取选择的YOLO版本
+                var yoloVersion = "yolov8"
+                if (configFile == null) {
+                    val radioGroup = dialogView.getChildAt(dialogView.childCount - 1) as? RadioGroup
+                    val selectedId = radioGroup?.checkedRadioButtonId ?: 2
+                    yoloVersion = when (selectedId) {
+                        0 -> "yolov5"
+                        1 -> "yolov7"
+                        else -> "yolov8"
+                    }
+                }
+
+                performImportFromFiles(modelName, paramFile, binFile, configFile, yoloVersion)
+            }
+            .setNegativeButton("取消") { _, _ ->
+                // 清理临时文件
+                val tempDir = File(cacheDir, "model_import_temp")
+                tempDir.deleteRecursively()
+                updateStatus("已取消导入")
+            }
+            .show()
+    }
+
+    /**
+     * 执行模型导入（从ZIP解压的文件）
+     */
+    private fun performImportFromFiles(
+        modelName: String,
+        paramFile: File,
+        binFile: File,
+        configFile: File?,
+        yoloVersion: String = "yolov8"
+    ) {
         updateStatus("正在导入模型: $modelName ...")
 
         try {
-            // 将SAF Uri的文件内容复制到应用私有目录
-            val modelDir = java.io.File(filesDir, "imported_models/$modelName")
+            val modelDir = File(filesDir, "imported_models/$modelName")
             if (!modelDir.exists()) {
                 modelDir.mkdirs()
             }
 
             // 复制param文件
-            val paramFile = java.io.File(modelDir, "model.param")
+            val destParam = File(modelDir, "model.param")
+            paramFile.inputStream().use { input -> destParam.outputStream().use { output -> input.copyTo(output) } }
+
+            // 复制bin文件
+            val destBin = File(modelDir, "model.bin")
+            binFile.inputStream().use { input -> destBin.outputStream().use { output -> input.copyTo(output) } }
+
+            // 处理config文件
+            val destConfig = File(modelDir, "config.json")
+            if (configFile != null) {
+                // 有config文件，直接复制
+                configFile.inputStream().use { input -> destConfig.outputStream().use { output -> input.copyTo(output) } }
+            } else {
+                // 没有config文件，生成默认配置
+                generateDefaultConfig(destConfig, yoloVersion)
+            }
+
+            // 清理临时文件
+            val tempDir = File(cacheDir, "model_import_temp")
+            tempDir.deleteRecursively()
+
+            // 刷新模型列表
+            modelManager.refreshModelList()
+            refreshModelSpinner()
+
+            updateStatus("模型导入成功: $modelName")
+            Toast.makeText(this, "模型「$modelName」导入成功！", Toast.LENGTH_SHORT).show()
+            logger.info(TAG, "Model imported successfully: $modelName")
+
+            // 自动选择刚导入的模型
+            val models = modelManager.availableModels
+            val index = models.indexOf(modelName)
+            if (index >= 0) {
+                modelSpinner.setSelection(index)
+            }
+        } catch (e: Exception) {
+            updateStatus("模型导入失败")
+            Toast.makeText(this, "导入失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            logger.error(TAG, "Error importing model: $modelName", e)
+        }
+    }
+
+    /**
+     * 执行模型导入（从SAF Uri，单独文件模式）
+     * 没有config时使用默认配置
+     */
+    private fun performImportFromUris(modelName: String, paramUri: Uri, binUri: Uri, configUri: Uri?) {
+        updateStatus("正在导入模型: $modelName ...")
+
+        try {
+            val modelDir = File(filesDir, "imported_models/$modelName")
+            if (!modelDir.exists()) {
+                modelDir.mkdirs()
+            }
+
+            // 复制param文件
+            val destParam = File(modelDir, "model.param")
             contentResolver.openInputStream(paramUri)?.use { input ->
-                paramFile.outputStream().use { output ->
-                    input.copyTo(output)
-                }
+                destParam.outputStream().use { output -> input.copyTo(output) }
             }
 
             // 复制bin文件
-            val binFile = java.io.File(modelDir, "model.bin")
+            val destBin = File(modelDir, "model.bin")
             contentResolver.openInputStream(binUri)?.use { input ->
-                binFile.outputStream().use { output ->
-                    input.copyTo(output)
-                }
+                destBin.outputStream().use { output -> input.copyTo(output) }
             }
 
-            // 复制config文件
-            val configFile = java.io.File(modelDir, "config.json")
-            contentResolver.openInputStream(configUri)?.use { input ->
-                configFile.outputStream().use { output ->
-                    input.copyTo(output)
+            // 处理config文件（可选）
+            val destConfig = File(modelDir, "config.json")
+            if (configUri != null) {
+                contentResolver.openInputStream(configUri)?.use { input ->
+                    destConfig.outputStream().use { output -> input.copyTo(output) }
                 }
+            } else {
+                // 没有config，生成默认配置
+                generateDefaultConfig(destConfig, "yolov8")
             }
 
             // 刷新模型列表
@@ -368,6 +615,30 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "导入失败: ${e.message}", Toast.LENGTH_SHORT).show()
             logger.error(TAG, "Error importing model: $modelName", e)
         }
+    }
+
+    /**
+     * 生成默认的config.json配置文件
+     * @param destFile 目标文件
+     * @param yoloVersion YOLO版本（yolov5/yolov7/yolov8）
+     */
+    private fun generateDefaultConfig(destFile: File, yoloVersion: String) {
+        val configJson = """
+        {
+            "version": "${yoloVersion}n",
+            "inputWidth": 640,
+            "inputHeight": 640,
+            "numClasses": 80,
+            "confidenceThreshold": 0.5,
+            "nmsThreshold": 0.4,
+            "labels": [
+                ${DEFAULT_COCO_LABELS.joinToString(",\n                ") { "\"$it\"" }}
+            ]
+        }
+        """.trimIndent()
+
+        destFile.writeText(configJson)
+        logger.info(TAG, "Generated default config for $yoloVersion")
     }
 
     /**
