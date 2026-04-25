@@ -70,6 +70,16 @@ class OverlayControlPanel(context: Context) : FrameLayout(context) {
             setBackgroundColor(0xDD222222.toInt())
         }
 
+        // ALOYO标识
+        val tvTitle = TextView(context).apply {
+            text = "ALOYO"
+            setTextColor(Color.parseColor("#E94560"))
+            textSize = 11f
+            setTypeface(android.graphics.Typeface.DEFAULT_BOLD)
+            setPadding(0, 0, 10, 0)
+        }
+        container.addView(tvTitle)
+
         // FPS显示
         tvFps = TextView(context).apply {
             text = "FPS: --"

@@ -37,40 +37,40 @@ class DetectionOverlayView(context: Context) : View(context) {
     @Volatile
     private var hasReceivedData: Boolean = false
 
-    // 绘制画笔
+    // 绘制画笔 - 使用醒目的颜色确保可见
     private val boxPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = config.boxStrokeWidth
-        color = config.boxColor
+        strokeWidth = 3f
+        color = Color.RED
     }
 
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = config.textSize
-        color = config.textColor
+        textSize = 24f
+        color = Color.WHITE
         typeface = android.graphics.Typeface.DEFAULT_BOLD
     }
 
     private val textBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = config.textBgColor
+        color = Color.parseColor("#CC000000")
     }
 
     private val metricsPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = 12f
+        textSize = 18f
         color = Color.GREEN
         typeface = android.graphics.Typeface.MONOSPACE
     }
 
     private val metricsBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = 0x99000000.toInt()
+        color = Color.parseColor("#CC000000")
     }
 
     // 等待数据提示的画笔
     private val waitingTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = 16f
-        color = 0xAAFFFFFF.toInt()
-        typeface = android.graphics.Typeface.DEFAULT
+        textSize = 20f
+        color = Color.YELLOW
+        typeface = android.graphics.Typeface.DEFAULT_BOLD
     }
 
     // 视图尺寸

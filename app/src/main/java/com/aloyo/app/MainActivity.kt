@@ -708,6 +708,14 @@ class MainActivity : AppCompatActivity() {
             setPadding(48, 24, 48, 24)
         }
 
+        // 提示文字（放在ScrollView内部，避免setMessage导致按钮被截断）
+        layout.addView(TextView(this).apply {
+            text = "请检查并修改模型配置，确保与实际模型匹配："
+            setTextColor(0xFF666666.toInt())
+            textSize = 14f
+            setPadding(0, 0, 0, 16)
+        })
+
         // YOLO版本
         layout.addView(TextView(this).apply { text = "YOLO版本（决定解码方式）:" })
         val versionRadioGroup = RadioGroup(this)
@@ -788,7 +796,6 @@ class MainActivity : AppCompatActivity() {
 
         AlertDialog.Builder(this)
             .setTitle("模型配置 - $modelName")
-            .setMessage("请检查并修改模型配置，确保与实际模型匹配：")
             .setView(scrollView)
             .setPositiveButton("保存") { _, _ ->
                 // 读取编辑后的值
