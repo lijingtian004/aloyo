@@ -24,15 +24,6 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: 缓存Gradle依赖
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ hashFiles('**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: gradle-
-
       # 下载NCNN Android SDK
       - name: 下载NCNN SDK
         env:
@@ -47,19 +38,22 @@ jobs:
           echo "NCNN SDK downloaded and extracted"
           ls -la core-inference/libs/ncnn-android-vulkan/
 
-      # 下载Gradle并直接构建（不依赖gradle-wrapper.jar）
+      # 设置Gradle
+      - name: 设置Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.5'
+
       - name: 构建Debug APK
+        run: gradle assembleDebug --stacktrace --info 2>&1 | tee build-output.log
+
+      - name: 列出构建输出
+        if: always()
         run: |
-          # 从gradle-wrapper.properties获取Gradle版本
-          GRADLE_VERSION=$(grep distributionUrl gradle/wrapper/gradle-wrapper.properties | sed 's/.*gradle-\([0-9.]*\)-bin.*/\1/')
-          echo "Gradle version: $GRADLE_VERSION"
-          
-          # 下载Gradle发行版
-          curl -L "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" -o /tmp/gradle.zip
-          unzip -q /tmp/gradle.zip -d /tmp/gradle-dist
-          
-          # 直接用Gradle构建（跳过wrapper）
-          /tmp/gradle-dist/gradle-${GRADLE_VERSION}/bin/gradle assembleDebug --stacktrace 2>&1 | tee build-output.log
+          echo "=== APK files ==="
+          find app/build/outputs -name "*.apk" 2>/dev/null || echo "No APK files found"
+          echo "=== Build output directory ==="
+          ls -laR app/build/outputs/ 2>/dev/null || echo "No outputs directory"
 
       - name: 上传构建日志
         if: always()
@@ -69,7 +63,10 @@ jobs:
           path: build-output.log
 
       - name: 上传Debug APK
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: aloyo-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/**/*.apk
