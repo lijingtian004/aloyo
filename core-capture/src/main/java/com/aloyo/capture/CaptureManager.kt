@@ -316,12 +316,9 @@ class CaptureManager(private val context: Context) : ICaptureSource {
 
     override fun setCaptureRegion(region: CaptureRegion) {
         captureRegion = region
-        // 如果正在截屏，需要重新设置VirtualDisplay
-        if (isCapturing) {
-            virtualDisplay?.release()
-            imageReader?.close()
-            setupVirtualDisplay()
-        }
+        // 不需要重建VirtualDisplay，因为setupVirtualDisplay始终以全屏尺寸截屏
+        // 裁剪在processImage中通过cropBitmap实现
+        android.util.Log.i(TAG, "Capture region updated: ${if (region.isFullScreen) "FULL_SCREEN" else "${region.width}x${region.height} at (${region.x},${region.y})"}")
     }
 
     override fun startCapture(): Boolean {
