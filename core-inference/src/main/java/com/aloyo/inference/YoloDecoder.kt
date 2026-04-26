@@ -81,6 +81,10 @@ data class RawDetection(
  */
 class UnifiedYoloDecoder : YoloDecoder {
 
+    // 追踪最近一次解码是否跳过了objectness（供全局自适应过滤使用）
+    @Volatile
+    private var lastSkipObjectness = false
+
     companion object {
         private const val TAG = "UnifiedYoloDecoder"
 
@@ -127,6 +131,7 @@ class UnifiedYoloDecoder : YoloDecoder {
         confidenceThreshold: Float,
         blobShapes: List<OutputBlobInfo>
     ): List<RawDetection> {
+        lastSkipObjectness = false
         val numRows = output.size
         if (numRows == 0) return emptyList()
         val numCols = output[0].size
@@ -154,21 +159,89 @@ class UnifiedYoloDecoder : YoloDecoder {
             }
         }
 
-        // 如果有多个blob的形状信息，按blob分别解码后合并
-        if (blobShapes.isNotEmpty()) {
-            return decodeMultiBlob(output, config, confidenceThreshold, blobShapes, v5Attrs, v8Attrs)
+        // 解码原始输出
+        val detections = if (blobShapes.isNotEmpty()) {
+            decodeMultiBlob(output, config, confidenceThreshold, blobShapes, v5Attrs, v8Attrs)
+        } else {
+            // 单blob情况：自动检测格式并解码
+            val format = detectFormat(numRows, numCols, v8Attrs, v5Attrs)
+            android.util.Log.i(TAG, "Detected format: ${format.name}")
+            when (format) {
+                OutputFormat.V5_MULTI_ANCHOR -> decodeV5MultiAnchor(output, config, confidenceThreshold, numRows, numCols, null, null)
+                OutputFormat.V8_TRANSPOSED -> decodeV8Format(output, config, confidenceThreshold, numRows, numCols)
+                OutputFormat.V5_PER_ROW -> decodeV5PerRowFormat(output, config, confidenceThreshold, numRows, numCols)
+                OutputFormat.V5_FLAT -> decodeV5FlatFormat(output, config, confidenceThreshold, numCols, v5Attrs)
+            }
         }
 
-        // 单blob情况：自动检测格式并解码
-        val format = detectFormat(numRows, numCols, v8Attrs, v5Attrs)
-        android.util.Log.i(TAG, "Detected format: ${format.name}")
-
-        return when (format) {
-            OutputFormat.V5_MULTI_ANCHOR -> decodeV5MultiAnchor(output, config, confidenceThreshold, numRows, numCols, null, null)
-            OutputFormat.V8_TRANSPOSED -> decodeV8Format(output, config, confidenceThreshold, numRows, numCols)
-            OutputFormat.V5_PER_ROW -> decodeV5PerRowFormat(output, config, confidenceThreshold, numRows, numCols)
-            OutputFormat.V5_FLAT -> decodeV5FlatFormat(output, config, confidenceThreshold, numCols, v5Attrs)
+        // 全局自适应过滤：当objectness被跳过时，类别置信度无法区分前景/背景
+        // 使用gap-based方法：在排序后的置信度中找到最大间隔作为前景/背景分离点
+        if (lastSkipObjectness && detections.size > 20) {
+            return applyGapBasedFiltering(detections, confidenceThreshold)
         }
+
+        return detections
+    }
+
+    /**
+     * 基于最大间隔（gap）的自适应过滤
+     * 当objectness通道未使用时，类别置信度对前景/背景区分度不足，
+     * 背景和前景的置信度可能非常接近（如0.978 vs 0.998）。
+     *
+     * 原理：将所有检测按置信度降序排列，找到相邻元素之间的最大间隔。
+     * 真实目标的置信度通常明显高于背景，因此最大间隔自然出现在
+     * 前景和背景的交界处，以此作为分离阈值。
+     *
+     * 优点：不依赖固定百分位数，直接从数据分布中找到最佳分离点
+     */
+    private fun applyGapBasedFiltering(
+        detections: List<RawDetection>,
+        confThresh: Float
+    ): List<RawDetection> {
+        val confs = detections.map { it.confidence }.sortedDescending()
+        val maxConf = confs.first()
+        val medianConf = confs[confs.size / 2]
+
+        // 在排序后的置信度中查找最大间隔
+        // 只检查前半部分（高置信度区域），避免被尾部噪声干扰
+        val checkRange = minOf(confs.size - 1, maxOf(50, confs.size / 2))
+        var maxGap = 0f
+        var maxGapIdx = 0
+        for (i in 0 until checkRange) {
+            val gap = confs[i] - confs[i + 1]
+            if (gap > maxGap) {
+                maxGap = gap
+                maxGapIdx = i
+            }
+        }
+
+        val beforeCount = detections.size
+        val result: List<RawDetection>
+
+        if (maxGap > 0.005f) {
+            // 找到显著间隔：以间隔中点作为前景/背景分离阈值
+            val gapThresh = (confs[maxGapIdx] + confs[maxGapIdx + 1]) / 2f
+            val effectiveThresh = maxOf(confThresh, gapThresh)
+            result = detections.filter { it.confidence >= effectiveThresh }
+
+            android.util.Log.i(TAG, "Gap-based filtering: maxGap=${"%.4f".format(maxGap)} " +
+                    "at idx=$maxGapIdx, gapThresh=${"%.4f".format(gapThresh)}, " +
+                    "maxConf=${"%.4f".format(maxConf)}, medianConf=${"%.4f".format(medianConf)}, " +
+                    "before=$beforeCount, after=${result.size}")
+        } else {
+            // 无显著间隔：前景/背景置信度几乎无差异，无法可靠区分
+            // 保守策略：仅保留置信度最高的少量检测（可能是全部假阳性或全部真阳性）
+            val topN = minOf(10, confs.size)
+            val topThresh = confs[topN - 1]
+            result = detections.filter { it.confidence >= topThresh }
+
+            android.util.Log.i(TAG, "Gap-based filtering (no significant gap): " +
+                    "maxGap=${"%.4f".format(maxGap)}, topThresh=${"%.4f".format(topThresh)}, " +
+                    "maxConf=${"%.4f".format(maxConf)}, medianConf=${"%.4f".format(medianConf)}, " +
+                    "before=$beforeCount, after=${result.size}")
+        }
+
+        return result
     }
 
     /**
@@ -327,6 +400,7 @@ class UnifiedYoloDecoder : YoloDecoder {
         //   b. objRange < 5.0 — 原始值范围很窄，通道对输入无响应（只是偏置+噪声）
         // 不跳过的情况：maxRawObj很负且range很宽 → objectness正常工作，只是没有目标
         val skipObjectness = maxObjSigmoid < 0.01f && (maxRawObj > -2.0f || objRange < 5.0f)
+        lastSkipObjectness = skipObjectness
 
         android.util.Log.i(TAG, "V5_MULTI_ANCHOR: numAnchors=$numAnchors, gridH=$gridH, gridW=$gridW, " +
                 "stride=$stride, numSpatial=$numSpatial, anchors=${anchors.toList()}, " +
@@ -368,9 +442,9 @@ class UnifiedYoloDecoder : YoloDecoder {
                     finalConf = objConf * maxClassConf
                 }
 
-                // skipObjectness时使用宽松预过滤，后续会做自适应阈值筛选
-                val preThresh = if (skipObjectness) 0.5f else confThresh
-                if (finalConf < preThresh) continue
+                // 当skipObjectness时使用宽松预过滤，全局自适应阈值在decode()中统一执行
+        val preThresh = if (skipObjectness) 0.5f else confThresh
+        if (finalConf < preThresh) continue
 
                 // 解码坐标（YOLOv5公式）
                 val rawCx = output[base + 0][i]
@@ -396,27 +470,6 @@ class UnifiedYoloDecoder : YoloDecoder {
                     confidence = finalConf
                 ))
             }
-        }
-
-        // 当skipObjectness时，类别置信度可能对前景/背景区分度不足
-        // （模型依赖objectness区分前景，类别头只区分类别）
-        // 此时需要基于置信度分布动态计算阈值，将真实目标从背景中分离
-        if (skipObjectness && detections.size > 20) {
-            val confs = detections.map { it.confidence }.sortedDescending()
-            val maxConf = confs.first()
-            val medianConf = confs[confs.size / 2]
-            // 自适应阈值：取中位数和最大值之间的3/4分位点
-            // 背景的类别置信度聚集在中位数附近，真实目标则明显更高
-            val adaptiveThresh = medianConf + 0.75f * (maxConf - medianConf)
-            val effectiveThresh = maxOf(confThresh, adaptiveThresh)
-
-            val beforeCount = detections.size
-            detections.retainAll { it.confidence >= effectiveThresh }
-
-            android.util.Log.i(TAG, "V5_MULTI_ANCHOR adaptive filtering: skipObj=true, " +
-                    "maxConf=${"%.4f".format(maxConf)}, medianConf=${"%.4f".format(medianConf)}, " +
-                    "adaptiveThresh=${"%.4f".format(adaptiveThresh)}, " +
-                    "before=$beforeCount, after=${detections.size}")
         }
 
         android.util.Log.i(TAG, "V5_MULTI_ANCHOR decoded: ${detections.size} raw detections (before NMS), skipObj=$skipObjectness")
