@@ -72,6 +72,30 @@
         android:textColor="#FFFFFF"
         android:layout_marginBottom="8dp" />
 
+    <!-- 截屏区域 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="4dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="截屏区域: "
+            android:textColor="#CCCCCC"
+            android:textSize="14sp" />
+
+        <Spinner
+            android:id="@+id/spinner_capture_region"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:background="#16213E"
+            android:popupBackground="#16213E" />
+    </LinearLayout>
+
     <!-- 置信度阈值 -->
     <LinearLayout
         android:layout_width="match_parent"

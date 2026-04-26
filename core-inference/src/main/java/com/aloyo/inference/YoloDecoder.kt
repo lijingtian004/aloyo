@@ -51,7 +51,8 @@ data class RawDetection(
     val w: Float,
     val h: Float,
     val classId: Int,
-    val confidence: Float
+    val confidence: Float,
+    val rawLogit: Float = 0f
 )
 
 /**
@@ -188,27 +189,36 @@ class UnifiedYoloDecoder : YoloDecoder {
      * 当objectness通道未使用时，类别置信度对前景/背景区分度不足，
      * 背景和前景的置信度可能非常接近（如0.978 vs 0.998）。
      *
-     * 原理：将所有检测按置信度降序排列，找到相邻元素之间的最大间隔。
-     * 真实目标的置信度通常明显高于背景，因此最大间隔自然出现在
-     * 前景和背景的交界处，以此作为分离阈值。
+     * 优先在logit空间（原始值）中查找间隔，因为logit空间的区分度更大：
+     * - sigmoid(3.8) ≈ 0.978（背景）
+     * - sigmoid(6.0) ≈ 0.998（目标）
+     * - sigmoid空间gap: 0.02
+     * - logit空间gap: 2.2（区分度提升100倍）
      *
-     * 优点：不依赖固定百分位数，直接从数据分布中找到最佳分离点
+     * 如果logit不可用，回退到sigmoid置信度空间
      */
     private fun applyGapBasedFiltering(
         detections: List<RawDetection>,
         confThresh: Float
     ): List<RawDetection> {
-        val confs = detections.map { it.confidence }.sortedDescending()
-        val maxConf = confs.first()
-        val medianConf = confs[confs.size / 2]
+        // 优先使用logit空间，区分度更大
+        val hasLogits = detections.any { it.rawLogit != 0f }
+        val values = if (hasLogits) {
+            detections.map { it.rawLogit }.sortedDescending()
+        } else {
+            detections.map { it.confidence }.sortedDescending()
+        }
 
-        // 在排序后的置信度中查找最大间隔
-        // 只检查前半部分（高置信度区域），避免被尾部噪声干扰
-        val checkRange = minOf(confs.size - 1, maxOf(50, confs.size / 2))
+        val maxValue = values.first()
+        val medianValue = values[values.size / 2]
+
+        // 在排序后的值中查找最大间隔
+        // 只检查前半部分（高值区域），避免被尾部噪声干扰
+        val checkRange = minOf(values.size - 1, maxOf(50, values.size / 2))
         var maxGap = 0f
         var maxGapIdx = 0
         for (i in 0 until checkRange) {
-            val gap = confs[i] - confs[i + 1]
+            val gap = values[i] - values[i + 1]
             if (gap > maxGap) {
                 maxGap = gap
                 maxGapIdx = i
@@ -218,26 +228,37 @@ class UnifiedYoloDecoder : YoloDecoder {
         val beforeCount = detections.size
         val result: List<RawDetection>
 
-        if (maxGap > 0.005f) {
-            // 找到显著间隔：以间隔中点作为前景/背景分离阈值
-            val gapThresh = (confs[maxGapIdx] + confs[maxGapIdx + 1]) / 2f
-            val effectiveThresh = maxOf(confThresh, gapThresh)
-            result = detections.filter { it.confidence >= effectiveThresh }
+        // logit空间的显著间隔阈值更大（1.0 vs 0.005）
+        val significantGap = if (hasLogits) 1.0f else 0.005f
 
-            android.util.Log.i(TAG, "Gap-based filtering: maxGap=${"%.4f".format(maxGap)} " +
-                    "at idx=$maxGapIdx, gapThresh=${"%.4f".format(gapThresh)}, " +
-                    "maxConf=${"%.4f".format(maxConf)}, medianConf=${"%.4f".format(medianConf)}, " +
+        if (maxGap > significantGap) {
+            // 找到显著间隔：以间隔中点作为前景/背景分离阈值
+            val gapThresh = (values[maxGapIdx] + values[maxGapIdx + 1]) / 2f
+            result = if (hasLogits) {
+                detections.filter { it.rawLogit >= gapThresh }
+            } else {
+                val effectiveThresh = maxOf(confThresh, gapThresh)
+                detections.filter { it.confidence >= effectiveThresh }
+            }
+
+            android.util.Log.i(TAG, "Gap-based filtering (${if (hasLogits) "logit" else "sigmoid"}): " +
+                    "maxGap=${"%.4f".format(maxGap)} at idx=$maxGapIdx, " +
+                    "gapThresh=${"%.4f".format(gapThresh)}, " +
+                    "max=${"%.4f".format(maxValue)}, median=${"%.4f".format(medianValue)}, " +
                     "before=$beforeCount, after=${result.size}")
         } else {
-            // 无显著间隔：前景/背景置信度几乎无差异，无法可靠区分
-            // 保守策略：仅保留置信度最高的少量检测（可能是全部假阳性或全部真阳性）
-            val topN = minOf(10, confs.size)
-            val topThresh = confs[topN - 1]
-            result = detections.filter { it.confidence >= topThresh }
+            // 无显著间隔：保守保留top-10检测
+            val topN = minOf(10, values.size)
+            val topThresh = values[topN - 1]
+            result = if (hasLogits) {
+                detections.filter { it.rawLogit >= topThresh }
+            } else {
+                detections.filter { it.confidence >= topThresh }
+            }
 
             android.util.Log.i(TAG, "Gap-based filtering (no significant gap): " +
                     "maxGap=${"%.4f".format(maxGap)}, topThresh=${"%.4f".format(topThresh)}, " +
-                    "maxConf=${"%.4f".format(maxConf)}, medianConf=${"%.4f".format(medianConf)}, " +
+                    "max=${"%.4f".format(maxValue)}, median=${"%.4f".format(medianValue)}, " +
                     "before=$beforeCount, after=${result.size}")
         }
 
@@ -469,9 +490,18 @@ class UnifiedYoloDecoder : YoloDecoder {
 
                 // 计算最终置信度
                 val finalConf: Float
+                val maxRawClsLogit: Float
                 if (skipObjectness) {
-                    // 无objectness模式：直接使用类别置信度
+                    // 无objectness模式：使用类别置信度
                     finalConf = maxClassConf
+                    // 记录原始logit值用于自适应过滤
+                    var rawMax = Float.NEGATIVE_INFINITY
+                    for (c in 0 until config.numClasses) {
+                        val clsCh = base + 5 + c
+                        if (clsCh >= numRows || i >= output[clsCh].size) continue
+                        if (output[clsCh][i] > rawMax) rawMax = output[clsCh][i]
+                    }
+                    maxRawClsLogit = rawMax
                 } else {
                     // 标准V5模式：objectness × 类别置信度
                     val rawObj = output[base + 4][i]
@@ -479,11 +509,12 @@ class UnifiedYoloDecoder : YoloDecoder {
                     // 先用objectness预过滤，减少不必要的计算
                     if (objConf < confThresh * 0.1f) continue
                     finalConf = objConf * maxClassConf
+                    maxRawClsLogit = 0f
                 }
 
-                // 当skipObjectness时使用宽松预过滤，全局自适应阈值在decode()中统一执行
-        val preThresh = if (skipObjectness) 0.5f else confThresh
-        if (finalConf < preThresh) continue
+                // skipObjectness时使用宽松预过滤，后续gap-based过滤会精确筛选
+                val preThresh = if (skipObjectness) 0.5f else confThresh
+                if (finalConf < preThresh) continue
 
                 // 解码坐标（YOLOv5公式）
                 val rawCx = output[base + 0][i]
@@ -506,7 +537,8 @@ class UnifiedYoloDecoder : YoloDecoder {
                     w = w,
                     h = h,
                     classId = maxClassId,
-                    confidence = finalConf
+                    confidence = finalConf,
+                    rawLogit = maxRawClsLogit
                 ))
             }
         }

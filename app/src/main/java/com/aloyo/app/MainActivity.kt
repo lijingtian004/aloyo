@@ -27,6 +27,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.aloyo.capture.ScreenCaptureService
+import com.aloyo.common.CaptureRegion
 import com.aloyo.common.IInferenceEngine
 import com.aloyo.common.ILogger
 import com.aloyo.common.PerformanceMetrics
@@ -83,6 +84,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var seekbarNms: SeekBar
     private lateinit var tvConfValue: TextView
     private lateinit var tvNmsValue: TextView
+    private lateinit var captureRegionSpinner: Spinner
+
+    // 截屏区域选项
+    private val captureRegionOptions = listOf("全屏", "16:9", "4:3", "1:1", "居中75%")
 
     // 运行状态
     private var isCapturing = false
@@ -220,6 +225,12 @@ class MainActivity : AppCompatActivity() {
         seekbarNms = findViewById(R.id.seekbar_nms)
         tvConfValue = findViewById(R.id.tv_conf_value)
         tvNmsValue = findViewById(R.id.tv_nms_value)
+        captureRegionSpinner = findViewById(R.id.spinner_capture_region)
+
+        // 初始化截屏区域下拉框
+        val regionAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, captureRegionOptions)
+        regionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        captureRegionSpinner.adapter = regionAdapter
 
         // 置信度阈值滑块：0-100 映射到 0.0-1.0
         seekbarConfidence.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -949,12 +960,40 @@ class MainActivity : AppCompatActivity() {
         val bindIntent = Intent(this, ScreenCaptureService::class.java)
         bindService(bindIntent, serviceConnection, Context.BIND_AUTO_CREATE)
 
+        // 应用截屏区域设置
+        applyCaptureRegion()
+
         // 显示悬浮窗
         overlayManager.show()
 
         isCapturing = true
         updateStatus("截屏推理运行中")
         logger.info(TAG, "Capture and inference started")
+    }
+
+    /**
+     * 根据UI选择应用截屏区域
+     */
+    private fun applyCaptureRegion() {
+        val displayMetrics = resources.displayMetrics
+        val screenWidth = displayMetrics.widthPixels
+        val screenHeight = displayMetrics.heightPixels
+
+        val region = when (captureRegionSpinner.selectedItemPosition) {
+            1 -> CaptureRegion.createRatioRegion(screenWidth, screenHeight, 16, 9)
+            2 -> CaptureRegion.createRatioRegion(screenWidth, screenHeight, 4, 3)
+            3 -> CaptureRegion.createRatioRegion(screenWidth, screenHeight, 1, 1)
+            4 -> {
+                // 居中75%区域
+                val w = (screenWidth * 0.75).toInt()
+                val h = (screenHeight * 0.75).toInt()
+                CaptureRegion((screenWidth - w) / 2, (screenHeight - h) / 2, w, h)
+            }
+            else -> CaptureRegion.FULL_SCREEN
+        }
+
+        captureService?.setCaptureRegion(region)
+        logger.info(TAG, "Capture region set: ${if (region.isFullScreen) "FULL_SCREEN" else "${region.width}x${region.height} at (${region.x},${region.y})"}")
     }
 
     /**

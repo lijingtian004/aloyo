@@ -136,18 +136,17 @@ class CaptureManager(private val context: Context) : ICaptureSource {
      * 设置VirtualDisplay和ImageReader
      */
     private fun setupVirtualDisplay() {
-        val region = if (captureRegion.isFullScreen) {
-            CaptureRegion(0, 0, screenWidth, screenHeight)
-        } else {
-            captureRegion
-        }
+        // 始终以全屏尺寸创建VirtualDisplay，确保截取完整屏幕内容
+        // 非全屏区域通过processImage中的Bitmap裁剪实现
+        val captureWidth = screenWidth
+        val captureHeight = screenHeight
 
-        android.util.Log.i(TAG, "Setting up VirtualDisplay: ${region.width}x${region.height}")
+        android.util.Log.i(TAG, "Setting up VirtualDisplay: ${captureWidth}x${captureHeight}, region=${captureRegion}")
 
         // 创建ImageReader
         imageReader = ImageReader.newInstance(
-            region.width,
-            region.height,
+            captureWidth,
+            captureHeight,
             PixelFormat.RGBA_8888,
             2
         )
@@ -162,8 +161,8 @@ class CaptureManager(private val context: Context) : ICaptureSource {
         // 创建VirtualDisplay
         virtualDisplay = mediaProjection?.createVirtualDisplay(
             VIRTUAL_DISPLAY_NAME,
-            region.width,
-            region.height,
+            captureWidth,
+            captureHeight,
             screenDensity,
             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
             imageReader?.surface,
@@ -203,13 +202,21 @@ class CaptureManager(private val context: Context) : ICaptureSource {
             // 将Image转换为Bitmap
             val bitmap = imageToBitmap(image)
             if (bitmap != null) {
+                // 如果设置了截屏区域，裁剪Bitmap到指定区域
+                val finalBitmap = if (!captureRegion.isFullScreen) {
+                    cropBitmap(bitmap, captureRegion)
+                } else {
+                    bitmap
+                }
+
                 val captureTimeMs = System.currentTimeMillis() - captureStartTime
                 val callback = frameCallback
                 if (callback != null) {
-                    callback.onFrame(bitmap, captureTimeMs)
+                    callback.onFrame(finalBitmap, captureTimeMs)
                 } else {
                     // 没有回调，回收Bitmap
-                    bitmap.recycle()
+                    finalBitmap.recycle()
+                    if (finalBitmap !== bitmap) bitmap.recycle()
                 }
 
                 // 诊断日志：每3秒打印一次帧统计
@@ -264,6 +271,20 @@ class CaptureManager(private val context: Context) : ICaptureSource {
             bitmap.recycle()
             croppedBitmap
         }
+    }
+
+    /**
+     * 裁剪Bitmap到指定截屏区域
+     * 确保裁剪区域在Bitmap范围内
+     */
+    private fun cropBitmap(bitmap: Bitmap, region: CaptureRegion): Bitmap {
+        // 确保裁剪区域在Bitmap范围内
+        val x = region.x.coerceIn(0, bitmap.width - 1)
+        val y = region.y.coerceIn(0, bitmap.height - 1)
+        val w = region.width.coerceIn(1, bitmap.width - x)
+        val h = region.height.coerceIn(1, bitmap.height - y)
+
+        return Bitmap.createBitmap(bitmap, x, y, w, h)
     }
 
     /**
