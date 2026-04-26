@@ -52,6 +52,14 @@ class DetectionOverlayView(context: Context) : View(context) {
     @Volatile
     private var srcHeight: Int = 0
 
+    // 是否显示截屏区域框
+    @Volatile
+    var showCaptureRegion: Boolean = false
+
+    // 截屏区域（原图像素坐标）
+    @Volatile
+    private var captureRegion: com.aloyo.common.CaptureRegion = com.aloyo.common.CaptureRegion.FULL_SCREEN
+
     // 诊断：onDraw调用计数
     private var drawCount = 0
     private var lastDrawLogTime = 0L
@@ -119,6 +127,28 @@ class DetectionOverlayView(context: Context) : View(context) {
         color = Color.parseColor("#99000000")
     }
 
+    // 截屏区域框画笔（青色虚线）
+    private val captureRegionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+        color = Color.CYAN
+        // 虚线效果
+        pathEffect = android.graphics.DashPathEffect(floatArrayOf(20f, 10f), 0f)
+    }
+
+    // 截屏区域遮罩画笔（半透明暗色，覆盖区域外部分）
+    private val captureRegionMaskPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = Color.parseColor("#66000000")
+    }
+
+    // 截屏区域标签画笔
+    private val captureRegionLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = 20f
+        color = Color.CYAN
+        typeface = android.graphics.Typeface.DEFAULT_BOLD
+    }
+
     /**
      * 更新检测结果
      * @param detections 检测结果列表（坐标为原图像素坐标）
@@ -145,6 +175,13 @@ class DetectionOverlayView(context: Context) : View(context) {
     fun setSourceSize(srcWidth: Int, srcHeight: Int) {
         this.srcWidth = srcWidth
         this.srcHeight = srcHeight
+    }
+
+    /**
+     * 设置截屏区域（用于绘制截屏范围框）
+     */
+    fun setCaptureRegion(region: com.aloyo.common.CaptureRegion) {
+        this.captureRegion = region
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -190,8 +227,44 @@ class DetectionOverlayView(context: Context) : View(context) {
         // 绘制性能指标
         metrics?.let { drawMetrics(canvas, it) }
 
+        // 绘制截屏区域框（如果启用且非全屏）
+        if (showCaptureRegion && !captureRegion.isFullScreen && srcWidth > 0 && srcHeight > 0) {
+            drawCaptureRegion(canvas, scaleX, scaleY, viewW, viewH)
+        }
+
         // 始终绘制状态指示器
         drawStatusIndicator(canvas, viewW, viewH)
+    }
+
+    /**
+     * 绘制截屏区域框
+     * 在截屏区域外绘制半透明遮罩，区域内绘制青色虚线边框
+     */
+    private fun drawCaptureRegion(canvas: Canvas, scaleX: Float, scaleY: Float, viewW: Int, viewH: Int) {
+        // 将截屏区域坐标映射到屏幕坐标
+        val rx1 = captureRegion.x * scaleX
+        val ry1 = captureRegion.y * scaleY
+        val rx2 = (captureRegion.x + captureRegion.width) * scaleX
+        val ry2 = (captureRegion.y + captureRegion.height) * scaleY
+
+        // 绘制区域外遮罩（四个矩形：上、下、左、右）
+        // 上方遮罩
+        canvas.drawRect(0f, 0f, viewW.toFloat(), ry1, captureRegionMaskPaint)
+        // 下方遮罩
+        canvas.drawRect(0f, ry2, viewW.toFloat(), viewH.toFloat(), captureRegionMaskPaint)
+        // 左方遮罩
+        canvas.drawRect(0f, ry1, rx1, ry2, captureRegionMaskPaint)
+        // 右方遮罩
+        canvas.drawRect(rx2, ry1, viewW.toFloat(), ry2, captureRegionMaskPaint)
+
+        // 绘制虚线边框
+        canvas.drawRect(rx1, ry1, rx2, ry2, captureRegionPaint)
+
+        // 绘制标签
+        val labelText = "${captureRegion.width}×${captureRegion.height}"
+        val textWidth = captureRegionLabelPaint.measureText(labelText)
+        val textHeight = captureRegionLabelPaint.fontMetrics.let { it.descent - it.ascent }
+        canvas.drawText(labelText, rx1 + 4f, ry1 - 4f, captureRegionLabelPaint)
     }
 
     /**

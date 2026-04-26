@@ -326,9 +326,11 @@ class CaptureManager(private val context: Context) : ICaptureSource {
     }
 
     /**
-     * 检查屏幕尺寸是否因旋转而变化，如果变化则重建VirtualDisplay
-     * 应在帧处理循环中定期调用（如每3秒检查一次）
-     * @return true如果检测到旋转并完成了重建
+     * 检查屏幕尺寸是否因旋转而变化
+     * 注意：VirtualDisplay使用AUTO_MIRROR标志，旋转后自动适配新方向
+     * 不需要重建VirtualDisplay（Android不允许同一MediaProjection上多次createVirtualDisplay）
+     * 只需更新本地记录的屏幕尺寸，供外部查询使用
+     * @return true如果检测到旋转
      */
     fun checkAndRecreateForRotation(): Boolean {
         if (!isCapturing) return false
@@ -346,29 +348,11 @@ class CaptureManager(private val context: Context) : ICaptureSource {
             screenWidth = newWidth
             screenHeight = newHeight
             screenDensity = displayMetrics.densityDpi
-
-            // 重建VirtualDisplay和ImageReader以匹配新尺寸
-            recreateVirtualDisplay()
+            // 不重建VirtualDisplay！AUTO_MIRROR标志会自动适配旋转
+            // 只更新screenWidth/screenHeight供外部查询
             return true
         }
         return false
-    }
-
-    /**
-     * 重建VirtualDisplay和ImageReader
-     * 在屏幕旋转后调用，使截屏尺寸匹配新的屏幕方向
-     */
-    private fun recreateVirtualDisplay() {
-        android.util.Log.i(TAG, "Recreating VirtualDisplay for new screen size: ${screenWidth}x${screenHeight}")
-
-        // 先释放旧的VirtualDisplay和ImageReader
-        virtualDisplay?.release()
-        virtualDisplay = null
-        imageReader?.close()
-        imageReader = null
-
-        // 用新尺寸重建
-        setupVirtualDisplay()
     }
 
     override fun startCapture(): Boolean {

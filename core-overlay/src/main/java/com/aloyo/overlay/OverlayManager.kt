@@ -58,6 +58,19 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
     var onLog: ((String) -> Unit)? = null
 
     /**
+     * 获取全屏真实尺寸（包含导航栏和状态栏）
+     * MATCH_PARENT在某些设备上不包含系统栏区域，导致overlay视图比实际屏幕小
+     * 使用getRealMetrics获取包含系统栏的完整屏幕尺寸
+     */
+    private fun getFullScreenSize(): android.graphics.Point {
+        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val displayMetrics = android.util.DisplayMetrics()
+        @Suppress("DEPRECATION")
+        windowManager.defaultDisplay.getRealMetrics(displayMetrics)
+        return android.graphics.Point(displayMetrics.widthPixels, displayMetrics.heightPixels)
+    }
+
+    /**
      * 创建悬浮窗
      * 同时创建全屏检测覆盖层和可拖拽控制面板
      */
@@ -80,7 +93,8 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
     /**
      * 创建全屏检测覆盖层
      * FLAG_NOT_TOUCHABLE：触摸穿透到下层应用
-     * 使用MATCH_PARENT使窗口自动适配屏幕旋转
+     * 使用显式全屏尺寸（getRealMetrics），确保覆盖包含导航栏的完整屏幕
+     * MATCH_PARENT在某些设备上不包含系统栏，导致overlay比屏幕小，检测框偏移
      */
     private fun showDetectionOverlay() {
         overlayView = DetectionOverlayView(context).apply {
@@ -95,10 +109,14 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
             WindowManager.LayoutParams.TYPE_PHONE
         }
 
-        // 使用MATCH_PARENT，窗口自动填满屏幕，旋转时无需手动更新尺寸
+        // 使用getRealMetrics获取包含系统栏的完整屏幕尺寸
+        // MATCH_PARENT在部分设备上只覆盖到导航栏上方（如2584而非2780）
+        // 导致scaleY不等于1.0，检测框整体偏移
+        val screenSize = getFullScreenSize()
+
         overlayLayoutParams = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT,
+            screenSize.x,
+            screenSize.y,
             type,
             // 全屏检测层：不可触摸，让触摸穿透到下层应用
             WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
@@ -200,6 +218,26 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
     fun setSourceSize(srcWidth: Int, srcHeight: Int) {
         mainHandler.post {
             overlayView?.setSourceSize(srcWidth, srcHeight)
+        }
+    }
+
+    /**
+     * 设置是否显示截屏区域框
+     */
+    fun setShowCaptureRegion(show: Boolean) {
+        mainHandler.post {
+            overlayView?.showCaptureRegion = show
+            overlayView?.invalidate()
+        }
+    }
+
+    /**
+     * 设置截屏区域（用于绘制截屏范围框）
+     */
+    fun setCaptureRegion(region: com.aloyo.common.CaptureRegion) {
+        mainHandler.post {
+            overlayView?.setCaptureRegion(region)
+            overlayView?.invalidate()
         }
     }
 

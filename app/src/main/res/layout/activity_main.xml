@@ -94,6 +94,19 @@
             android:layout_weight="1"
             android:background="#16213E"
             android:popupBackground="#16213E" />
+
+        <Button
+            android:id="@+id/btn_toggle_capture_region_display"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:text="显示区域"
+            android:textSize="12sp"
+            android:backgroundTint="#533483"
+            android:textColor="#FFFFFF"
+            android:layout_marginStart="8dp"
+            android:minWidth="80dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp" />
     </LinearLayout>
 
     <!-- 置信度阈值 -->

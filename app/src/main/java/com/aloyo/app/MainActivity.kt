@@ -86,6 +86,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvNmsValue: TextView
     private lateinit var captureRegionSpinner: Spinner
 
+    // 截屏区域显示切换按钮
+    private lateinit var btnToggleCaptureRegionDisplay: Button
+    private var isCaptureRegionDisplayShown = false
+
     // 截屏区域选项
     private val captureRegionOptions = listOf("全屏", "256×256", "320×320", "640×640", "居中75%")
 
@@ -233,6 +237,7 @@ class MainActivity : AppCompatActivity() {
         tvConfValue = findViewById(R.id.tv_conf_value)
         tvNmsValue = findViewById(R.id.tv_nms_value)
         captureRegionSpinner = findViewById(R.id.spinner_capture_region)
+        btnToggleCaptureRegionDisplay = findViewById(R.id.btn_toggle_capture_region_display)
 
         // 初始化截屏区域下拉框
         val regionAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, captureRegionOptions)
@@ -340,6 +345,14 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "请先选择一个模型", Toast.LENGTH_SHORT).show()
             }
             true
+        }
+
+        // 截屏区域显示切换按钮
+        btnToggleCaptureRegionDisplay.setOnClickListener {
+            isCaptureRegionDisplayShown = !isCaptureRegionDisplayShown
+            overlayManager.setShowCaptureRegion(isCaptureRegionDisplayShown)
+            overlayManager.setCaptureRegion(currentCaptureRegion)
+            btnToggleCaptureRegionDisplay.text = if (isCaptureRegionDisplayShown) "隐藏区域" else "显示区域"
         }
     }
 
@@ -1025,6 +1038,8 @@ class MainActivity : AppCompatActivity() {
 
         currentCaptureRegion = region
         captureService?.setCaptureRegion(region)
+        // 同步截屏区域到overlay（用于绘制截屏范围框）
+        overlayManager.setCaptureRegion(region)
         logger.info(TAG, "Capture region set: ${if (region.isFullScreen) "FULL_SCREEN" else "${region.width}x${region.height} at (${region.x},${region.y})"}")
     }
 
@@ -1083,8 +1098,9 @@ class MainActivity : AppCompatActivity() {
             }
 
             // 设置原图尺寸（用于坐标映射：原图像素→屏幕像素）
-            // 使用CaptureManager提供的实时屏幕尺寸（旋转后会更新）
-            // 而不是resources.displayMetrics（Activity锁定竖屏，不会随旋转更新）
+            // 全屏截屏时：bitmap就是全屏截图，直接用bitmap尺寸
+            // 截屏区域时：检测框已偏移到全屏坐标，需要用全屏尺寸
+            // 旋转后bitmap尺寸会自动变化（AUTO_MIRROR），但全屏尺寸需要实时查询
             if (!currentCaptureRegion.isFullScreen) {
                 val curWidth = captureService?.currentScreenWidth ?: 0
                 val curHeight = captureService?.currentScreenHeight ?: 0
@@ -1096,6 +1112,7 @@ class MainActivity : AppCompatActivity() {
                     overlayManager.setSourceSize(displayMetrics.widthPixels, displayMetrics.heightPixels)
                 }
             } else {
+                // 全屏截屏：bitmap尺寸就是源尺寸，旋转后bitmap会自动变为新方向
                 overlayManager.setSourceSize(bitmap.width, bitmap.height)
             }
 
