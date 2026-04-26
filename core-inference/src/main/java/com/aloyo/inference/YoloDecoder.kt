@@ -176,7 +176,7 @@ class UnifiedYoloDecoder : YoloDecoder {
 
         // 全局自适应过滤：当objectness被跳过时，类别置信度无法区分前景/背景
         // 使用gap-based方法：在排序后的置信度中找到最大间隔作为前景/背景分离点
-        if (lastSkipObjectness && detections.size > 20) {
+        if (lastSkipObjectness && detections.size > 5) {
             return applyGapBasedFiltering(detections, confidenceThreshold)
         }
 
@@ -259,6 +259,27 @@ class UnifiedYoloDecoder : YoloDecoder {
         val allDetections = mutableListOf<RawDetection>()
         var channelOffset = 0
 
+        // 计算标准YOLOv5 stride：基于grid尺寸排名分配stride 8/16/32
+        // YOLOv5的stride是模型架构属性，不依赖于config中的inputSize
+        // 最大grid → 最小stride(8)，中等grid → stride(16)，最小grid → 最大stride(32)
+        val STANDARD_STRIDES = intArrayOf(8, 16, 32)
+        val sortedGridSizes = blobShapes.map { it.height }.sortedDescending()
+        val strideMap = mutableMapOf<Int, Float>()
+        for ((idx, gridSize) in sortedGridSizes.withIndex()) {
+            val standardStride = if (idx < STANDARD_STRIDES.size) STANDARD_STRIDES[idx].toFloat()
+                                 else config.inputHeight.toFloat() / gridSize
+            // 同一grid尺寸可能出现在多个blob中，取第一次分配的stride
+            if (!strideMap.containsKey(gridSize)) {
+                strideMap[gridSize] = standardStride
+            }
+        }
+        // 推断模型实际训练时的输入尺寸：最大grid × 最小stride
+        val effectiveInputSize = (sortedGridSizes.firstOrNull() ?: config.inputHeight) *
+                (strideMap[sortedGridSizes.firstOrNull()] ?: 8f).toInt()
+
+        android.util.Log.i(TAG, "decodeMultiBlob: sortedGrids=$sortedGridSizes, strideMap=$strideMap, " +
+                "effectiveInputSize=$effectiveInputSize, configInputSize=${config.inputWidth}x${config.inputHeight}")
+
         for (blobInfo in blobShapes) {
             val blobChannels = blobInfo.channels
             val blobSpatial = blobInfo.spatialSize
@@ -273,8 +294,14 @@ class UnifiedYoloDecoder : YoloDecoder {
             // 检测该blob的格式
             val format = detectFormat(blobChannels, blobSpatial, v8Attrs, v5Attrs)
 
+            // 获取该blob对应的标准stride
+            val standardStride = strideMap[blobHeight] ?: (config.inputHeight.toFloat() / blobHeight)
+
             val detections = when (format) {
-                OutputFormat.V5_MULTI_ANCHOR -> decodeV5MultiAnchor(blobOutput, config, confThresh, blobChannels, blobSpatial, blobHeight, blobWidth)
+                OutputFormat.V5_MULTI_ANCHOR -> decodeV5MultiAnchor(
+                    blobOutput, config, confThresh, blobChannels, blobSpatial,
+                    blobHeight, blobWidth, standardStride, effectiveInputSize
+                )
                 OutputFormat.V8_TRANSPOSED -> decodeV8Format(blobOutput, config, confThresh, blobChannels, blobSpatial)
                 OutputFormat.V5_PER_ROW -> decodeV5PerRowFormat(blobOutput, config, confThresh, blobChannels, blobSpatial)
                 OutputFormat.V5_FLAT -> decodeV5FlatFormat(blobOutput, config, confThresh, blobSpatial, v5Attrs)
@@ -348,7 +375,9 @@ class UnifiedYoloDecoder : YoloDecoder {
         numRows: Int,
         numCols: Int,
         blobHeight: Int?,
-        blobWidth: Int?
+        blobWidth: Int?,
+        overrideStride: Float = 0f,
+        effectiveInputSize: Int = 0
     ): List<RawDetection> {
         val detections = mutableListOf<RawDetection>()
         val v5Attrs = 5 + config.numClasses
@@ -359,13 +388,22 @@ class UnifiedYoloDecoder : YoloDecoder {
         val gridH = blobHeight ?: sqrt(numSpatial.toFloat()).toInt()
         val gridW = blobWidth ?: gridH
 
-        // 计算stride（特征图步长 = 输入尺寸 / 网格尺寸）
-        val strideH = config.inputHeight.toFloat() / gridH
-        val strideW = config.inputWidth.toFloat() / gridW
-        val stride = (strideH + strideW) / 2f
+        // 计算stride：优先使用标准stride，回退到config.inputSize/gridH
+        val stride = if (overrideStride > 0f) overrideStride
+                     else (config.inputHeight.toFloat() / gridH + config.inputWidth.toFloat() / gridW) / 2f
 
-        // 获取该stride对应的锚框尺寸
-        val anchors = getAnchorsForStride(stride, config.inputWidth)
+        // 推断模型实际训练时的输入尺寸，用于锚框缩放和坐标映射
+        val modelInputSize = if (effectiveInputSize > 0) effectiveInputSize
+                             else config.inputWidth
+
+        // 获取该stride对应的锚框尺寸（使用模型实际输入尺寸缩放）
+        val anchors = getAnchorsForStride(stride, modelInputSize)
+
+        // 坐标空间缩放因子：从模型实际输入空间映射到config输入空间
+        // 当config.inputWidth != modelInputSize时需要缩放
+        val coordScale = if (modelInputSize != config.inputWidth && modelInputSize > 0)
+                             config.inputWidth.toFloat() / modelInputSize
+                         else 1.0f
 
         // 扫描objectness通道的统计信息，判断objectness是否有效
         // 需要区分三种情况：
@@ -403,7 +441,8 @@ class UnifiedYoloDecoder : YoloDecoder {
         lastSkipObjectness = skipObjectness
 
         android.util.Log.i(TAG, "V5_MULTI_ANCHOR: numAnchors=$numAnchors, gridH=$gridH, gridW=$gridW, " +
-                "stride=$stride, numSpatial=$numSpatial, anchors=${anchors.toList()}, " +
+                "stride=$stride, coordScale=$coordScale, modelInputSize=$modelInputSize, " +
+                "numSpatial=$numSpatial, anchors=${anchors.toList()}, " +
                 "maxRawObj=$maxRawObj, minRawObj=$minRawObj, avgRawObj=${"%.2f".format(avgRawObj)}, " +
                 "objRange=${"%.2f".format(objRange)}, maxObjSigmoid=$maxObjSigmoid, skipObjectness=$skipObjectness")
 
@@ -452,14 +491,14 @@ class UnifiedYoloDecoder : YoloDecoder {
                 val rawW = output[base + 2][i]
                 val rawH = output[base + 3][i]
 
-                val cx = (sigmoid(rawCx) * 2f - 0.5f + gridX) * stride
-                val cy = (sigmoid(rawCy) * 2f - 0.5f + gridY) * stride
+                val cx = (sigmoid(rawCx) * 2f - 0.5f + gridX) * stride * coordScale
+                val cy = (sigmoid(rawCy) * 2f - 0.5f + gridY) * stride * coordScale
 
                 // 获取该锚框的宽高（anchors数组: [aw0, ah0, aw1, ah1, aw2, ah2]）
                 val anchorW = if (a * 2 < anchors.size) anchors[a * 2] else stride
                 val anchorH = if (a * 2 + 1 < anchors.size) anchors[a * 2 + 1] else stride
-                val w = (sigmoid(rawW) * 2f).pow(2) * anchorW
-                val h = (sigmoid(rawH) * 2f).pow(2) * anchorH
+                val w = (sigmoid(rawW) * 2f).pow(2) * anchorW * coordScale
+                val h = (sigmoid(rawH) * 2f).pow(2) * anchorH * coordScale
 
                 detections.add(RawDetection(
                     cx = cx,
