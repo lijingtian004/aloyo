@@ -228,8 +228,10 @@ class UnifiedYoloDecoder : YoloDecoder {
         val beforeCount = detections.size
         val result: List<RawDetection>
 
-        // logit空间的显著间隔阈值更大（1.0 vs 0.005）
-        val significantGap = if (hasLogits) 1.0f else 0.005f
+        // logit空间的显著间隔阈值
+        // 背景logit约3.3-3.9，目标logit约4.5-6.0
+        // 即使较小的gap(0.3)也足以区分前景/背景
+        val significantGap = if (hasLogits) 0.3f else 0.003f
 
         if (maxGap > significantGap) {
             // 找到显著间隔：以间隔中点作为前景/背景分离阈值

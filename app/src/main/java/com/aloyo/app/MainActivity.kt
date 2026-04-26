@@ -87,7 +87,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var captureRegionSpinner: Spinner
 
     // 截屏区域选项
-    private val captureRegionOptions = listOf("全屏", "16:9", "4:3", "1:1", "居中75%")
+    private val captureRegionOptions = listOf("全屏", "256×256", "320×320", "640×640", "居中75%")
+
+    // 当前截屏区域（用于检测框坐标偏移）
+    @Volatile
+    private var currentCaptureRegion: CaptureRegion = CaptureRegion.FULL_SCREEN
 
     // 运行状态
     private var isCapturing = false
@@ -123,6 +127,9 @@ class MainActivity : AppCompatActivity() {
                     logger.error(TAG, "Capture error: $error")
                 }
             })
+
+            // 服务连接后应用截屏区域（必须在captureService赋值后调用）
+            applyCaptureRegion()
 
             // 启动推理流水线
             inferencePipeline.start()
@@ -956,12 +963,9 @@ class MainActivity : AppCompatActivity() {
         // 启动截屏服务
         ScreenCaptureService.start(this, resultCode, data)
 
-        // 绑定截屏服务以获取帧回调
+        // 绑定截屏服务以获取帧回调（applyCaptureRegion在onServiceConnected中调用）
         val bindIntent = Intent(this, ScreenCaptureService::class.java)
         bindService(bindIntent, serviceConnection, Context.BIND_AUTO_CREATE)
-
-        // 应用截屏区域设置
-        applyCaptureRegion()
 
         // 显示悬浮窗
         overlayManager.show()
@@ -980,9 +984,21 @@ class MainActivity : AppCompatActivity() {
         val screenHeight = displayMetrics.heightPixels
 
         val region = when (captureRegionSpinner.selectedItemPosition) {
-            1 -> CaptureRegion.createRatioRegion(screenWidth, screenHeight, 16, 9)
-            2 -> CaptureRegion.createRatioRegion(screenWidth, screenHeight, 4, 3)
-            3 -> CaptureRegion.createRatioRegion(screenWidth, screenHeight, 1, 1)
+            1 -> {
+                // 256×256 居中
+                val size = 256
+                CaptureRegion((screenWidth - size) / 2, (screenHeight - size) / 2, size, size)
+            }
+            2 -> {
+                // 320×320 居中
+                val size = 320
+                CaptureRegion((screenWidth - size) / 2, (screenHeight - size) / 2, size, size)
+            }
+            3 -> {
+                // 640×640 居中
+                val size = 640
+                CaptureRegion((screenWidth - size) / 2, (screenHeight - size) / 2, size, size)
+            }
             4 -> {
                 // 居中75%区域
                 val w = (screenWidth * 0.75).toInt()
@@ -992,6 +1008,7 @@ class MainActivity : AppCompatActivity() {
             else -> CaptureRegion.FULL_SCREEN
         }
 
+        currentCaptureRegion = region
         captureService?.setCaptureRegion(region)
         logger.info(TAG, "Capture region set: ${if (region.isFullScreen) "FULL_SCREEN" else "${region.width}x${region.height} at (${region.x},${region.y})"}")
     }
@@ -1037,10 +1054,33 @@ class MainActivity : AppCompatActivity() {
 
         try {
             // 设置原图尺寸（用于坐标映射：原图像素→屏幕像素）
-            overlayManager.setSourceSize(bitmap.width, bitmap.height)
+            // 当使用截屏区域时，检测框已经偏移到全屏坐标，所以source size应该是全屏尺寸
+            if (!currentCaptureRegion.isFullScreen) {
+                val displayMetrics = resources.displayMetrics
+                overlayManager.setSourceSize(displayMetrics.widthPixels, displayMetrics.heightPixels)
+            } else {
+                overlayManager.setSourceSize(bitmap.width, bitmap.height)
+            }
 
             // 执行推理
             val (detections, metrics) = inferenceEngine.inferWithMetrics(bitmap)
+
+            // 如果使用了截屏区域，检测框坐标需要加上区域偏移量
+            // 因为推理是在裁剪后的Bitmap上进行的，坐标是相对于裁剪区域的
+            // 但overlay显示在全屏上，需要将坐标映射回全屏空间
+            val captureRegion = currentCaptureRegion
+            val offsetDetections = if (!captureRegion.isFullScreen) {
+                detections.map { det ->
+                    det.copy(
+                        x1 = det.x1 + captureRegion.x,
+                        y1 = det.y1 + captureRegion.y,
+                        x2 = det.x2 + captureRegion.x,
+                        y2 = det.y2 + captureRegion.y
+                    )
+                }
+            } else {
+                detections
+            }
 
             // 首次推理时记录NCNN输出诊断信息到应用日志
             if (!hasLoggedNcnnDiag) {
@@ -1054,15 +1094,15 @@ class MainActivity : AppCompatActivity() {
                             logger.info(TAG, line)
                         }
                         // 也记录前3个检测的原始坐标
-                        detections.take(3).forEachIndexed { idx, det ->
+                        offsetDetections.take(3).forEachIndexed { idx, det ->
                             logger.info(TAG, "  det[$idx]: x1=${det.x1}, y1=${det.y1}, x2=${det.x2}, y2=${det.y2}, label=${det.label}, conf=${det.confidence}")
                         }
                     }
                 }
             }
 
-            // 更新悬浮窗
-            overlayManager.updateDetections(detections, metrics.copy(captureLatencyMs = captureTimeMs))
+            // 更新悬浮窗（使用偏移后的检测框坐标）
+            overlayManager.updateDetections(offsetDetections, metrics.copy(captureLatencyMs = captureTimeMs))
 
             // 更新UI上的性能指标
             updateMetricsUI(metrics)
