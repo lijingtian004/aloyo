@@ -68,9 +68,13 @@ class YoloPostProcessor(
             )
         }
 
-        // 过滤退化检测框：宽或高极小的框通常是解码错误产生的假阳性
-        // 这些框因为面积接近0，IoU也为0，无法被NMS去除
-        val minBoxSize = 2.0f
+        // 过滤退化检测框：宽或高极小的框通常是解码噪声产生的假阳性
+        // 使用相对于源图像尺寸的百分比阈值，适应不同分辨率的输入
+        // 固定2像素阈值对小图(256x256)和大图(1264x2584)都不合适：
+        // - 小图：3x4像素的噪声框能通过2像素过滤
+        // - 大图：2像素阈值太宽松
+        val minDim = minOf(srcWidth, srcHeight).toFloat()
+        val minBoxSize = maxOf(5.0f, minDim * 0.02f)
         val validDetections = mappedDetections.filter { det ->
             (det.x2 - det.x1) >= minBoxSize && (det.y2 - det.y1) >= minBoxSize
         }
