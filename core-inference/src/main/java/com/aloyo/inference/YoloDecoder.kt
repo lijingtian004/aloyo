@@ -357,7 +357,7 @@ class UnifiedYoloDecoder : YoloDecoder {
                 // 计算最终置信度
                 val finalConf: Float
                 if (skipObjectness) {
-                    // 无objectness模式：直接使用类别置信度（类似YOLOv8）
+                    // 无objectness模式：直接使用类别置信度
                     finalConf = maxClassConf
                 } else {
                     // 标准V5模式：objectness × 类别置信度
@@ -368,7 +368,9 @@ class UnifiedYoloDecoder : YoloDecoder {
                     finalConf = objConf * maxClassConf
                 }
 
-                if (finalConf < confThresh) continue
+                // skipObjectness时使用宽松预过滤，后续会做自适应阈值筛选
+                val preThresh = if (skipObjectness) 0.5f else confThresh
+                if (finalConf < preThresh) continue
 
                 // 解码坐标（YOLOv5公式）
                 val rawCx = output[base + 0][i]
@@ -394,6 +396,27 @@ class UnifiedYoloDecoder : YoloDecoder {
                     confidence = finalConf
                 ))
             }
+        }
+
+        // 当skipObjectness时，类别置信度可能对前景/背景区分度不足
+        // （模型依赖objectness区分前景，类别头只区分类别）
+        // 此时需要基于置信度分布动态计算阈值，将真实目标从背景中分离
+        if (skipObjectness && detections.size > 20) {
+            val confs = detections.map { it.confidence }.sortedDescending()
+            val maxConf = confs.first()
+            val medianConf = confs[confs.size / 2]
+            // 自适应阈值：取中位数和最大值之间的3/4分位点
+            // 背景的类别置信度聚集在中位数附近，真实目标则明显更高
+            val adaptiveThresh = medianConf + 0.75f * (maxConf - medianConf)
+            val effectiveThresh = maxOf(confThresh, adaptiveThresh)
+
+            val beforeCount = detections.size
+            detections.retainAll { it.confidence >= effectiveThresh }
+
+            android.util.Log.i(TAG, "V5_MULTI_ANCHOR adaptive filtering: skipObj=true, " +
+                    "maxConf=${"%.4f".format(maxConf)}, medianConf=${"%.4f".format(medianConf)}, " +
+                    "adaptiveThresh=${"%.4f".format(adaptiveThresh)}, " +
+                    "before=$beforeCount, after=${detections.size}")
         }
 
         android.util.Log.i(TAG, "V5_MULTI_ANCHOR decoded: ${detections.size} raw detections (before NMS), skipObj=$skipObjectness")
