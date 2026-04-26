@@ -190,4 +190,22 @@ class ScreenCaptureService : Service() {
     fun setCaptureRegion(region: CaptureRegion) {
         captureManager?.setCaptureRegion(region)
     }
+
+    /**
+     * 检查屏幕旋转并重建VirtualDisplay
+     * @return true如果检测到旋转并完成了重建
+     */
+    fun checkAndRecreateForRotation(): Boolean {
+        return captureManager?.checkAndRecreateForRotation() ?: false
+    }
+
+    /**
+     * 获取当前屏幕宽度（旋转后会更新）
+     */
+    val currentScreenWidth: Int get() = captureManager?.currentScreenWidth ?: 0
+
+    /**
+     * 获取当前屏幕高度（旋转后会更新）
+     */
+    val currentScreenHeight: Int get() = captureManager?.currentScreenHeight ?: 0
 }

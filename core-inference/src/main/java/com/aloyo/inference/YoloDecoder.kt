@@ -468,11 +468,13 @@ class UnifiedYoloDecoder : YoloDecoder {
 
         // 跳过objectness的条件（满足全部条件才跳过）：
         // 条件1：maxObjSigmoid < 0.01 — 没有高置信度的objectness信号
-        // 条件2（满足任一）：
-        //   a. maxRawObj > -2.0 — 原始值接近0，通道从未被激活
-        //   b. objRange < 5.0 — 原始值范围很窄，通道对输入无响应（只是偏置+噪声）
-        // 不跳过的情况：maxRawObj很负且range很宽 → objectness正常工作，只是没有目标
-        val skipObjectness = maxObjSigmoid < 0.01f && (maxRawObj > -2.0f || objRange < 5.0f)
+        // 条件2：maxRawObj > -2.0 — 原始值接近0，通道从未被激活（未训练的标志）
+        // 条件3：objRange < 5.0 — 原始值范围很窄，通道对输入无响应（只是偏置+噪声）
+        // 三个条件必须同时满足才跳过，因为：
+        //   - 如果maxRawObj很负（如-13），说明模型学到了"没有目标"，objectness正常工作，不应跳过
+        //   - 即使range较小，只要maxRawObj很负，就说明通道在积极抑制背景检测
+        //   - 之前使用OR逻辑导致：maxRawObj很负但range小时错误跳过objectness，产生高置信度假阳
+        val skipObjectness = maxObjSigmoid < 0.01f && maxRawObj > -2.0f && objRange < 5.0f
         lastSkipObjectness = skipObjectness
 
         android.util.Log.i(TAG, "V5_MULTI_ANCHOR: numAnchors=$numAnchors, gridH=$gridH, gridW=$gridW, " +

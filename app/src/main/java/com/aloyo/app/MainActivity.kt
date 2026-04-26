@@ -977,11 +977,26 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * 根据UI选择应用截屏区域
+     * 使用WindowManager获取实时屏幕尺寸，确保旋转后也能正确计算
      */
     private fun applyCaptureRegion() {
-        val displayMetrics = resources.displayMetrics
-        val screenWidth = displayMetrics.widthPixels
-        val screenHeight = displayMetrics.heightPixels
+        // 优先使用CaptureManager的实时屏幕尺寸（旋转后会更新）
+        // 回退到WindowManager查询（比resources.displayMetrics更可靠）
+        val screenWidth: Int
+        val screenHeight: Int
+        val svcWidth = captureService?.currentScreenWidth ?: 0
+        val svcHeight = captureService?.currentScreenHeight ?: 0
+        if (svcWidth > 0 && svcHeight > 0) {
+            screenWidth = svcWidth
+            screenHeight = svcHeight
+        } else {
+            val windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
+            val displayMetrics = android.util.DisplayMetrics()
+            @Suppress("DEPRECATION")
+            windowManager.defaultDisplay.getRealMetrics(displayMetrics)
+            screenWidth = displayMetrics.widthPixels
+            screenHeight = displayMetrics.heightPixels
+        }
 
         val region = when (captureRegionSpinner.selectedItemPosition) {
             1 -> {
@@ -1041,6 +1056,9 @@ class MainActivity : AppCompatActivity() {
     // 是否已记录过NCNN输出诊断信息
     private var hasLoggedNcnnDiag = false
 
+    // 上次旋转检查时间（避免每帧都检查，每3秒检查一次）
+    private var lastRotationCheckTime = 0L
+
     /**
      * 处理截屏帧回调
      * 将截屏帧送入推理引擎，然后将结果显示在悬浮窗上
@@ -1053,11 +1071,30 @@ class MainActivity : AppCompatActivity() {
         }
 
         try {
+            // 定期检查屏幕旋转（每3秒检查一次，避免每帧都查询系统服务）
+            val now = System.currentTimeMillis()
+            if (now - lastRotationCheckTime >= 3000) {
+                lastRotationCheckTime = now
+                val rotated = captureService?.checkAndRecreateForRotation() ?: false
+                if (rotated) {
+                    // 屏幕旋转了，重新计算截屏区域
+                    applyCaptureRegion()
+                }
+            }
+
             // 设置原图尺寸（用于坐标映射：原图像素→屏幕像素）
-            // 当使用截屏区域时，检测框已经偏移到全屏坐标，所以source size应该是全屏尺寸
+            // 使用CaptureManager提供的实时屏幕尺寸（旋转后会更新）
+            // 而不是resources.displayMetrics（Activity锁定竖屏，不会随旋转更新）
             if (!currentCaptureRegion.isFullScreen) {
-                val displayMetrics = resources.displayMetrics
-                overlayManager.setSourceSize(displayMetrics.widthPixels, displayMetrics.heightPixels)
+                val curWidth = captureService?.currentScreenWidth ?: 0
+                val curHeight = captureService?.currentScreenHeight ?: 0
+                if (curWidth > 0 && curHeight > 0) {
+                    overlayManager.setSourceSize(curWidth, curHeight)
+                } else {
+                    // 回退到displayMetrics
+                    val displayMetrics = resources.displayMetrics
+                    overlayManager.setSourceSize(displayMetrics.widthPixels, displayMetrics.heightPixels)
+                }
             } else {
                 overlayManager.setSourceSize(bitmap.width, bitmap.height)
             }
@@ -1109,13 +1146,13 @@ class MainActivity : AppCompatActivity() {
 
             // 诊断日志：每3秒打印一次推理统计
             inferenceFrameCount++
-            val now = System.currentTimeMillis()
-            if (now - lastInferenceLogTime >= 3000) {
-                val elapsed = now - lastInferenceLogTime
+            val inferNow = System.currentTimeMillis()
+            if (inferNow - lastInferenceLogTime >= 3000) {
+                val elapsed = inferNow - lastInferenceLogTime
                 val fps = inferenceFrameCount * 1000f / elapsed
                 logger.info(TAG, "Inference stats: ${inferenceFrameCount} frames in ${elapsed}ms (${"%.1f".format(fps)} fps), detections=${detections.size}, latency=${metrics.inferenceLatencyMs}ms")
                 inferenceFrameCount = 0
-                lastInferenceLogTime = now
+                lastInferenceLogTime = inferNow
             }
 
             // 回收Bitmap

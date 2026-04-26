@@ -55,9 +55,13 @@ class CaptureManager(private val context: Context) : ICaptureSource {
     private var handler: Handler? = null
 
     // 屏幕尺寸
-    private var screenWidth: Int = 0
-    private var screenHeight: Int = 0
+    @Volatile private var screenWidth: Int = 0
+    @Volatile private var screenHeight: Int = 0
     private var screenDensity: Int = 0
+
+    // 当前屏幕尺寸的公开访问器（旋转后会更新）
+    val currentScreenWidth: Int get() = screenWidth
+    val currentScreenHeight: Int get() = screenHeight
 
     // 上一帧时间戳，用于计算截屏延迟
     private var lastFrameTimeMs: Long = 0
@@ -319,6 +323,52 @@ class CaptureManager(private val context: Context) : ICaptureSource {
         // 不需要重建VirtualDisplay，因为setupVirtualDisplay始终以全屏尺寸截屏
         // 裁剪在processImage中通过cropBitmap实现
         android.util.Log.i(TAG, "Capture region updated: ${if (region.isFullScreen) "FULL_SCREEN" else "${region.width}x${region.height} at (${region.x},${region.y})"}")
+    }
+
+    /**
+     * 检查屏幕尺寸是否因旋转而变化，如果变化则重建VirtualDisplay
+     * 应在帧处理循环中定期调用（如每3秒检查一次）
+     * @return true如果检测到旋转并完成了重建
+     */
+    fun checkAndRecreateForRotation(): Boolean {
+        if (!isCapturing) return false
+
+        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val displayMetrics = DisplayMetrics()
+        @Suppress("DEPRECATION")
+        windowManager.defaultDisplay.getRealMetrics(displayMetrics)
+        val newWidth = displayMetrics.widthPixels
+        val newHeight = displayMetrics.heightPixels
+
+        // 检测尺寸变化（旋转时宽高互换）
+        if (newWidth != screenWidth || newHeight != screenHeight) {
+            android.util.Log.i(TAG, "Screen rotation detected: ${screenWidth}x${screenHeight} -> ${newWidth}x${newHeight}")
+            screenWidth = newWidth
+            screenHeight = newHeight
+            screenDensity = displayMetrics.densityDpi
+
+            // 重建VirtualDisplay和ImageReader以匹配新尺寸
+            recreateVirtualDisplay()
+            return true
+        }
+        return false
+    }
+
+    /**
+     * 重建VirtualDisplay和ImageReader
+     * 在屏幕旋转后调用，使截屏尺寸匹配新的屏幕方向
+     */
+    private fun recreateVirtualDisplay() {
+        android.util.Log.i(TAG, "Recreating VirtualDisplay for new screen size: ${screenWidth}x${screenHeight}")
+
+        // 先释放旧的VirtualDisplay和ImageReader
+        virtualDisplay?.release()
+        virtualDisplay = null
+        imageReader?.close()
+        imageReader = null
+
+        // 用新尺寸重建
+        setupVirtualDisplay()
     }
 
     override fun startCapture(): Boolean {
