@@ -115,11 +115,27 @@ class NcnnInferenceEngine : IInferenceEngine {
         val processor = preProcessor ?: return emptyList()
         val postProc = postProcessor ?: return emptyList()
 
-        // 预处理：缩放、归一化
-        val inputData = processor.process(bitmap)
+        // 当输入bitmap尺寸小于config.inputSize时，直接使用bitmap尺寸作为预处理目标
+        // 避免不必要的放大（如256→640），因为模型内部会缩放回实际训练尺寸
+        // 256→640→256的有损往返会降低检测精度
+        val actualTargetWidth = minOf(bitmap.width, modelConfig!!.inputWidth)
+        val actualTargetHeight = minOf(bitmap.height, modelConfig!!.inputHeight)
+        val useActualSize = actualTargetWidth != modelConfig!!.inputWidth || actualTargetHeight != modelConfig!!.inputHeight
 
-        // 执行NCNN推理
-        val outputData = nativeRunInference(netPtr, inputData, modelConfig!!.inputWidth, modelConfig!!.inputHeight)
+        if (useActualSize) {
+            android.util.Log.i(TAG, "Using actual input size ${actualTargetWidth}x${actualTargetHeight} instead of config ${modelConfig!!.inputWidth}x${modelConfig!!.inputHeight}")
+        }
+
+        // 预处理：缩放、归一化（使用实际目标尺寸）
+        val actualPreProcessor = if (useActualSize) {
+            YoloPreProcessor(actualTargetWidth, actualTargetHeight)
+        } else {
+            processor
+        }
+        val inputData = actualPreProcessor.process(bitmap)
+
+        // 执行NCNN推理（使用实际目标尺寸）
+        val outputData = nativeRunInference(netPtr, inputData, actualTargetWidth, actualTargetHeight)
 
         if (outputData == null) {
             android.util.Log.w(TAG, "NCNN inference returned null")
@@ -184,10 +200,10 @@ class NcnnInferenceEngine : IInferenceEngine {
         lastOutputDiagInfo = diagBuilder.toString()
         android.util.Log.i(TAG, lastOutputDiagInfo)
 
-        // 后处理：解码、NMS（传递blob形状信息给解码器）
+        // 后处理：解码、NMS（传递blob形状信息和实际目标尺寸给后处理器）
         val srcWidth = bitmap.width
         val srcHeight = bitmap.height
-        val detections = postProc.process(outputData, srcWidth, srcHeight, lastBlobShapes)
+        val detections = postProc.process(outputData, srcWidth, srcHeight, lastBlobShapes, actualTargetWidth, actualTargetHeight)
 
         // 首次推理时记录前几个检测结果的坐标（诊断用）
         if (!hasLoggedOutputDiag || detections.isNotEmpty()) {

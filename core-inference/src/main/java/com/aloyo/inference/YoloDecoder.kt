@@ -17,13 +17,16 @@ interface YoloDecoder {
      * @param config 模型配置
      * @param confidenceThreshold 置信度阈值
      * @param blobShapes 每个输出blob的形状信息列表（c, h, w），为空时自动推断
+     * @param actualInputWidth 实际传入NCNN的输入宽度，0时使用config.inputWidth
+     *                         当截屏区域小于config.inputSize时，实际输入宽度可能小于config.inputWidth
      * @return 解码后的检测列表（未经过NMS）
      */
     fun decode(
         output: Array<FloatArray>,
         config: ModelConfig,
         confidenceThreshold: Float,
-        blobShapes: List<OutputBlobInfo> = emptyList()
+        blobShapes: List<OutputBlobInfo> = emptyList(),
+        actualInputWidth: Int = 0
     ): List<RawDetection>
 }
 
@@ -130,13 +133,17 @@ class UnifiedYoloDecoder : YoloDecoder {
         output: Array<FloatArray>,
         config: ModelConfig,
         confidenceThreshold: Float,
-        blobShapes: List<OutputBlobInfo>
+        blobShapes: List<OutputBlobInfo>,
+        actualInputWidth: Int
     ): List<RawDetection> {
         lastSkipObjectness = false
         val numRows = output.size
         if (numRows == 0) return emptyList()
         val numCols = output[0].size
         if (numCols == 0) return emptyList()
+
+        // 实际传入NCNN的输入宽度，0时回退到config.inputWidth
+        val effectiveActualInputWidth = if (actualInputWidth > 0) actualInputWidth else config.inputWidth
 
         val v8Attrs = 4 + config.numClasses
         val v5Attrs = 5 + config.numClasses
@@ -162,13 +169,13 @@ class UnifiedYoloDecoder : YoloDecoder {
 
         // 解码原始输出
         val detections = if (blobShapes.isNotEmpty()) {
-            decodeMultiBlob(output, config, confidenceThreshold, blobShapes, v5Attrs, v8Attrs)
+            decodeMultiBlob(output, config, confidenceThreshold, blobShapes, v5Attrs, v8Attrs, effectiveActualInputWidth)
         } else {
             // 单blob情况：自动检测格式并解码
             val format = detectFormat(numRows, numCols, v8Attrs, v5Attrs)
             android.util.Log.i(TAG, "Detected format: ${format.name}")
             when (format) {
-                OutputFormat.V5_MULTI_ANCHOR -> decodeV5MultiAnchor(output, config, confidenceThreshold, numRows, numCols, null, null)
+                OutputFormat.V5_MULTI_ANCHOR -> decodeV5MultiAnchor(output, config, confidenceThreshold, numRows, numCols, null, null, 0f, 0, effectiveActualInputWidth)
                 OutputFormat.V8_TRANSPOSED -> decodeV8Format(output, config, confidenceThreshold, numRows, numCols)
                 OutputFormat.V5_PER_ROW -> decodeV5PerRowFormat(output, config, confidenceThreshold, numRows, numCols)
                 OutputFormat.V5_FLAT -> decodeV5FlatFormat(output, config, confidenceThreshold, numCols, v5Attrs)
@@ -277,7 +284,8 @@ class UnifiedYoloDecoder : YoloDecoder {
         confThresh: Float,
         blobShapes: List<OutputBlobInfo>,
         v5Attrs: Int,
-        v8Attrs: Int
+        v8Attrs: Int,
+        actualInputWidth: Int = 0
     ): List<RawDetection> {
         val allDetections = mutableListOf<RawDetection>()
         var channelOffset = 0
@@ -323,7 +331,7 @@ class UnifiedYoloDecoder : YoloDecoder {
             val detections = when (format) {
                 OutputFormat.V5_MULTI_ANCHOR -> decodeV5MultiAnchor(
                     blobOutput, config, confThresh, blobChannels, blobSpatial,
-                    blobHeight, blobWidth, standardStride, effectiveInputSize
+                    blobHeight, blobWidth, standardStride, effectiveInputSize, actualInputWidth
                 )
                 OutputFormat.V8_TRANSPOSED -> decodeV8Format(blobOutput, config, confThresh, blobChannels, blobSpatial)
                 OutputFormat.V5_PER_ROW -> decodeV5PerRowFormat(blobOutput, config, confThresh, blobChannels, blobSpatial)
@@ -400,7 +408,8 @@ class UnifiedYoloDecoder : YoloDecoder {
         blobHeight: Int?,
         blobWidth: Int?,
         overrideStride: Float = 0f,
-        effectiveInputSize: Int = 0
+        effectiveInputSize: Int = 0,
+        actualInputWidth: Int = 0
     ): List<RawDetection> {
         val detections = mutableListOf<RawDetection>()
         val v5Attrs = 5 + config.numClasses
@@ -422,10 +431,13 @@ class UnifiedYoloDecoder : YoloDecoder {
         // 获取该stride对应的锚框尺寸（使用模型实际输入尺寸缩放）
         val anchors = getAnchorsForStride(stride, modelInputSize)
 
-        // 坐标空间缩放因子：从模型实际输入空间映射到config输入空间
-        // 当config.inputWidth != modelInputSize时需要缩放
-        val coordScale = if (modelInputSize != config.inputWidth && modelInputSize > 0)
-                             config.inputWidth.toFloat() / modelInputSize
+        // 坐标空间缩放因子：从模型实际输入空间映射到NCNN实际输入空间
+        // 当截屏区域小于config.inputSize时，实际传入NCNN的尺寸可能小于config.inputWidth
+        // 例如：256×256截屏区域直接传入NCNN，actualInputWidth=256，modelInputSize=256，coordScale=1.0
+        // 而之前强制放大到640时，actualInputWidth=640，modelInputSize=256，coordScale=2.5
+        val ncnnInputWidth = if (actualInputWidth > 0) actualInputWidth else config.inputWidth
+        val coordScale = if (modelInputSize != ncnnInputWidth && modelInputSize > 0)
+                             ncnnInputWidth.toFloat() / modelInputSize
                          else 1.0f
 
         // 扫描objectness通道的统计信息，判断objectness是否有效
@@ -464,7 +476,7 @@ class UnifiedYoloDecoder : YoloDecoder {
         lastSkipObjectness = skipObjectness
 
         android.util.Log.i(TAG, "V5_MULTI_ANCHOR: numAnchors=$numAnchors, gridH=$gridH, gridW=$gridW, " +
-                "stride=$stride, coordScale=$coordScale, modelInputSize=$modelInputSize, " +
+                "stride=$stride, coordScale=$coordScale, modelInputSize=$modelInputSize, ncnnInputWidth=$ncnnInputWidth, " +
                 "numSpatial=$numSpatial, anchors=${anchors.toList()}, " +
                 "maxRawObj=$maxRawObj, minRawObj=$minRawObj, avgRawObj=${"%.2f".format(avgRawObj)}, " +
                 "objRange=${"%.2f".format(objRange)}, maxObjSigmoid=$maxObjSigmoid, skipObjectness=$skipObjectness")
@@ -722,9 +734,10 @@ class YoloV5Decoder : YoloDecoder {
         output: Array<FloatArray>,
         config: ModelConfig,
         confidenceThreshold: Float,
-        blobShapes: List<OutputBlobInfo>
+        blobShapes: List<OutputBlobInfo>,
+        actualInputWidth: Int
     ): List<RawDetection> {
-        return unifiedDecoder.decode(output, config, confidenceThreshold, blobShapes)
+        return unifiedDecoder.decode(output, config, confidenceThreshold, blobShapes, actualInputWidth)
     }
 }
 
@@ -738,9 +751,10 @@ class YoloV7Decoder : YoloDecoder {
         output: Array<FloatArray>,
         config: ModelConfig,
         confidenceThreshold: Float,
-        blobShapes: List<OutputBlobInfo>
+        blobShapes: List<OutputBlobInfo>,
+        actualInputWidth: Int
     ): List<RawDetection> {
-        return unifiedDecoder.decode(output, config, confidenceThreshold, blobShapes)
+        return unifiedDecoder.decode(output, config, confidenceThreshold, blobShapes, actualInputWidth)
     }
 }
 
@@ -754,8 +768,9 @@ class YoloV8Decoder : YoloDecoder {
         output: Array<FloatArray>,
         config: ModelConfig,
         confidenceThreshold: Float,
-        blobShapes: List<OutputBlobInfo>
+        blobShapes: List<OutputBlobInfo>,
+        actualInputWidth: Int
     ): List<RawDetection> {
-        return unifiedDecoder.decode(output, config, confidenceThreshold, blobShapes)
+        return unifiedDecoder.decode(output, config, confidenceThreshold, blobShapes, actualInputWidth)
     }
 }

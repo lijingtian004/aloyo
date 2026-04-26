@@ -28,16 +28,23 @@ class YoloPostProcessor(
      * @param srcWidth 原图宽度
      * @param srcHeight 原图高度
      * @param blobShapes 每个输出blob的形状信息列表，为空时自动推断
+     * @param actualTargetWidth 实际预处理目标宽度，0时使用config.inputWidth
+     *                          当截屏区域小于config.inputSize时，实际目标宽度可能小于config.inputWidth
+     * @param actualTargetHeight 实际预处理目标高度，0时使用config.inputHeight
      * @return 最终的检测结果列表
      */
-    fun process(output: Array<FloatArray>, srcWidth: Int, srcHeight: Int, blobShapes: List<OutputBlobInfo> = emptyList()): List<Detection> {
-        // 解码原始输出（传递blob形状信息给解码器）
-        val rawDetections = decoder.decode(output, config, confidenceThreshold, blobShapes)
+    fun process(output: Array<FloatArray>, srcWidth: Int, srcHeight: Int, blobShapes: List<OutputBlobInfo> = emptyList(), actualTargetWidth: Int = 0, actualTargetHeight: Int = 0): List<Detection> {
+        // 实际预处理目标尺寸，0时回退到config值
+        val targetW = if (actualTargetWidth > 0) actualTargetWidth else config.inputWidth
+        val targetH = if (actualTargetHeight > 0) actualTargetHeight else config.inputHeight
+
+        // 解码原始输出（传递blob形状信息和实际输入宽度给解码器）
+        val rawDetections = decoder.decode(output, config, confidenceThreshold, blobShapes, targetW)
 
         if (rawDetections.isEmpty()) return emptyList()
 
-        // 计算坐标映射参数
-        val preProcessor = YoloPreProcessor(config.inputWidth, config.inputHeight)
+        // 计算坐标映射参数（使用实际预处理目标尺寸）
+        val preProcessor = YoloPreProcessor(targetW, targetH)
         val scaleFactors = preProcessor.getScaleFactors(srcWidth, srcHeight)
 
         // 将坐标从模型空间映射回原图空间
@@ -70,11 +77,9 @@ class YoloPostProcessor(
 
         // 过滤退化检测框：宽或高极小的框通常是解码噪声产生的假阳性
         // 使用相对于源图像尺寸的百分比阈值，适应不同分辨率的输入
-        // 固定2像素阈值对小图(256x256)和大图(1264x2584)都不合适：
-        // - 小图：3x4像素的噪声框能通过2像素过滤
-        // - 大图：2像素阈值太宽松
+        // 5%阈值：真实目标通常占图像至少5%的宽或高，噪声框通常<3%
         val minDim = minOf(srcWidth, srcHeight).toFloat()
-        val minBoxSize = maxOf(5.0f, minDim * 0.02f)
+        val minBoxSize = maxOf(8.0f, minDim * 0.05f)
         val validDetections = mappedDetections.filter { det ->
             (det.x2 - det.x1) >= minBoxSize && (det.y2 - det.y1) >= minBoxSize
         }
