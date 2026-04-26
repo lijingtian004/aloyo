@@ -34,12 +34,18 @@ class YoloPostProcessor(
      * @return 最终的检测结果列表
      */
     fun process(output: Array<FloatArray>, srcWidth: Int, srcHeight: Int, blobShapes: List<OutputBlobInfo> = emptyList(), actualTargetWidth: Int = 0, actualTargetHeight: Int = 0): List<Detection> {
-        // 实际预处理目标尺寸，0时回退到config值
         val targetW = if (actualTargetWidth > 0) actualTargetWidth else config.inputWidth
         val targetH = if (actualTargetHeight > 0) actualTargetHeight else config.inputHeight
-
-        // 解码原始输出（传递blob形状信息和实际输入宽度给解码器）
         val rawDetections = decoder.decode(output, config, confidenceThreshold, blobShapes, targetW)
+        return processRawDetections(rawDetections, srcWidth, srcHeight, actualTargetWidth, actualTargetHeight)
+    }
+
+    /**
+     * 处理已解码的原始检测结果（避免重复解码）
+     */
+    fun processRawDetections(rawDetections: List<RawDetection>, srcWidth: Int, srcHeight: Int, actualTargetWidth: Int = 0, actualTargetHeight: Int = 0): List<Detection> {
+        val targetW = if (actualTargetWidth > 0) actualTargetWidth else config.inputWidth
+        val targetH = if (actualTargetHeight > 0) actualTargetHeight else config.inputHeight
 
         if (rawDetections.isEmpty()) return emptyList()
 

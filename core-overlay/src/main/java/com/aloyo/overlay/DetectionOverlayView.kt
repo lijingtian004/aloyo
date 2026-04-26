@@ -216,8 +216,17 @@ class DetectionOverlayView(context: Context) : View(context) {
         }
 
         // 计算坐标映射比例：原图像素 → 屏幕像素
-        val scaleX = if (srcWidth > 0) viewW.toFloat() / srcWidth else 1f
-        val scaleY = if (srcHeight > 0) viewH.toFloat() / srcHeight else 1f
+        // 使用getRealMetrics获取包含系统栏的完整屏幕尺寸
+        // MATCH_PARENT在某些设备上不包含导航栏（如2584而非2780），导致scaleY≠1.0
+        // getRealMetrics始终返回完整屏幕尺寸，确保坐标映射正确
+        val screenMetrics = android.util.DisplayMetrics()
+        @Suppress("DEPRECATION")
+        (context.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager)
+            .defaultDisplay.getRealMetrics(screenMetrics)
+        val mapW = screenMetrics.widthPixels
+        val mapH = screenMetrics.heightPixels
+        val scaleX = if (srcWidth > 0) mapW.toFloat() / srcWidth else 1f
+        val scaleY = if (srcHeight > 0) mapH.toFloat() / srcHeight else 1f
 
         // 绘制检测框
         for (detection in detections) {

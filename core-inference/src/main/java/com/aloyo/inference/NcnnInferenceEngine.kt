@@ -203,7 +203,24 @@ class NcnnInferenceEngine : IInferenceEngine {
         // 后处理：解码、NMS（传递blob形状信息和实际目标尺寸给后处理器）
         val srcWidth = bitmap.width
         val srcHeight = bitmap.height
-        val detections = postProc.process(outputData, srcWidth, srcHeight, lastBlobShapes, actualTargetWidth, actualTargetHeight)
+        val rawDetections = decoder.decode(outputData, config, confidenceThreshold, lastBlobShapes, actualTargetWidth, actualTargetHeight)
+
+        // 首次推理时记录解码器诊断信息到应用日志
+        if (!hasLoggedOutputDiag) {
+            hasLoggedOutputDiag = true
+            val decodeDiag = buildString {
+                append("Decoder: skipObjectness=${decoder.lastSkipObjectness}, rawDetections=${rawDetections.size}")
+                if (rawDetections.isNotEmpty()) {
+                    append("\n  Top detections:")
+                    rawDetections.sortedByDescending { it.confidence }.take(5).forEachIndexed { idx, det ->
+                        append("\n  [$idx] conf=${String.format("%.4f", det.confidence)}, logit=${String.format("%.4f", det.rawLogit)}, class=${det.classId}, cx=${String.format("%.1f", det.cx)}, cy=${String.format("%.1f", det.cy)}")
+                    }
+                }
+            }
+            lastOutputDiagInfo += "\n$decodeDiag"
+        }
+
+        val detections = postProc.processRawDetections(rawDetections, srcWidth, srcHeight, actualTargetWidth, actualTargetHeight)
 
         // 首次推理时记录前几个检测结果的坐标（诊断用）
         if (!hasLoggedOutputDiag || detections.isNotEmpty()) {
