@@ -222,6 +222,32 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
     }
 
     /**
+     * 更新overlay窗口尺寸以匹配当前屏幕方向
+     * 屏幕旋转后，overlay窗口的宽高需要互换（竖屏1264x2780 ↔ 横屏2780x1264）
+     * 否则坐标映射会产生非均匀缩放（如scale=0.45x2.20），导致检测框严重变形
+     */
+    fun updateOverlaySize() {
+        mainHandler.post {
+            val view = overlayView ?: return@post
+            val params = overlayLayoutParams ?: return@post
+
+            val screenSize = getFullScreenSize()
+
+            // 只有尺寸真正变化时才更新（避免不必要的重绘）
+            if (params.width != screenSize.x || params.height != screenSize.y) {
+                android.util.Log.i(TAG, "Updating overlay size: ${params.width}x${params.height} -> ${screenSize.x}x${screenSize.y}")
+                params.width = screenSize.x
+                params.height = screenSize.y
+                try {
+                    windowManager.updateViewLayout(view, params)
+                } catch (e: Exception) {
+                    android.util.Log.e(TAG, "Error updating overlay layout", e)
+                }
+            }
+        }
+    }
+
+    /**
      * 设置是否显示截屏区域框
      */
     fun setShowCaptureRegion(show: Boolean) {

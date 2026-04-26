@@ -466,15 +466,17 @@ class UnifiedYoloDecoder : YoloDecoder {
         val avgRawObj = if (objCount > 0) sumRawObj / objCount else 0.0
         val objRange = maxRawObj - minRawObj
 
-        // 跳过objectness的条件（满足全部条件才跳过）：
-        // 条件1：maxObjSigmoid < 0.01 — 没有高置信度的objectness信号
-        // 条件2：maxRawObj > -2.0 — 原始值接近0，通道从未被激活（未训练的标志）
-        // 条件3：objRange < 5.0 — 原始值范围很窄，通道对输入无响应（只是偏置+噪声）
-        // 三个条件必须同时满足才跳过，因为：
-        //   - 如果maxRawObj很负（如-13），说明模型学到了"没有目标"，objectness正常工作，不应跳过
-        //   - 即使range较小，只要maxRawObj很负，就说明通道在积极抑制背景检测
-        //   - 之前使用OR逻辑导致：maxRawObj很负但range小时错误跳过objectness，产生高置信度假阳
-        val skipObjectness = maxObjSigmoid < 0.01f && maxRawObj > -2.0f && objRange < 5.0f
+        // 跳过objectness的条件：
+        // 条件1：maxObjSigmoid < 0.01 — 没有高置信度的objectness信号（没有任何位置认为有目标）
+        // 条件2：objRange < 5.0 — 原始值范围很窄，通道对输入无区分能力
+        // 两个条件同时满足时跳过，因为：
+        //   - 如果maxObjSigmoid < 0.01但objRange >= 5.0，说明通道有区分能力（某些位置响应更强），
+        //     即使当前帧没有高置信度位置，也应保留objectness供后续帧使用
+        //   - 如果objRange < 5.0且maxObjSigmoid < 0.01，说明通道无论原始值是接近0还是很负，
+        //     都没有提供有效的前景/背景区分信息，应跳过
+        //   - 之前的AND三条件逻辑（maxRawObj > -2.0 && objRange < 5.0）在maxRawObj很负时
+        //     不跳过objectness，导致sigmoid(-13)×classConf≈0，杀死所有检测
+        val skipObjectness = maxObjSigmoid < 0.01f && objRange < 5.0f
         lastSkipObjectness = skipObjectness
 
         android.util.Log.i(TAG, "V5_MULTI_ANCHOR: numAnchors=$numAnchors, gridH=$gridH, gridW=$gridW, " +
@@ -528,8 +530,8 @@ class UnifiedYoloDecoder : YoloDecoder {
                     maxRawClsLogit = 0f
                 }
 
-                // skipObjectness时使用宽松预过滤，后续gap-based过滤会精确筛选
-                val preThresh = if (skipObjectness) 0.5f else confThresh
+                // skipObjectness时使用置信度阈值预过滤，后续gap-based过滤会精确筛选
+                val preThresh = confThresh
                 if (finalConf < preThresh) continue
 
                 // 解码坐标（YOLOv5公式）

@@ -1106,6 +1106,8 @@ class MainActivity : AppCompatActivity() {
                 if (rotated) {
                     // 屏幕旋转了，重新计算截屏区域
                     applyCaptureRegion()
+                    // 更新overlay窗口尺寸以匹配新方向
+                    overlayManager.updateOverlaySize()
                 }
             }
 

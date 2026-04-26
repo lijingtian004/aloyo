@@ -203,6 +203,12 @@ class CaptureManager(private val context: Context) : ICaptureSource {
             image = reader.acquireLatestImage()
             if (image == null) return
 
+            // 检查截屏是否已停止（避免在停止过程中处理帧）
+            if (!isCapturing) {
+                image.close()
+                return
+            }
+
             // 将Image转换为Bitmap
             val bitmap = imageToBitmap(image)
             if (bitmap != null) {
