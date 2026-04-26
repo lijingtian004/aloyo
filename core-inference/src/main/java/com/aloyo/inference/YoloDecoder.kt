@@ -87,7 +87,8 @@ class UnifiedYoloDecoder : YoloDecoder {
 
     // 追踪最近一次解码是否跳过了objectness（供全局自适应过滤使用）
     @Volatile
-    private var lastSkipObjectness = false
+    var lastSkipObjectness = false
+        private set
 
     companion object {
         private const val TAG = "UnifiedYoloDecoder"

@@ -53,6 +53,7 @@ class NcnnInferenceEngine : IInferenceEngine {
     // 预处理器和后处理器
     private var preProcessor: YoloPreProcessor? = null
     private var postProcessor: YoloPostProcessor? = null
+    private var decoder: UnifiedYoloDecoder? = null
 
     // 诊断信息：上次推理的NCNN输出形状和原始值（用于日志诊断）
     @Volatile
@@ -94,8 +95,9 @@ class NcnnInferenceEngine : IInferenceEngine {
             preProcessor = YoloPreProcessor(config.inputWidth, config.inputHeight)
 
             // 根据模型版本创建对应的后处理器（统一解码器自动检测输出格式）
-            val decoder = UnifiedYoloDecoder()
-            postProcessor = YoloPostProcessor(decoder, config, confidenceThreshold, nmsThreshold)
+            val dec = UnifiedYoloDecoder()
+            postProcessor = YoloPostProcessor(dec, config, confidenceThreshold, nmsThreshold)
+            this.decoder = dec
 
             isInitialized = true
             android.util.Log.i(TAG, "NCNN engine initialized with model: ${config.version}")
@@ -203,13 +205,13 @@ class NcnnInferenceEngine : IInferenceEngine {
         // 后处理：解码、NMS（传递blob形状信息和实际目标尺寸给后处理器）
         val srcWidth = bitmap.width
         val srcHeight = bitmap.height
-        val rawDetections = decoder.decode(outputData, config, confidenceThreshold, lastBlobShapes, actualTargetWidth, actualTargetHeight)
+        val rawDetections = decoder?.decode(outputData, config, confidenceThreshold, lastBlobShapes, actualTargetWidth, actualTargetHeight) ?: emptyList()
 
         // 首次推理时记录解码器诊断信息到应用日志
         if (!hasLoggedOutputDiag) {
             hasLoggedOutputDiag = true
             val decodeDiag = buildString {
-                append("Decoder: skipObjectness=${decoder.lastSkipObjectness}, rawDetections=${rawDetections.size}")
+                append("Decoder: skipObjectness=${decoder?.lastSkipObjectness}, rawDetections=${rawDetections.size}")
                 if (rawDetections.isNotEmpty()) {
                     append("\n  Top detections:")
                     rawDetections.sortedByDescending { it.confidence }.take(5).forEachIndexed { idx, det ->
@@ -261,6 +263,7 @@ class NcnnInferenceEngine : IInferenceEngine {
         modelConfig = null
         preProcessor = null
         postProcessor = null
+        decoder = null
         android.util.Log.i(TAG, "NCNN engine released")
     }
 
