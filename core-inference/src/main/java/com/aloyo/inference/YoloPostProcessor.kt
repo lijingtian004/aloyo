@@ -22,7 +22,8 @@ class YoloPostProcessor(
      * 处理模型输出
      * 1. 使用对应版本的解码器解码原始输出
      * 2. 将坐标从模型空间映射回原图空间
-     * 3. 执行NMS去除重叠检测
+     * 3. 过滤退化检测框（零宽/零高/极小的框）
+     * 4. 执行NMS去除重叠检测
      * @param output 模型原始输出
      * @param srcWidth 原图宽度
      * @param srcHeight 原图高度
@@ -67,8 +68,15 @@ class YoloPostProcessor(
             )
         }
 
+        // 过滤退化检测框：宽或高极小的框通常是解码错误产生的假阳性
+        // 这些框因为面积接近0，IoU也为0，无法被NMS去除
+        val minBoxSize = 2.0f
+        val validDetections = mappedDetections.filter { det ->
+            (det.x2 - det.x1) >= minBoxSize && (det.y2 - det.y1) >= minBoxSize
+        }
+
         // 按类别执行NMS
-        return applyNMS(mappedDetections)
+        return applyNMS(validDetections)
     }
 
     /**

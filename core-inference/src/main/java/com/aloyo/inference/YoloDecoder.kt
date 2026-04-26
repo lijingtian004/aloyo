@@ -294,27 +294,39 @@ class UnifiedYoloDecoder : YoloDecoder {
         // 获取该stride对应的锚框尺寸
         val anchors = getAnchorsForStride(stride, config.inputWidth)
 
-        // 先扫描最大objectness值，判断objectness是否有效
+        // 扫描objectness通道的统计信息，判断objectness是否有效
+        // 关键区分：
+        //   - objectness未使用/未训练：原始值接近0（如-1~1），说明该通道没有被模型激活
+        //   - objectness正常使用但无目标：原始值非常负（如-15~-5），模型主动输出"无目标"
+        //   - objectness正常使用且有目标：部分原始值为正，sigmoid后>0.5
         var maxRawObj = Float.NEGATIVE_INFINITY
+        var minRawObj = Float.POSITIVE_INFINITY
+        var sumRawObj = 0.0
+        var objCount = 0
         for (a in 0 until numAnchors) {
             val objCh = a * v5Attrs + 4
             if (objCh >= numRows) continue
             for (i in 0 until minOf(numSpatial, output[objCh].size)) {
-                if (output[objCh][i] > maxRawObj) {
-                    maxRawObj = output[objCh][i]
-                }
+                val rawVal = output[objCh][i]
+                if (rawVal > maxRawObj) maxRawObj = rawVal
+                if (rawVal < minRawObj) minRawObj = rawVal
+                sumRawObj += rawVal
+                objCount++
             }
         }
         val maxObjSigmoid = sigmoid(maxRawObj)
+        val avgRawObj = if (objCount > 0) sumRawObj / objCount else 0.0
 
-        // 如果最大objectness的sigmoid值极低（<0.01），说明objectness通道无效
-        // 可能原因：模型训练时未使用objectness、objectness未校准、或输入预处理有误
-        // 此时回退到无objectness模式，直接使用类别置信度（类似YOLOv8）
-        val skipObjectness = maxObjSigmoid < 0.01f
+        // 仅在objectness通道明显未训练时跳过：
+        // 条件1：最大objectness的sigmoid值极低（<0.01），说明没有高置信度的目标
+        // 条件2：objectness原始值的范围很窄且接近0（|最大值| < 2.0），说明通道未被激活
+        // 如果最大值非常负（如-13），说明模型主动输出"无目标"，此时绝不能跳过objectness
+        val skipObjectness = maxObjSigmoid < 0.01f && maxRawObj > -2.0f
 
         android.util.Log.i(TAG, "V5_MULTI_ANCHOR: numAnchors=$numAnchors, gridH=$gridH, gridW=$gridW, " +
                 "stride=$stride, numSpatial=$numSpatial, anchors=${anchors.toList()}, " +
-                "maxRawObj=$maxRawObj, maxObjSigmoid=$maxObjSigmoid, skipObjectness=$skipObjectness")
+                "maxRawObj=$maxRawObj, minRawObj=$minRawObj, avgRawObj=${"%.2f".format(avgRawObj)}, " +
+                "maxObjSigmoid=$maxObjSigmoid, skipObjectness=$skipObjectness")
 
         for (i in 0 until numSpatial) {
             val gridX = i % gridW
