@@ -466,17 +466,19 @@ class UnifiedYoloDecoder : YoloDecoder {
         val avgRawObj = if (objCount > 0) sumRawObj / objCount else 0.0
         val objRange = maxRawObj - minRawObj
 
-        // 跳过objectness的条件：
-        // 条件1：maxObjSigmoid < 0.01 — 没有高置信度的objectness信号（没有任何位置认为有目标）
-        // 条件2：objRange < 5.0 — 原始值范围很窄，通道对输入无区分能力
-        // 两个条件同时满足时跳过，因为：
-        //   - 如果maxObjSigmoid < 0.01但objRange >= 5.0，说明通道有区分能力（某些位置响应更强），
-        //     即使当前帧没有高置信度位置，也应保留objectness供后续帧使用
-        //   - 如果objRange < 5.0且maxObjSigmoid < 0.01，说明通道无论原始值是接近0还是很负，
-        //     都没有提供有效的前景/背景区分信息，应跳过
-        //   - 之前的AND三条件逻辑（maxRawObj > -2.0 && objRange < 5.0）在maxRawObj很负时
-        //     不跳过objectness，导致sigmoid(-13)×classConf≈0，杀死所有检测
-        val skipObjectness = maxObjSigmoid < 0.01f && objRange < 5.0f
+        // 跳过objectness的条件：maxObjSigmoid < 0.01
+        // 当没有任何位置的objectness sigmoid超过0.01时，说明模型认为当前帧没有目标
+        // 此时如果保留objectness，sigmoid(-13)×classConf≈0会杀死所有检测
+        // 因此必须跳过objectness，仅用类别置信度+gap-based过滤来区分前景/背景
+        //
+        // 之前尝试加入objRange条件来区分"objectness未训练"和"objectness正常但无目标"，
+        // 但实际发现：即使objectness全部很负（-13~-17），不同空间位置的值仍有差异，
+        // 导致objRange>=5.0，条件不满足，objectness不被跳过，杀死所有检测
+        //
+        // 正确做法：只要maxObjSigmoid<0.01就跳过objectness，
+        // 因为此时无论objRange大小，sigmoid(objectness)都接近0，无法提供有效信号
+        // 假阳防护由gap-based过滤在logit空间完成（区分度比sigmoid空间高100倍）
+        val skipObjectness = maxObjSigmoid < 0.01f
         lastSkipObjectness = skipObjectness
 
         android.util.Log.i(TAG, "V5_MULTI_ANCHOR: numAnchors=$numAnchors, gridH=$gridH, gridW=$gridW, " +

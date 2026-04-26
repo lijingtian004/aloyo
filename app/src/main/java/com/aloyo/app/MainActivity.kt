@@ -1106,8 +1106,13 @@ class MainActivity : AppCompatActivity() {
                 if (rotated) {
                     // 屏幕旋转了，重新计算截屏区域
                     applyCaptureRegion()
-                    // 更新overlay窗口尺寸以匹配新方向
-                    overlayManager.updateOverlaySize()
+                    // 使用CaptureManager的实时屏幕尺寸更新overlay窗口
+                    // 不能用getRealMetrics()，因为从Application context可能返回错误的尺寸
+                    val curWidth = captureService?.currentScreenWidth ?: 0
+                    val curHeight = captureService?.currentScreenHeight ?: 0
+                    if (curWidth > 0 && curHeight > 0) {
+                        overlayManager.updateOverlaySize(curWidth, curHeight)
+                    }
                 }
             }
 
