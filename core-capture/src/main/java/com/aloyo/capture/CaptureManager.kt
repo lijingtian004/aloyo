@@ -156,7 +156,7 @@ class CaptureManager(private val context: Context) : ICaptureSource {
             processImage(reader)
         }, handler)
 
-        android.util.Log.i(TAG, "ImageReader created: ${region.width}x${region.height}, surface=${imageReader?.surface != null}")
+        android.util.Log.i(TAG, "ImageReader created: ${captureWidth}x${captureHeight}, surface=${imageReader?.surface != null}")
 
         // 创建VirtualDisplay
         virtualDisplay = mediaProjection?.createVirtualDisplay(
