@@ -50,10 +50,23 @@ class YoloPostProcessor(
         // 将坐标从模型空间映射回原图空间
         val mappedDetections = rawDetections.map { raw ->
             // 从中心坐标+宽高转换为左上角+右下角坐标
-            val x1 = (raw.cx - raw.w / 2f - scaleFactors.padX) / scaleFactors.scale
-            val y1 = (raw.cy - raw.h / 2f - scaleFactors.padY) / scaleFactors.scale
-            val x2 = (raw.cx + raw.w / 2f - scaleFactors.padX) / scaleFactors.scale
-            val y2 = (raw.cy + raw.h / 2f - scaleFactors.padY) / scaleFactors.scale
+            var x1 = (raw.cx - raw.w / 2f - scaleFactors.padX) / scaleFactors.scale
+            var y1 = (raw.cy - raw.h / 2f - scaleFactors.padY) / scaleFactors.scale
+            var x2 = (raw.cx + raw.w / 2f - scaleFactors.padX) / scaleFactors.scale
+            var y2 = (raw.cy + raw.h / 2f - scaleFactors.padY) / scaleFactors.scale
+
+            // 应用检测框缩放因子（boxScale）
+            // 以框中心为基准向外扩展，补偿锚框不匹配或模型回归偏差
+            if (config.boxScale != 1.0f) {
+                val cx = (x1 + x2) / 2f
+                val cy = (y1 + y2) / 2f
+                val halfW = (x2 - x1) / 2f * config.boxScale
+                val halfH = (y2 - y1) / 2f * config.boxScale
+                x1 = cx - halfW
+                y1 = cy - halfH
+                x2 = cx + halfW
+                y2 = cy + halfH
+            }
 
             // 裁剪坐标到图像范围内
             val clampedX1 = x1.coerceIn(0f, srcWidth.toFloat())

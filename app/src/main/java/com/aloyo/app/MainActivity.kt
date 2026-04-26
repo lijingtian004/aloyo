@@ -719,6 +719,7 @@ class MainActivity : AppCompatActivity() {
             "numClasses": 80,
             "confidenceThreshold": 0.5,
             "nmsThreshold": 0.4,
+            "boxScale": 1.15,
             "labels": [
                 ${DEFAULT_COCO_LABELS.joinToString(",\n                ") { "\"$it\"" }}
             ]
@@ -812,6 +813,15 @@ class MainActivity : AppCompatActivity() {
         }
         layout.addView(etNmsThresh)
 
+        // 检测框缩放因子
+        layout.addView(TextView(this).apply { text = "检测框缩放因子 (1.0=不缩放, 1.2=扩展20%):"; setPadding(0, 8, 0, 4) })
+        val etBoxScale = EditText(this).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+            hint = "1.15"
+            setText(config.boxScale.toString())
+        }
+        layout.addView(etBoxScale)
+
         // 类别标签
         layout.addView(TextView(this).apply {
             text = "类别标签（每行一个，顺序对应类别ID）:"
@@ -846,6 +856,7 @@ class MainActivity : AppCompatActivity() {
                 val numClasses = etNumClasses.text.toString().toIntOrNull() ?: 80
                 val confThresh = etConfThresh.text.toString().toFloatOrNull() ?: 0.5f
                 val nmsThresh = etNmsThresh.text.toString().toFloatOrNull() ?: 0.4f
+                val boxScale = etBoxScale.text.toString().toFloatOrNull() ?: 1.15f
                 val labels = etLabels.text.toString().lines().filter { it.isNotBlank() }
 
                 // 如果标签数量与类别数不匹配，提示
@@ -866,6 +877,7 @@ class MainActivity : AppCompatActivity() {
                     append("    \"numClasses\": $numClasses,\n")
                     append("    \"confidenceThreshold\": $confThresh,\n")
                     append("    \"nmsThreshold\": $nmsThresh,\n")
+                    append("    \"boxScale\": $boxScale,\n")
                     append("    \"labels\": [\n")
                     labels.forEachIndexed { index, label ->
                         append("        \"$label\"")
