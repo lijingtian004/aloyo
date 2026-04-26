@@ -205,7 +205,8 @@ class NcnnInferenceEngine : IInferenceEngine {
         // 后处理：解码、NMS（传递blob形状信息和实际目标尺寸给后处理器）
         val srcWidth = bitmap.width
         val srcHeight = bitmap.height
-        val rawDetections = decoder?.decode(outputData, config, confidenceThreshold, lastBlobShapes, actualTargetWidth, actualTargetHeight) ?: emptyList()
+        val currentConfig = modelConfig ?: return emptyList()
+        val rawDetections = decoder?.decode(outputData, currentConfig, confidenceThreshold, lastBlobShapes, actualTargetWidth) ?: emptyList()
 
         // 首次推理时记录解码器诊断信息到应用日志
         if (!hasLoggedOutputDiag) {
