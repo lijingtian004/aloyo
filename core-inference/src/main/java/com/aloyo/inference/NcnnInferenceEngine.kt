@@ -156,8 +156,8 @@ class NcnnInferenceEngine : IInferenceEngine {
         diagBuilder.append(", numClasses=${config?.numClasses}, v8Attrs=$v8Attrs, v5Attrs=$v5Attrs")
 
         // 首次推理时记录每个通道的前5个原始值
-        if (!hasLoggedOutputDiag) {
-            hasLoggedOutputDiag = true
+        val shouldLogDiag = !hasLoggedOutputDiag
+        if (shouldLogDiag) {
             diagBuilder.append("\n")
             for (c in 0 until minOf(numRows, 8)) {
                 val vals = (0 until minOf(numCols, 5)).joinToString(", ") {
@@ -209,7 +209,7 @@ class NcnnInferenceEngine : IInferenceEngine {
         val rawDetections = decoder?.decode(outputData, currentConfig, confidenceThreshold, lastBlobShapes, actualTargetWidth) ?: emptyList()
 
         // 首次推理时记录解码器诊断信息到应用日志
-        if (!hasLoggedOutputDiag) {
+        if (shouldLogDiag) {
             hasLoggedOutputDiag = true
             val decodeDiag = buildString {
                 append("Decoder: skipObjectness=${decoder?.lastSkipObjectness}, rawDetections=${rawDetections.size}")
