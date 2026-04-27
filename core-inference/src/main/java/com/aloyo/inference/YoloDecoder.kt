@@ -186,9 +186,22 @@ class UnifiedYoloDecoder : YoloDecoder {
         // 全局自适应过滤：当objectness被跳过时，类别置信度无法区分前景/背景
         // 使用gap-based方法：在排序后的logit中找到最大间隔作为前景/背景分离点
         // skipObjectness时，背景logit约2-4，前景logit约5-7，gap通常>2.0
-        // 当检测数量>10时启用过滤（10个以上检测很可能是假阳）
-        if (lastSkipObjectness && detections.size > 10) {
+        // 降低阈值到>3，更积极地过滤假阳
+        if (lastSkipObjectness && detections.size > 3) {
             return applyGapBasedFiltering(detections, confidenceThreshold)
+        }
+
+        // 置信度上限过滤：当skipObjectness时，所有检测的sigmoid置信度都接近1.0(~99.8%)
+        // 这个高置信度不可靠，不能用来区分前景/背景
+        // 改用logit绝对阈值：只保留logit > 5.0的检测（真实目标通常logit>5）
+        // sigmoid(5.0) ≈ 0.993，sigmoid(4.0) ≈ 0.982，sigmoid(3.0) ≈ 0.953
+        if (lastSkipObjectness) {
+            val logitThreshold = 5.0f
+            val filtered = detections.filter { it.rawLogit >= logitThreshold }
+            if (filtered.size < detections.size) {
+                android.util.Log.i(TAG, "Logit threshold filtering: logitThresh=$logitThreshold, before=${detections.size}, after=${filtered.size}")
+            }
+            return filtered
         }
 
         return detections
