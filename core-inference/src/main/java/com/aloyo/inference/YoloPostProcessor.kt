@@ -68,7 +68,8 @@ class YoloPostProcessor(
 
             // 应用检测框缩放因子（boxScale）
             // 以框中心为基准向外扩展，补偿锚框不匹配或模型回归偏差
-            if (config.boxScale != 1.0f) {
+            // boxScale必须>0才有效：0.0会将框压缩为零尺寸点（Gson反序列化时默认值可能是0.0）
+            if (config.boxScale > 0f && config.boxScale != 1.0f) {
                 val cx = (x1 + x2) / 2f
                 val cy = (y1 + y2) / 2f
                 val halfW = (x2 - x1) / 2f * config.boxScale

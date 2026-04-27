@@ -356,7 +356,10 @@ class ModelManager(private val context: Context) : IModelManager {
      */
     private fun parseModelConfig(json: String): ModelConfig? {
         return try {
-            gson.fromJson(json, ModelConfig::class.java)
+            // Gson反序列化后调用validate()修正无效默认值
+            // Gson不使用Kotlin默认参数值，而是使用Java零值（如Float→0.0）
+            // 这会导致boxScale=0.0，将所有检测框压缩为零尺寸点
+            gson.fromJson(json, ModelConfig::class.java)?.validate()
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Error parsing model config", e)
             null
