@@ -22,9 +22,9 @@ class YoloPostProcessor(
         // 提高IoU阈值到0.7：要求框的位置更稳定才算同一目标
         // 这可以减少因目标微移导致的闪烁，同时保持假阳过滤能力
         private const val TEMPORAL_IOU_THRESHOLD = 0.7f
-        // EMA平滑系数：0.3表示新帧占30%，历史占70%
+        // EMA平滑系数：0.4表示新帧占40%，历史占60%
         // 越大越跟手，越小越平滑
-        private const val EMA_ALPHA = 0.3f
+        private const val EMA_ALPHA = 0.4f
     }
 
     // 后处理诊断信息（供NcnnInferenceEngine读取并写入应用日志）
