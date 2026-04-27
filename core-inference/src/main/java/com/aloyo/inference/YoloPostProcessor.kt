@@ -16,11 +16,12 @@ class YoloPostProcessor(
 ) {
     companion object {
         private const val TAG = "YoloPostProcessor"
-
-        // 是否已记录过后处理诊断（仅首次推理时记录）
-        @Volatile
-        private var hasLoggedPostProcDiag = false
     }
+
+    // 后处理诊断信息（供NcnnInferenceEngine读取并写入应用日志）
+    @Volatile
+    var lastDiagInfo: String = ""
+        private set
 
     /**
      * 处理模型输出
@@ -108,30 +109,50 @@ class YoloPostProcessor(
             (det.x2 - det.x1) >= minBoxSize && (det.y2 - det.y1) >= minBoxSize
         }
 
-        // 首次推理时记录后处理诊断信息
-        if (!hasLoggedPostProcDiag) {
-            hasLoggedPostProcDiag = true
-            // 统计boxSize过滤前后的数量
-            val filteredBySize = mappedDetections.size - validDetections.size
-            android.util.Log.i(TAG, "PostProc: srcSize=${srcWidth}x${srcHeight}, targetSize=${targetW}x${targetH}, " +
-                    "scale=${scaleFactors.scale}, pad=(${scaleFactors.padX},${scaleFactors.padY}), " +
-                    "minBoxSize=$minBoxSize, rawCount=${rawDetections.size}, " +
-                    "mappedCount=${mappedDetections.size}, validCount=${validDetections.size}, filteredBySize=$filteredBySize")
-            // 记录前5个原始检测的坐标和映射后坐标
-            rawDetections.take(5).forEachIndexed { idx, raw ->
-                val mx1 = (raw.cx - raw.w / 2f - scaleFactors.padX) / scaleFactors.scale
-                val my1 = (raw.cy - raw.h / 2f - scaleFactors.padY) / scaleFactors.scale
-                val mx2 = (raw.cx + raw.w / 2f - scaleFactors.padX) / scaleFactors.scale
-                val my2 = (raw.cy + raw.h / 2f - scaleFactors.padY) / scaleFactors.scale
-                val bw = mx2 - mx1
-                val bh = my2 - my1
-                val passSize = bw >= minBoxSize && bh >= minBoxSize
-                android.util.Log.i(TAG, "  raw[$idx]: cx=${"%.1f".format(raw.cx)}, cy=${"%.1f".format(raw.cy)}, " +
-                        "w=${"%.1f".format(raw.w)}, h=${"%.1f".format(raw.h)}, " +
-                        "mapped=(${ "%.1f".format(mx1)},${"%.1f".format(my1)})-(${ "%.1f".format(mx2)},${"%.1f".format(my2)}), " +
-                        "boxSize=${"%.1f".format(bw)}x${"%.1f".format(bh)}, passSize=$passSize, conf=${"%.4f".format(raw.confidence)}")
+        // 构建后处理诊断信息（每次推理都记录，方便排查零检测问题）
+        val filteredBySize = mappedDetections.size - validDetections.size
+        val diagBuilder = StringBuilder()
+        diagBuilder.append("PostProc: srcSize=${srcWidth}x${srcHeight}, targetSize=${targetW}x${targetH}, " +
+                "scale=${scaleFactors.scale}, pad=(${scaleFactors.padX},${scaleFactors.padY}), " +
+                "minBoxSize=$minBoxSize, boxScale=${config.boxScale}, " +
+                "rawCount=${rawDetections.size}, mappedCount=${mappedDetections.size}, " +
+                "validCount=${validDetections.size}, filteredBySize=$filteredBySize")
+        // 记录前5个原始检测的坐标和映射后坐标
+        rawDetections.take(5).forEachIndexed { idx, raw ->
+            val mx1 = (raw.cx - raw.w / 2f - scaleFactors.padX) / scaleFactors.scale
+            val my1 = (raw.cy - raw.h / 2f - scaleFactors.padY) / scaleFactors.scale
+            val mx2 = (raw.cx + raw.w / 2f - scaleFactors.padX) / scaleFactors.scale
+            val my2 = (raw.cy + raw.h / 2f - scaleFactors.padY) / scaleFactors.scale
+            // 应用boxScale后的坐标
+            var bx1 = mx1
+            var by1 = my1
+            var bx2 = mx2
+            var by2 = my2
+            if (config.boxScale != 1.0f) {
+                val bcx = (mx1 + mx2) / 2f
+                val bcy = (my1 + my2) / 2f
+                val bhalfW = (mx2 - mx1) / 2f * config.boxScale
+                val bhalfH = (my2 - my1) / 2f * config.boxScale
+                bx1 = bcx - bhalfW
+                by1 = bcy - bhalfH
+                bx2 = bcx + bhalfW
+                by2 = bcy + bhalfH
             }
+            // 裁剪后的坐标
+            val cx1 = bx1.coerceIn(0f, srcWidth.toFloat())
+            val cy1 = by1.coerceIn(0f, srcHeight.toFloat())
+            val cx2 = bx2.coerceIn(0f, srcWidth.toFloat())
+            val cy2 = by2.coerceIn(0f, srcHeight.toFloat())
+            val bw = cx2 - cx1
+            val bh = cy2 - cy1
+            val passSize = bw >= minBoxSize && bh >= minBoxSize
+            diagBuilder.append("\n  raw[$idx]: cx=${"%.1f".format(raw.cx)}, cy=${"%.1f".format(raw.cy)}, " +
+                    "w=${"%.1f".format(raw.w)}, h=${"%.1f".format(raw.h)}, " +
+                    "mapped=(${ "%.1f".format(mx1)},${"%.1f".format(my1)})-(${ "%.1f".format(mx2)},${"%.1f".format(my2)}), " +
+                    "clamped=(${ "%.1f".format(cx1)},${"%.1f".format(cy1)})-(${ "%.1f".format(cx2)},${"%.1f".format(cy2)}), " +
+                    "boxSize=${"%.1f".format(bw)}x${"%.1f".format(bh)}, passSize=$passSize, conf=${"%.4f".format(raw.confidence)}")
         }
+        lastDiagInfo = diagBuilder.toString()
 
         // 按类别执行NMS
         return applyNMS(validDetections)

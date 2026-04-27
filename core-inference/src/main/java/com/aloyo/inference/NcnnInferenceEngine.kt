@@ -225,20 +225,20 @@ class NcnnInferenceEngine : IInferenceEngine {
 
         val detections = postProc.processRawDetections(rawDetections, srcWidth, srcHeight, actualTargetWidth, actualTargetHeight)
 
-        // 首次推理时记录后处理后的检测数量（诊断用）
-        if (shouldLogDiag) {
-            android.util.Log.i(TAG, "After postProc: rawDetections=${rawDetections.size}, finalDetections=${detections.size}, " +
-                    "srcSize=${srcWidth}x${srcHeight}, actualTarget=${actualTargetWidth}x${actualTargetHeight}")
+        // 将后处理诊断信息追加到lastOutputDiagInfo（通过应用日志系统输出）
+        val postProcDiag = postProc.lastDiagInfo
+        if (postProcDiag.isNotEmpty()) {
+            lastOutputDiagInfo += "\n$postProcDiag"
         }
+        // 追加最终检测数量和bitmap尺寸
+        lastOutputDiagInfo += "\nAfter postProc: bitmapSize=${srcWidth}x${srcHeight}, actualTarget=${actualTargetWidth}x${actualTargetHeight}, rawDetections=${rawDetections.size}, finalDetections=${detections.size}"
 
         // 首次推理时记录前几个检测结果的坐标（诊断用）
-        if (!hasLoggedOutputDiag || detections.isNotEmpty()) {
-            if (detections.isNotEmpty()) {
-                val sampleDets = detections.take(3).joinToString("; ") {
-                    "(${String.format("%.1f", it.x1)},${String.format("%.1f", it.y1)})-(${String.format("%.1f", it.x2)},${String.format("%.1f", it.y2)}) ${it.label}:${String.format("%.2f", it.confidence)}"
-                }
-                android.util.Log.i(TAG, "Sample detections (${detections.size} total): $sampleDets")
+        if (shouldLogDiag && detections.isNotEmpty()) {
+            val sampleDets = detections.take(3).joinToString("; ") {
+                "(${String.format("%.1f", it.x1)},${String.format("%.1f", it.y1)})-(${String.format("%.1f", it.x2)},${String.format("%.1f", it.y2)}) ${it.label}:${String.format("%.2f", it.confidence)}"
             }
+            lastOutputDiagInfo += "\nSample detections: $sampleDets"
         }
 
         return detections
