@@ -156,7 +156,51 @@ class YoloPostProcessor(
         lastDiagInfo = diagBuilder.toString()
 
         // 按类别执行NMS
-        return applyNMS(validDetections)
+        val afterNMS = applyNMS(validDetections)
+
+        // 跨类别去重：同一目标可能被检测为多个类别（如Head和Body）
+        // 当不同类别的检测框高度重叠时，只保留置信度最高的那个
+        // 这避免了同一角色同时显示"Head 93%"和"Body 83%"两个标签
+        val deduplicated = applyCrossClassDedup(afterNMS)
+
+        return deduplicated
+    }
+
+    /**
+     * 跨类别检测去重
+     * 同一目标可能被模型输出为多个类别（如Head和Body），
+     * 这些检测框位置相近但类别不同。标准NMS只在同类别内去重，
+     * 无法处理跨类别的重复检测。
+     *
+     * 策略：对所有检测框按置信度降序排序，
+     * 如果一个低置信度检测与已保留的高置信度检测高度重叠（IoU > 阈值），则丢弃。
+     */
+    private fun applyCrossClassDedup(detections: List<Detection>): List<Detection> {
+        if (detections.size <= 1) return detections
+
+        // 跨类别去重阈值：比NMS阈值更宽松（0.5 vs 0.4）
+        // 因为不同类别的同类目标检测框通常有较大偏移
+        val crossClassThreshold = 0.5f
+
+        // 按置信度降序排序
+        val sorted = detections.sortedByDescending { it.confidence }
+        val kept = mutableListOf<Detection>()
+
+        for (det in sorted) {
+            var shouldKeep = true
+            for (keptDet in kept) {
+                // 不同类别才需要跨类别去重（同类的已经在NMS中处理过）
+                if (det.classId != keptDet.classId && computeIoU(det, keptDet) > crossClassThreshold) {
+                    shouldKeep = false
+                    break
+                }
+            }
+            if (shouldKeep) {
+                kept.add(det)
+            }
+        }
+
+        return kept
     }
 
     /**
