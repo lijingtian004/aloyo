@@ -649,8 +649,33 @@ class UnifiedYoloDecoder : YoloDecoder {
             }
         }
 
-        android.util.Log.i(TAG, "V5_MULTI_ANCHOR decoded: ${detections.size} raw detections (before NMS), skipObj=$skipObjectness")
-        return detections
+        // 当skipObjectness=true时，所有检测的置信度都接近1.0
+        // 此时需要额外的过滤策略：如果所有检测的logit差异很小（<0.5），
+        // 说明模型没有区分出真实目标，这些检测都是背景噪声，应全部过滤
+        val filteredDetections = if (skipObjectness && detections.size > 1) {
+            val sortedByLogit = detections.sortedByDescending { it.rawLogit }
+            val maxLogit = sortedByLogit[0].rawLogit
+            val minLogit = sortedByLogit.last().rawLogit
+            val logitRange = maxLogit - minLogit
+
+            // 如果logit范围很小（<0.5），说明所有检测都是同一噪声水平，全部过滤
+            // 如果logit范围足够大，只保留logit明显高于其他的检测（前50%或logit>max-0.3）
+            if (logitRange < 0.5f) {
+                android.util.Log.i(TAG, "V5_MULTI_ANCHOR: all detections have similar logit (range=$logitRange), filtering all as false positives")
+                emptyList()
+            } else {
+                // 只保留logit接近最大值的检测（差距<0.3），过滤低logit的假阳
+                val threshold = maxLogit - 0.3f
+                val result = detections.filter { it.rawLogit >= threshold }
+                android.util.Log.i(TAG, "V5_MULTI_ANCHOR: logitRange=$logitRange, threshold=$threshold, before=${detections.size}, after=${result.size}")
+                result
+            }
+        } else {
+            detections
+        }
+
+        android.util.Log.i(TAG, "V5_MULTI_ANCHOR decoded: ${detections.size} raw detections, afterLogitFilter=${filteredDetections.size}, skipObj=$skipObjectness")
+        return filteredDetections
     }
 
     /**
