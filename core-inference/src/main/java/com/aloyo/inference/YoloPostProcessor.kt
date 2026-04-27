@@ -37,7 +37,8 @@ class YoloPostProcessor(
     private var frameCounter = 0
 
     // EMA平滑状态：记录每个跟踪目标的平滑后坐标
-    // key: "classId_index", value: 平滑后的检测框
+    // key: "classId_gridCx_gridCy" (基于网格化中心点的稳定key)
+    // value: 平滑后的检测框
     private val smoothedDetections = mutableMapOf<String, Detection>()
 
     /**
@@ -327,6 +328,11 @@ class YoloPostProcessor(
      * - 新帧检测到目标时：smooth = alpha * new + (1-alpha) * old
      * - 新帧未检测到目标时：保持旧位置（但降低置信度）
      *
+     * key生成策略（解决检测框来回跳动问题）：
+     * - 使用网格化的中心点坐标作为稳定key，而不是不稳定的索引
+     * - 当没有精确网格匹配时，使用IoU找最相似的历史框
+     * - 这确保同一物理目标在不同帧中始终匹配到同一个平滑状态
+     *
      * @param detections 当前帧的检测结果
      * @return 平滑后的检测结果
      */
@@ -340,10 +346,17 @@ class YoloPostProcessor(
         val result = mutableListOf<Detection>()
         val matchedKeys = mutableSetOf<String>()
 
-        for ((idx, det) in detections.withIndex()) {
-            // 生成唯一key：类别ID + 索引
-            val key = "${det.classId}_$idx"
+        for (det in detections) {
+            // 生成稳定key：类别ID + 网格化中心点坐标
+            // 使用32像素网格，在保持区分度的同时容忍位置抖动
+            val gridSize = 32f
+            val cx = (det.x1 + det.x2) / 2f
+            val cy = (det.y1 + det.y2) / 2f
+            val gridCx = (cx / gridSize).toInt()
+            val gridCy = (cy / gridSize).toInt()
+            val key = "${det.classId}_${gridCx}_${gridCy}"
 
+            // 先尝试精确key匹配
             val smoothed = smoothedDetections[key]
             if (smoothed != null) {
                 // 已有历史记录，进行EMA平滑
@@ -362,12 +375,49 @@ class YoloPostProcessor(
                 )
                 result.add(smoothedDet)
                 smoothedDetections[key] = smoothedDet
+                matchedKeys.add(key)
             } else {
-                // 首次出现，直接使用当前值
-                result.add(det)
-                smoothedDetections[key] = det
+                // 精确key未匹配，尝试用IoU找最相似的历史框（同类别）
+                var bestMatchKey: String? = null
+                var bestIoU = 0f
+                for ((histKey, histDet) in smoothedDetections) {
+                    // 只匹配同类别
+                    if (!histKey.startsWith("${det.classId}_")) continue
+                    val iou = computeIoU(det, histDet)
+                    if (iou > bestIoU) {
+                        bestIoU = iou
+                        bestMatchKey = histKey
+                    }
+                }
+
+                if (bestMatchKey != null && bestIoU > 0.5f) {
+                    // 找到相似历史框，继承其平滑状态
+                    val histDet = smoothedDetections[bestMatchKey]!!
+                    val newX1 = EMA_ALPHA * det.x1 + (1 - EMA_ALPHA) * histDet.x1
+                    val newY1 = EMA_ALPHA * det.y1 + (1 - EMA_ALPHA) * histDet.y1
+                    val newX2 = EMA_ALPHA * det.x2 + (1 - EMA_ALPHA) * histDet.x2
+                    val newY2 = EMA_ALPHA * det.y2 + (1 - EMA_ALPHA) * histDet.y2
+                    val newConf = EMA_ALPHA * det.confidence + (1 - EMA_ALPHA) * histDet.confidence
+
+                    val smoothedDet = det.copy(
+                        x1 = newX1,
+                        y1 = newY1,
+                        x2 = newX2,
+                        y2 = newY2,
+                        confidence = newConf
+                    )
+                    result.add(smoothedDet)
+                    // 用新key存储，同时删除旧key（目标移动到了新的网格）
+                    smoothedDetections[key] = smoothedDet
+                    smoothedDetections.remove(bestMatchKey)
+                    matchedKeys.add(key)
+                } else {
+                    // 首次出现，直接使用当前值
+                    result.add(det)
+                    smoothedDetections[key] = det
+                    matchedKeys.add(key)
+                }
             }
-            matchedKeys.add(key)
         }
 
         // 清理未匹配的历史记录（目标已消失）
