@@ -823,6 +823,25 @@ class MainActivity : AppCompatActivity() {
         }
         layout.addView(etBoxScale)
 
+        // YOLOv8风格解码选项
+        layout.addView(TextView(this).apply { text = "坐标解码方式:"; setPadding(0, 8, 0, 4) })
+        val decodeRadioGroup = RadioGroup(this)
+        val decodeOptions = listOf("YOLOv5风格 (有网格偏移)", "YOLOv8风格 (无网格偏移)")
+        decodeOptions.forEachIndexed { index, option ->
+            RadioButton(this).apply {
+                text = option
+                id = index + 100  // 避免与versionRadioGroup的id冲突
+                isChecked = if (index == 0) !config.useV8StyleDecode else config.useV8StyleDecode
+            }.also { decodeRadioGroup.addView(it) }
+        }
+        layout.addView(decodeRadioGroup)
+        layout.addView(TextView(this).apply {
+            text = "提示：如果检测框系统性偏右偏下，请选择YOLOv8风格"
+            setTextColor(0xFF888888.toInt())
+            textSize = 12f
+            setPadding(0, 0, 0, 8)
+        })
+
         // 类别标签
         layout.addView(TextView(this).apply {
             text = "类别标签（每行一个，顺序对应类别ID）:"
@@ -858,6 +877,7 @@ class MainActivity : AppCompatActivity() {
                 val confThresh = etConfThresh.text.toString().toFloatOrNull() ?: 0.5f
                 val nmsThresh = etNmsThresh.text.toString().toFloatOrNull() ?: 0.4f
                 val boxScale = etBoxScale.text.toString().toFloatOrNull() ?: 1.15f
+                val useV8StyleDecode = decodeRadioGroup.checkedRadioButtonId == 101  // id 101 = YOLOv8风格
                 val labels = etLabels.text.toString().lines().filter { it.isNotBlank() }
 
                 // 如果标签数量与类别数不匹配，提示
@@ -879,6 +899,7 @@ class MainActivity : AppCompatActivity() {
                     append("    \"confidenceThreshold\": $confThresh,\n")
                     append("    \"nmsThreshold\": $nmsThresh,\n")
                     append("    \"boxScale\": $boxScale,\n")
+                    append("    \"useV8StyleDecode\": $useV8StyleDecode,\n")
                     append("    \"labels\": [\n")
                     labels.forEachIndexed { index, label ->
                         append("        \"$label\"")

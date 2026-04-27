@@ -106,8 +106,20 @@ class YoloPostProcessor(
         // 之前5%阈值(12.8px)和2%阈值(5.12px)都导致零检测，进一步降低到1%
         val minDim = minOf(srcWidth, srcHeight).toFloat()
         val minBoxSize = maxOf(2.0f, minDim * 0.01f)
+
+        // 宽高比约束：排除异常形状的检测框（如极瘦长或极扁平的框）
+        // 正常人体/目标宽高比通常在0.2~5.0之间
+        // 超出此范围的框通常是解码噪声或假阳性
+        val minAspectRatio = 0.15f
+        val maxAspectRatio = 6.5f
+
         val validDetections = mappedDetections.filter { det ->
-            (det.x2 - det.x1) >= minBoxSize && (det.y2 - det.y1) >= minBoxSize
+            val w = det.x2 - det.x1
+            val h = det.y2 - det.y1
+            val aspectRatio = if (h > 0f) w / h else 0f
+            val passSize = w >= minBoxSize && h >= minBoxSize
+            val passAspect = aspectRatio in minAspectRatio..maxAspectRatio
+            passSize && passAspect
         }
 
         // 构建后处理诊断信息（每次推理都记录，方便排查零检测问题）
@@ -116,6 +128,7 @@ class YoloPostProcessor(
         diagBuilder.append("PostProc: srcSize=${srcWidth}x${srcHeight}, targetSize=${targetW}x${targetH}, " +
                 "scale=${scaleFactors.scale}, pad=(${scaleFactors.padX},${scaleFactors.padY}), " +
                 "minBoxSize=$minBoxSize, boxScale=${config.boxScale}, " +
+                "aspectRange=${minAspectRatio}~${maxAspectRatio}, useV8Style=${config.useV8StyleDecode}, " +
                 "rawCount=${rawDetections.size}, mappedCount=${mappedDetections.size}, " +
                 "validCount=${validDetections.size}, filteredBySize=$filteredBySize")
         // 记录前5个原始检测的坐标和映射后坐标

@@ -25,7 +25,18 @@ data class ModelConfig(
      * 重要：Gson反序列化时如果JSON中缺少此字段，会设为0.0而非1.15f，
      * 导致所有检测框被压缩为零尺寸点。validate()方法会修正此问题。
      */
-    val boxScale: Float = 1.15f
+    val boxScale: Float = 1.15f,
+    /**
+     * 是否使用YOLOv8风格的坐标解码
+     * YOLOv5解码公式: sigmoid(raw) * 2 - 0.5（有-0.5到1.5的网格偏移）
+     * YOLOv8解码公式: sigmoid(raw)（无额外偏移，中心点直接在网格内）
+     *
+     * 如果检测框系统性偏右偏下，说明模型训练时使用的是v8风格解码，
+     * 应将此选项设为true。
+     *
+     * 默认false（兼容旧模型），Gson反序列化缺省时为false。
+     */
+    val useV8StyleDecode: Boolean = false
 ) {
     /**
      * 验证并修正Gson反序列化后的无效值

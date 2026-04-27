@@ -194,11 +194,12 @@ class UnifiedYoloDecoder : YoloDecoder {
 
         // logit绝对阈值过滤：当skipObjectness时，所有检测的sigmoid置信度都接近1.0(~99.8%)
         // 这个高置信度不可靠，不能用来区分前景/背景
-        // 改用logit绝对阈值：只保留logit > 4.0的检测（真实目标通常logit>5）
+        // 改用logit绝对阈值：只保留logit > 5.0的检测（真实目标通常logit>5~7）
         // sigmoid(5.0) ≈ 0.993，sigmoid(4.0) ≈ 0.982，sigmoid(3.0) ≈ 0.953
+        // 提高到5.0以减少假阳：背景logit通常在2~4之间，真实目标logit通常在5~8之间
         // 注意：此过滤必须在gap过滤之后也执行，作为双重保障
         if (lastSkipObjectness) {
-            val logitThreshold = 4.0f
+            val logitThreshold = 5.0f
             val beforeCount = result.size
             result = result.filter { it.rawLogit >= logitThreshold }
             if (result.size < beforeCount) {
@@ -553,7 +554,8 @@ class UnifiedYoloDecoder : YoloDecoder {
                 "stride=$stride, coordScale=$coordScale, modelInputSize=$modelInputSize, ncnnInputWidth=$ncnnInputWidth, " +
                 "numSpatial=$numSpatial, anchors=${anchors.toList()}, " +
                 "maxRawObj=$maxRawObj, minRawObj=$minRawObj, avgRawObj=${"%.2f".format(avgRawObj)}, " +
-                "objRange=${"%.2f".format(objRange)}, maxObjSigmoid=$maxObjSigmoid, skipObjectness=$skipObjectness")
+                "objRange=${"%.2f".format(objRange)}, maxObjSigmoid=$maxObjSigmoid, skipObjectness=$skipObjectness, " +
+                "useV8StyleDecode=${config.useV8StyleDecode}")
 
         for (i in 0 until numSpatial) {
             val gridX = i % gridW
@@ -604,20 +606,36 @@ class UnifiedYoloDecoder : YoloDecoder {
                 val preThresh = confThresh
                 if (finalConf < preThresh) continue
 
-                // 解码坐标（YOLOv5公式）
+                // 解码坐标
+                // YOLOv5公式: sigmoid(raw) * 2 - 0.5（有-0.5到1.5的网格偏移）
+                // YOLOv8公式: sigmoid(raw)（无额外偏移，中心点直接在网格内）
+                // 如果检测框系统性偏右偏下，说明模型使用的是v8风格解码
                 val rawCx = output[base + 0][i]
                 val rawCy = output[base + 1][i]
                 val rawW = output[base + 2][i]
                 val rawH = output[base + 3][i]
 
-                val cx = (sigmoid(rawCx) * 2f - 0.5f + gridX) * stride * coordScale
-                val cy = (sigmoid(rawCy) * 2f - 0.5f + gridY) * stride * coordScale
-
-                // 获取该锚框的宽高（anchors数组: [aw0, ah0, aw1, ah1, aw2, ah2]）
-                val anchorW = if (a * 2 < anchors.size) anchors[a * 2] else stride
-                val anchorH = if (a * 2 + 1 < anchors.size) anchors[a * 2 + 1] else stride
-                val w = (sigmoid(rawW) * 2f).pow(2) * anchorW * coordScale
-                val h = (sigmoid(rawH) * 2f).pow(2) * anchorH * coordScale
+                val cx: Float
+                val cy: Float
+                val w: Float
+                val h: Float
+                if (config.useV8StyleDecode) {
+                    // YOLOv8风格解码：无额外网格偏移
+                    cx = (sigmoid(rawCx) + gridX) * stride * coordScale
+                    cy = (sigmoid(rawCy) + gridY) * stride * coordScale
+                    // v8风格：无锚框，宽高直接回归（无anchor缩放和平方）
+                    w = sigmoid(rawW) * stride * 8f * coordScale
+                    h = sigmoid(rawH) * stride * 8f * coordScale
+                } else {
+                    // 标准YOLOv5解码公式
+                    cx = (sigmoid(rawCx) * 2f - 0.5f + gridX) * stride * coordScale
+                    cy = (sigmoid(rawCy) * 2f - 0.5f + gridY) * stride * coordScale
+                    // 获取该锚框的宽高（anchors数组: [aw0, ah0, aw1, ah1, aw2, ah2]）
+                    val anchorW = if (a * 2 < anchors.size) anchors[a * 2] else stride
+                    val anchorH = if (a * 2 + 1 < anchors.size) anchors[a * 2 + 1] else stride
+                    w = (sigmoid(rawW) * 2f).pow(2) * anchorW * coordScale
+                    h = (sigmoid(rawH) * 2f).pow(2) * anchorH * coordScale
+                }
 
                 detections.add(RawDetection(
                     cx = cx,
