@@ -19,13 +19,13 @@ data class ModelConfig(
     /**
      * 检测框缩放因子
      * 用于补偿锚框不匹配或模型回归偏差导致的检测框偏小问题
-     * 1.0 = 不缩放，1.2 = 每边扩展20%（框面积增加约44%）
-     * 推荐值：1.0~1.5，默认1.15（轻微扩展以完全框住目标）
+     * 1.0 = 不缩放，1.3 = 每边扩展30%（框面积增加约69%）
+     * 推荐值：1.0~1.5，默认1.3（中等扩展以完全框住目标）
      *
-     * 重要：Gson反序列化时如果JSON中缺少此字段，会设为0.0而非1.15f，
+     * 重要：Gson反序列化时如果JSON中缺少此字段，会设为0.0而非1.3f，
      * 导致所有检测框被压缩为零尺寸点。validate()方法会修正此问题。
      */
-    val boxScale: Float = 1.15f,
+    val boxScale: Float = 1.3f,
     /**
      * 是否使用YOLOv8风格的坐标解码
      * YOLOv5解码公式: sigmoid(raw) * 2 - 0.5（有-0.5到1.5的网格偏移）
@@ -47,8 +47,8 @@ data class ModelConfig(
         return copy(
             // boxScale=0.0是Gson反序列化的默认值（JSON中缺少此字段时），
             // 会导致所有检测框被压缩为零尺寸点
-            // 修正为1.15（Kotlin默认值），使框稍微放大以完全框住目标
-            boxScale = if (boxScale <= 0f) 1.15f else boxScale,
+            // 修正为1.3（Kotlin默认值），使框适当放大以完全框住目标
+            boxScale = if (boxScale <= 0f) 1.3f else boxScale,
             // 其他可能有类似问题的字段
             confidenceThreshold = if (confidenceThreshold <= 0f) 0.5f else confidenceThreshold,
             nmsThreshold = if (nmsThreshold <= 0f) 0.4f else nmsThreshold

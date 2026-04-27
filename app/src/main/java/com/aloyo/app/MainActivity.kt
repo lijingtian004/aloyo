@@ -720,7 +720,7 @@ class MainActivity : AppCompatActivity() {
             "numClasses": 80,
             "confidenceThreshold": 0.5,
             "nmsThreshold": 0.4,
-            "boxScale": 1.15,
+            "boxScale": 1.3,
             "labels": [
                 ${DEFAULT_COCO_LABELS.joinToString(",\n                ") { "\"$it\"" }}
             ]
@@ -818,7 +818,7 @@ class MainActivity : AppCompatActivity() {
         layout.addView(TextView(this).apply { text = "检测框缩放因子 (1.0=不缩放, 1.2=扩展20%):"; setPadding(0, 8, 0, 4) })
         val etBoxScale = EditText(this).apply {
             inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
-            hint = "1.15"
+            hint = "1.3"
             setText(config.boxScale.toString())
         }
         layout.addView(etBoxScale)
@@ -876,7 +876,7 @@ class MainActivity : AppCompatActivity() {
                 val numClasses = etNumClasses.text.toString().toIntOrNull() ?: 80
                 val confThresh = etConfThresh.text.toString().toFloatOrNull() ?: 0.5f
                 val nmsThresh = etNmsThresh.text.toString().toFloatOrNull() ?: 0.4f
-                val boxScale = etBoxScale.text.toString().toFloatOrNull() ?: 1.15f
+                val boxScale = etBoxScale.text.toString().toFloatOrNull() ?: 1.3f
                 val useV8StyleDecode = decodeRadioGroup.checkedRadioButtonId == 101  // id 101 = YOLOv8风格
                 val labels = etLabels.text.toString().lines().filter { it.isNotBlank() }
 

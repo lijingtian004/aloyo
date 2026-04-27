@@ -16,12 +16,20 @@ class YoloPostProcessor(
 ) {
     companion object {
         private const val TAG = "YoloPostProcessor"
+        // 时序过滤：检测框需要在连续多帧中出现才被保留
+        // 这可以有效过滤单帧假阳（如背景纹理被误检）
+        private const val TEMPORAL_FRAMES = 2
+        private const val TEMPORAL_IOU_THRESHOLD = 0.5f
     }
 
     // 后处理诊断信息（供NcnnInferenceEngine读取并写入应用日志）
     @Volatile
     var lastDiagInfo: String = ""
         private set
+
+    // 时序过滤状态：记录最近几帧的检测结果
+    private val detectionHistory = ArrayDeque<List<Detection>>()
+    private var frameCounter = 0
 
     /**
      * 处理模型输出
@@ -176,7 +184,62 @@ class YoloPostProcessor(
         // 这避免了同一角色同时显示"Head 93%"和"Body 83%"两个标签
         val deduplicated = applyCrossClassDedup(afterNMS)
 
-        return deduplicated
+        // 时序一致性过滤：检测框需要在连续多帧中出现才被保留
+        // 这可以有效过滤单帧假阳（如背景纹理、光影变化被误检）
+        val temporallyFiltered = applyTemporalFiltering(deduplicated)
+
+        return temporallyFiltered
+    }
+
+    /**
+     * 时序一致性过滤
+     * 检测框需要在连续多帧中稳定出现才被保留
+     * 原理：真实目标在连续帧中位置相对稳定，假阳通常只出现1帧
+     *
+     * @param detections 当前帧的检测结果
+     * @return 经过时序过滤后的检测结果
+     */
+    private fun applyTemporalFiltering(detections: List<Detection>): List<Detection> {
+        frameCounter++
+
+        // 将当前帧结果加入历史
+        detectionHistory.addLast(detections)
+        if (detectionHistory.size > TEMPORAL_FRAMES) {
+            detectionHistory.removeFirst()
+        }
+
+        // 历史帧不足时，直接返回当前结果（但限制数量避免首帧假阳过多）
+        if (detectionHistory.size < TEMPORAL_FRAMES) {
+            return detections.take(5)
+        }
+
+        // 只保留在当前帧和至少一帧历史帧中都出现的检测
+        // 使用IoU匹配：如果当前框与历史框IoU>阈值，认为是同一目标
+        val stableDetections = mutableListOf<Detection>()
+        for (det in detections) {
+            var foundInHistory = false
+            for (historyFrame in detectionHistory.dropLast(1)) {
+                for (histDet in historyFrame) {
+                    // 同一类别且IoU足够大
+                    if (det.classId == histDet.classId && computeIoU(det, histDet) > TEMPORAL_IOU_THRESHOLD) {
+                        foundInHistory = true
+                        break
+                    }
+                }
+                if (foundInHistory) break
+            }
+            if (foundInHistory) {
+                stableDetections.add(det)
+            }
+        }
+
+        // 如果时序过滤后没有检测结果，回退到当前帧结果（避免闪烁）
+        // 但只保留置信度最高的3个，减少假阳
+        return if (stableDetections.isNotEmpty()) {
+            stableDetections
+        } else {
+            detections.sortedByDescending { it.confidence }.take(3)
+        }
     }
 
     /**
@@ -191,9 +254,10 @@ class YoloPostProcessor(
     private fun applyCrossClassDedup(detections: List<Detection>): List<Detection> {
         if (detections.size <= 1) return detections
 
-        // 跨类别去重阈值：比NMS阈值更宽松（0.5 vs 0.4）
-        // 因为不同类别的同类目标检测框通常有较大偏移
-        val crossClassThreshold = 0.5f
+        // 跨类别去重阈值：降低为0.3，更积极地合并Head和Body
+        // Head框通常是Body框的上半部分，IoU大约在0.3~0.6之间
+        // 之前0.5的阈值太高，导致Head和Body无法被去重
+        val crossClassThreshold = 0.3f
 
         // 按置信度降序排序
         val sorted = detections.sortedByDescending { it.confidence }
