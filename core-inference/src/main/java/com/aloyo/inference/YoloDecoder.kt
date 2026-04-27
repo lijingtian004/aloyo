@@ -184,11 +184,10 @@ class UnifiedYoloDecoder : YoloDecoder {
         }
 
         // 全局自适应过滤：当objectness被跳过时，类别置信度无法区分前景/背景
-        // 使用gap-based方法：在排序后的置信度中找到最大间隔作为前景/背景分离点
-        // 仅当检测数量过多(>200)时才启用，避免过度过滤导致零检测
-        // gap-based过滤可能把不同stride的检测全部替换为同一stride的高logit检测，
-        // 而高logit检测可能来自小锚框(stride=8)，后续boxSize过滤后全部消失
-        if (lastSkipObjectness && detections.size > 200) {
+        // 使用gap-based方法：在排序后的logit中找到最大间隔作为前景/背景分离点
+        // skipObjectness时，背景logit约2-4，前景logit约5-7，gap通常>2.0
+        // 当检测数量>10时启用过滤（10个以上检测很可能是假阳）
+        if (lastSkipObjectness && detections.size > 10) {
             return applyGapBasedFiltering(detections, confidenceThreshold)
         }
 
@@ -224,8 +223,8 @@ class UnifiedYoloDecoder : YoloDecoder {
         val medianValue = values[values.size / 2]
 
         // 在排序后的值中查找最大间隔
-        // 只检查前半部分（高值区域），避免被尾部噪声干扰
-        val checkRange = minOf(values.size - 1, maxOf(50, values.size / 2))
+        // 检查范围：前半部分（高值区域），避免被尾部噪声干扰
+        val checkRange = minOf(values.size - 1, maxOf(20, values.size / 2))
         var maxGap = 0f
         var maxGapIdx = 0
         for (i in 0 until checkRange) {
@@ -240,9 +239,10 @@ class UnifiedYoloDecoder : YoloDecoder {
         val result: List<RawDetection>
 
         // logit空间的显著间隔阈值
-        // 背景logit约3.3-3.9，目标logit约4.5-6.0
-        // 即使较小的gap(0.3)也足以区分前景/背景
-        val significantGap = if (hasLogits) 0.3f else 0.003f
+        // 实际观察：背景logit约2-4，前景logit约5-7，gap通常>2.0
+        // 0.3太低，会把logit 3.5和3.8之间的0.3间隔也当作"显著间隔"
+        // 提高到1.0，确保只保留真正的前景（logit>5）
+        val significantGap = if (hasLogits) 1.0f else 0.01f
 
         if (maxGap > significantGap) {
             // 找到显著间隔：以间隔中点作为前景/背景分离阈值
@@ -260,9 +260,10 @@ class UnifiedYoloDecoder : YoloDecoder {
                     "max=${"%.4f".format(maxValue)}, median=${"%.4f".format(medianValue)}, " +
                     "before=$beforeCount, after=${result.size}")
         } else {
-            // 无显著间隔：保守保留top-30检测
-            // top-10太少，可能全部来自同一stride的小锚框，导致后续boxSize过滤后为零检测
-            val topN = minOf(30, values.size)
+            // 无显著间隔：保守保留top-5检测
+            // top-30太多，skipObjectness时背景logit和前景logit可能接近
+            // 保留top-5，配合NMS去除重叠
+            val topN = minOf(5, values.size)
             val topThresh = values[topN - 1]
             result = if (hasLogits) {
                 detections.filter { it.rawLogit >= topThresh }

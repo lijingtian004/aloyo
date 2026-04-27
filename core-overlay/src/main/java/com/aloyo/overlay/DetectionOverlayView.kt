@@ -216,21 +216,44 @@ class DetectionOverlayView(context: Context) : View(context) {
         }
 
         // 计算坐标映射比例：原图像素 → 屏幕像素
-        // 使用getRealMetrics获取包含系统栏的完整屏幕尺寸
-        // MATCH_PARENT在某些设备上不包含导航栏（如2584而非2780），导致scaleY≠1.0
-        // getRealMetrics始终返回完整屏幕尺寸，确保坐标映射正确
+        // 检测框坐标是全屏像素坐标(0到srcWidth/srcHeight)
+        // overlay view的canvas尺寸可能不等于全屏尺寸（MATCH_PARENT可能不含导航栏）
+        // 使用getRealMetrics获取全屏尺寸作为映射目标，确保坐标比例正确
+        // 然后需要考虑view与全屏之间的偏移（状态栏/导航栏导致的偏移）
         val screenMetrics = android.util.DisplayMetrics()
         @Suppress("DEPRECATION")
         (context.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager)
             .defaultDisplay.getRealMetrics(screenMetrics)
-        val mapW = screenMetrics.widthPixels
-        val mapH = screenMetrics.heightPixels
-        val scaleX = if (srcWidth > 0) mapW.toFloat() / srcWidth else 1f
-        val scaleY = if (srcHeight > 0) mapH.toFloat() / srcHeight else 1f
+        val fullW = screenMetrics.widthPixels
+        val fullH = screenMetrics.heightPixels
+
+        // 使用全屏尺寸计算缩放比例
+        val scaleX = if (srcWidth > 0) fullW.toFloat() / srcWidth else 1f
+        val scaleY = if (srcHeight > 0) fullH.toFloat() / srcHeight else 1f
+
+        // 计算view与全屏之间的偏移量
+        // MATCH_PARENT窗口可能不包含状态栏区域，导致canvas顶部不在屏幕顶部
+        // 偏移量 = (全屏尺寸 - view尺寸) / 2（假设居中）或直接用0（假设从顶部开始）
+        // 实际上FLAG_LAYOUT_IN_SCREEN让窗口从屏幕顶部开始，所以偏移主要在底部
+        // 但某些设备上view高度=全屏高度-状态栏高度，canvas从状态栏下方开始
+        // 此时需要将Y坐标向上偏移状态栏高度
+        // 简化处理：如果view高度<全屏高度，按比例调整scaleY使坐标适配view
+        val effectiveScaleY = if (viewH < fullH && fullH > 0) {
+            // view高度小于全屏高度（不含状态栏/导航栏）
+            // 将全屏坐标映射到view坐标
+            viewH.toFloat() / srcHeight
+        } else {
+            scaleY
+        }
+        val effectiveScaleX = if (viewW < fullW && fullW > 0) {
+            viewW.toFloat() / srcWidth
+        } else {
+            scaleX
+        }
 
         // 绘制检测框
         for (detection in detections) {
-            drawDetection(canvas, detection, scaleX, scaleY)
+            drawDetection(canvas, detection, effectiveScaleX, effectiveScaleY)
         }
 
         // 绘制性能指标
@@ -238,7 +261,7 @@ class DetectionOverlayView(context: Context) : View(context) {
 
         // 绘制截屏区域框（如果启用且非全屏）
         if (showCaptureRegion && !captureRegion.isFullScreen && srcWidth > 0 && srcHeight > 0) {
-            drawCaptureRegion(canvas, scaleX, scaleY, viewW, viewH)
+            drawCaptureRegion(canvas, effectiveScaleX, effectiveScaleY, viewW, viewH)
         }
 
         // 始终绘制状态指示器
