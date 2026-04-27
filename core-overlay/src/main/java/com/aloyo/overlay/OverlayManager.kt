@@ -5,6 +5,7 @@ import android.graphics.PixelFormat
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.util.DisplayMetrics
 import android.view.Gravity
 import android.view.WindowManager
 import com.aloyo.common.Detection
@@ -80,8 +81,8 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
     /**
      * 创建全屏检测覆盖层
      * FLAG_NOT_TOUCHABLE：触摸穿透到下层应用
-     * 使用MATCH_PARENT使窗口自动适配屏幕旋转（宽高自动互换）
-     * 坐标映射在DetectionOverlayView.onDraw中通过getRealMetrics获取全屏尺寸
+     * 使用getRealMetrics获取真实全屏尺寸（含刘海和导航栏），显式设置窗口大小
+     * 确保overlay覆盖完整屏幕，包括刘海区域和导航栏区域
      */
     private fun showDetectionOverlay() {
         overlayView = DetectionOverlayView(context).apply {
@@ -96,11 +97,15 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
             WindowManager.LayoutParams.TYPE_PHONE
         }
 
-        // 使用MATCH_PARENT，窗口自动填满屏幕并适配旋转
-        // 旋转时窗口宽高自动互换，无需手动更新
+        // 获取真实全屏尺寸（含刘海和导航栏）
+        val realScreenSize = getRealScreenSize()
+
+        // 使用真实全屏尺寸显式设置窗口大小，而非MATCH_PARENT
+        // MATCH_PARENT不包含导航栏区域，导致overlay底部留白
+        // FLAG_LAYOUT_NO_LIMITS允许窗口延伸到系统装饰区域（刘海、导航栏）
         overlayLayoutParams = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT,
+            realScreenSize.width,
+            realScreenSize.height,
             type,
             // 全屏检测层：不可触摸，让触摸穿透到下层应用
             WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
@@ -115,7 +120,58 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
         }
 
         windowManager.addView(overlayView, overlayLayoutParams)
+
+        // 检测导航栏状态并通知overlay
+        updateNavigationBarInfo()
     }
+
+    /**
+     * 获取真实全屏尺寸（包含刘海和导航栏）
+     * getRealMetrics返回包含系统装饰的完整屏幕尺寸
+     */
+    private fun getRealScreenSize(): ScreenSize {
+        val displayMetrics = DisplayMetrics()
+        @Suppress("DEPRECATION")
+        windowManager.defaultDisplay.getRealMetrics(displayMetrics)
+        return ScreenSize(displayMetrics.widthPixels, displayMetrics.heightPixels)
+    }
+
+    /**
+     * 获取应用窗口尺寸（不含导航栏）
+     * 用于判断导航栏是否可见
+     */
+    private fun getAppScreenSize(): ScreenSize {
+        val displayMetrics = DisplayMetrics()
+        @Suppress("DEPRECATION")
+        windowManager.defaultDisplay.getMetrics(displayMetrics)
+        return ScreenSize(displayMetrics.widthPixels, displayMetrics.heightPixels)
+    }
+
+    /**
+     * 检测导航栏状态并通知overlay
+     * 当手势指示条显示时，导航栏占用屏幕底部空间
+     * 当手势指示条隐藏时（沉浸模式），导航栏不占用空间
+     */
+    private fun updateNavigationBarInfo() {
+        val realSize = getRealScreenSize()
+        val appSize = getAppScreenSize()
+        // 导航栏高度 = 真实全屏高度 - 应用窗口高度
+        val navBarHeight = realSize.height - appSize.height
+        // 导航栏可见：真实高度 > 应用高度（差值即为导航栏高度）
+        val isNavBarVisible = navBarHeight > 0
+
+        mainHandler.post {
+            overlayView?.setNavigationBarInfo(isNavBarVisible, navBarHeight)
+        }
+
+        android.util.Log.i(TAG, "NavigationBar: visible=$isNavBarVisible, height=$navBarHeight, " +
+                "realSize=${realSize.width}x${realSize.height}, appSize=${appSize.width}x${appSize.height}")
+    }
+
+    /**
+     * 屏幕尺寸数据类
+     */
+    private data class ScreenSize(val width: Int, val height: Int)
 
     /**
      * 创建可拖拽控制面板
@@ -222,6 +278,30 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
         mainHandler.post {
             overlayView?.setCaptureRegion(region)
             overlayView?.invalidate()
+        }
+    }
+
+    /**
+     * 刷新导航栏状态
+     * 在屏幕旋转、导航栏显示/隐藏变化时调用
+     * 同时更新overlay窗口尺寸以匹配当前真实全屏尺寸
+     */
+    fun refreshNavigationBarState() {
+        updateNavigationBarInfo()
+        // 更新overlay窗口尺寸以匹配当前真实全屏尺寸
+        val realSize = getRealScreenSize()
+        val params = overlayLayoutParams
+        if (params != null && overlayView != null) {
+            if (params.width != realSize.width || params.height != realSize.height) {
+                params.width = realSize.width
+                params.height = realSize.height
+                try {
+                    windowManager.updateViewLayout(overlayView, params)
+                    android.util.Log.i(TAG, "Overlay size updated to ${realSize.width}x${realSize.height}")
+                } catch (e: Exception) {
+                    android.util.Log.w(TAG, "Failed to update overlay size", e)
+                }
+            }
         }
     }
 

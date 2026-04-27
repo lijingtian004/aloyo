@@ -1108,6 +1108,12 @@ class MainActivity : AppCompatActivity() {
                 if (rotated) {
                     // 屏幕旋转了，重新计算截屏区域
                     applyCaptureRegion()
+                    // 刷新overlay导航栏状态和窗口尺寸
+                    overlayManager.refreshNavigationBarState()
+                } else {
+                    // 即使未旋转，也定期刷新导航栏状态
+                    // 用户可能在运行中切换手势导航模式
+                    overlayManager.refreshNavigationBarState()
                 }
             }
 

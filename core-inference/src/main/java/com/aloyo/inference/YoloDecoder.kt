@@ -186,25 +186,46 @@ class UnifiedYoloDecoder : YoloDecoder {
         // 全局自适应过滤：当objectness被跳过时，类别置信度无法区分前景/背景
         // 使用gap-based方法：在排序后的logit中找到最大间隔作为前景/背景分离点
         // skipObjectness时，背景logit约2-4，前景logit约5-7，gap通常>2.0
-        // 降低阈值到>3，更积极地过滤假阳
+        var result = detections
+
         if (lastSkipObjectness && detections.size > 3) {
-            return applyGapBasedFiltering(detections, confidenceThreshold)
+            result = applyGapBasedFiltering(result, confidenceThreshold)
         }
 
-        // 置信度上限过滤：当skipObjectness时，所有检测的sigmoid置信度都接近1.0(~99.8%)
+        // logit绝对阈值过滤：当skipObjectness时，所有检测的sigmoid置信度都接近1.0(~99.8%)
         // 这个高置信度不可靠，不能用来区分前景/背景
-        // 改用logit绝对阈值：只保留logit > 5.0的检测（真实目标通常logit>5）
+        // 改用logit绝对阈值：只保留logit > 4.0的检测（真实目标通常logit>5）
         // sigmoid(5.0) ≈ 0.993，sigmoid(4.0) ≈ 0.982，sigmoid(3.0) ≈ 0.953
+        // 注意：此过滤必须在gap过滤之后也执行，作为双重保障
         if (lastSkipObjectness) {
-            val logitThreshold = 5.0f
-            val filtered = detections.filter { it.rawLogit >= logitThreshold }
-            if (filtered.size < detections.size) {
-                android.util.Log.i(TAG, "Logit threshold filtering: logitThresh=$logitThreshold, before=${detections.size}, after=${filtered.size}")
+            val logitThreshold = 4.0f
+            val beforeCount = result.size
+            result = result.filter { it.rawLogit >= logitThreshold }
+            if (result.size < beforeCount) {
+                android.util.Log.i(TAG, "Logit threshold filtering: logitThresh=$logitThreshold, before=$beforeCount, after=${result.size}")
             }
-            return filtered
         }
 
-        return detections
+        // 安全上限：当skipObjectness时，即使经过上述过滤，仍可能残留过多检测
+        // 限制最大检测数量为20，超过时只保留置信度最高的
+        if (lastSkipObjectness && result.size > 20) {
+            val beforeCount = result.size
+            result = result.sortedByDescending { it.confidence }.take(20)
+            android.util.Log.i(TAG, "Max detection limit (skipObj): before=$beforeCount, after=${result.size}")
+        }
+
+        // 通用安全上限：无论skipObjectness与否，解码后的检测数量不应超过30
+        // 过多检测通常意味着假阳性（背景被误检为目标）
+        // 对于V5_FLAT/V8_TRANSPOSED格式，模型可能输出数千个检测，
+        // 即使经过置信度过滤和NMS，仍可能残留大量重叠或低质量检测
+        val MAX_DETECTIONS = 30
+        if (result.size > MAX_DETECTIONS) {
+            val beforeCount = result.size
+            result = result.sortedByDescending { it.confidence }.take(MAX_DETECTIONS)
+            android.util.Log.i(TAG, "Max detection limit (general): before=$beforeCount, after=${result.size}")
+        }
+
+        return result
     }
 
     /**
@@ -254,8 +275,9 @@ class UnifiedYoloDecoder : YoloDecoder {
         // logit空间的显著间隔阈值
         // 实际观察：背景logit约2-4，前景logit约5-7，gap通常>2.0
         // 0.3太低，会把logit 3.5和3.8之间的0.3间隔也当作"显著间隔"
-        // 提高到1.0，确保只保留真正的前景（logit>5）
-        val significantGap = if (hasLogits) 1.0f else 0.01f
+        // 1.0太高，可能错过logit 4.5和3.5之间的1.0间隔（真实的前景/背景分界）
+        // 降低到0.5，在保持区分度的同时更积极地识别前景/背景分界
+        val significantGap = if (hasLogits) 0.5f else 0.01f
 
         if (maxGap > significantGap) {
             // 找到显著间隔：以间隔中点作为前景/背景分离阈值
@@ -337,24 +359,51 @@ class UnifiedYoloDecoder : YoloDecoder {
             val blobWidth = blobInfo.width
 
             // 提取该blob的通道数据
-            val blobOutput = Array(blobChannels) { ch ->
+            val rawBlobOutput = Array(blobChannels) { ch ->
                 output[channelOffset + ch].copyOfRange(0, minOf(blobSpatial, output[channelOffset + ch].size))
             }
 
+            // 当blob的channels=1且width匹配v5Attrs或v8Attrs时，将数据从[1][H*W]转置为[W][H]
+            // NCNN输出blob形状(1, 6300, 7)表示6300个检测×7个属性
+            // JNI层将c=1的blob扁平化为[1][44100]，丢失了二维结构
+            // 需要转置为[7][6300]才能使用V5_TRANSPOSED解码器正确解码
+            val blobOutput: Array<FloatArray>
+            val effectiveChannels: Int
+            val effectiveSpatial: Int
+
+            if (blobChannels == 1 && blobHeight > 1 &&
+                (blobWidth == v5Attrs || blobWidth == v8Attrs)) {
+                // 转置：从行优先[1][H*W]到列优先[W][H]
+                // 原始布局：row0=[cx0,cy0,w0,h0,obj0,cls0_0,cls1_0], row1=[cx1,cy1,...], ...
+                // 转置后：ch0=[cx0,cx1,...,cxH], ch1=[cy0,cy1,...,cyH], ...
+                effectiveChannels = blobWidth
+                effectiveSpatial = blobHeight
+                blobOutput = Array(effectiveChannels) { ch ->
+                    FloatArray(effectiveSpatial) { i ->
+                        rawBlobOutput[0][i * blobWidth + ch]
+                    }
+                }
+                android.util.Log.i(TAG, "Reshaped blob from [1][${blobHeight}*${blobWidth}] to [${effectiveChannels}][${effectiveSpatial}]")
+            } else {
+                blobOutput = rawBlobOutput
+                effectiveChannels = blobChannels
+                effectiveSpatial = blobSpatial
+            }
+
             // 检测该blob的格式
-            val format = detectFormat(blobChannels, blobSpatial, v8Attrs, v5Attrs)
+            val format = detectFormat(effectiveChannels, effectiveSpatial, v8Attrs, v5Attrs)
 
             // 获取该blob对应的标准stride
             val standardStride = strideMap[blobHeight] ?: (config.inputHeight.toFloat() / blobHeight)
 
             val detections = when (format) {
                 OutputFormat.V5_MULTI_ANCHOR -> decodeV5MultiAnchor(
-                    blobOutput, config, confThresh, blobChannels, blobSpatial,
+                    blobOutput, config, confThresh, effectiveChannels, effectiveSpatial,
                     blobHeight, blobWidth, standardStride, effectiveInputSize, actualInputWidth
                 )
-                OutputFormat.V8_TRANSPOSED -> decodeV8Format(blobOutput, config, confThresh, blobChannels, blobSpatial)
-                OutputFormat.V5_PER_ROW -> decodeV5PerRowFormat(blobOutput, config, confThresh, blobChannels, blobSpatial)
-                OutputFormat.V5_FLAT -> decodeV5FlatFormat(blobOutput, config, confThresh, blobSpatial, v5Attrs)
+                OutputFormat.V8_TRANSPOSED -> decodeV8Format(blobOutput, config, confThresh, effectiveChannels, effectiveSpatial)
+                OutputFormat.V5_PER_ROW -> decodeV5PerRowFormat(blobOutput, config, confThresh, effectiveChannels, effectiveSpatial)
+                OutputFormat.V5_FLAT -> decodeV5FlatFormat(blobOutput, config, confThresh, effectiveSpatial, v5Attrs)
             }
 
             allDetections.addAll(detections)
@@ -587,10 +636,13 @@ class UnifiedYoloDecoder : YoloDecoder {
     }
 
     /**
-     * YOLOv8格式解码（转置布局）
+     * YOLOv8/V5转置格式解码
      * output[0][i] = cx_i, output[1][i] = cy_i, output[2][i] = w_i, output[3][i] = h_i
-     * output[4+c][i] = class_c_prob_i
-     * 也兼容转置后的V5格式（有objectness行）
+     * output[4+c][i] = class_c_prob_i (V8) 或 objectness_i (V5)
+     *
+     * 自动检测输出是否需要sigmoid激活：
+     * - 原始logit：值可能>1.0或<0.0，需要sigmoid
+     * - 已解码输出：值在[0,1]范围内，不需要sigmoid
      */
     private fun decodeV8Format(
         output: Array<FloatArray>, config: ModelConfig, confThresh: Float,
@@ -600,29 +652,69 @@ class UnifiedYoloDecoder : YoloDecoder {
         val numDetections = numCols
         val hasObjectness = numRows == 5 + config.numClasses
 
+        // 自动检测是否需要sigmoid：采样前100个检测的objectness/类别值
+        // 如果任何值>1.0或<0.0，说明是原始logit，需要sigmoid
+        val needSigmoid = if (hasObjectness) {
+            val sampleSize = minOf(100, numDetections)
+            (0 until sampleSize).any { i ->
+                val objVal = if (4 < output.size && i < output[4].size) output[4][i] else 0f
+                objVal > 1.0f || objVal < 0.0f
+            }
+        } else {
+            val classOffset = 4
+            val sampleSize = minOf(100, numDetections)
+            (0 until sampleSize).any { i ->
+                (0 until config.numClasses).any { c ->
+                    val ch = classOffset + c
+                    if (ch < output.size && i < output[ch].size) {
+                        output[ch][i] > 1.0f || output[ch][i] < 0.0f
+                    } else false
+                }
+            }
+        }
+
+        if (needSigmoid) {
+            android.util.Log.i(TAG, "V8_TRANSPOSED: detected raw logits, applying sigmoid")
+        } else {
+            android.util.Log.i(TAG, "V8_TRANSPOSED: detected decoded output, using values directly")
+        }
+
         for (i in 0 until numDetections) {
             // 读取类别概率
             var maxClassConf = 0f
             var maxClassId = 0
+            var maxRawClsLogit = 0f
             val classOffset = if (hasObjectness) 5 else 4
             for (c in 0 until config.numClasses) {
                 if (classOffset + c >= numRows) break
-                val classConf = output[classOffset + c][i]
+                if (i >= output[classOffset + c].size) continue
+                val rawVal = output[classOffset + c][i]
+                val classConf = if (needSigmoid) sigmoid(rawVal) else rawVal
                 if (classConf > maxClassConf) {
                     maxClassConf = classConf
                     maxClassId = c
+                    maxRawClsLogit = rawVal
                 }
             }
 
             // 计算最终置信度
-            val finalConf = if (hasObjectness) {
-                val objectness = output[4][i]
-                objectness * maxClassConf
+            val finalConf: Float
+            if (hasObjectness) {
+                if (i >= output[4].size) continue
+                val rawObj = output[4][i]
+                val objConf = if (needSigmoid) sigmoid(rawObj) else rawObj
+                // objectness预过滤
+                if (objConf < confThresh * 0.1f) continue
+                finalConf = objConf * maxClassConf
             } else {
-                maxClassConf
+                finalConf = maxClassConf
             }
 
             if (finalConf < confThresh) continue
+
+            // 读取坐标
+            if (i >= output[0].size || i >= output[1].size || 
+                i >= output[2].size || i >= output[3].size) continue
 
             detections.add(RawDetection(
                 cx = output[0][i],
@@ -630,10 +722,12 @@ class UnifiedYoloDecoder : YoloDecoder {
                 w = output[2][i],
                 h = output[3][i],
                 classId = maxClassId,
-                confidence = finalConf
+                confidence = finalConf,
+                rawLogit = maxRawClsLogit
             ))
         }
 
+        android.util.Log.i(TAG, "V8_TRANSPOSED decoded: ${detections.size} raw detections, hasObj=$hasObjectness, needSigmoid=$needSigmoid")
         return detections
     }
 
@@ -694,6 +788,10 @@ class UnifiedYoloDecoder : YoloDecoder {
     /**
      * YOLOv5格式解码（扁平数组）
      * output[0] = [cx0, cy0, w0, h0, obj0, cls0_0, ..., cx1, cy1, w1, h1, obj1, cls1_0, ...]
+     *
+     * 自动检测输出是否需要sigmoid激活：
+     * - 原始logit：objectness/类别值可能>1.0或<0.0，需要sigmoid
+     * - 已解码输出：值在[0,1]范围内，不需要sigmoid
      */
     private fun decodeV5FlatFormat(
         output: Array<FloatArray>, config: ModelConfig, confThresh: Float,
@@ -702,19 +800,36 @@ class UnifiedYoloDecoder : YoloDecoder {
         val detections = mutableListOf<RawDetection>()
         val numDetections = numCols / v5Attrs
 
+        // 自动检测是否需要sigmoid：采样前100个检测的objectness值
+        val needSigmoid = run {
+            val sampleSize = minOf(100, numDetections)
+            (0 until sampleSize).any { i ->
+                val offset = i * v5Attrs
+                offset + 4 < output[0].size && (output[0][offset + 4] > 1.0f || output[0][offset + 4] < 0.0f)
+            }
+        }
+
         for (i in 0 until numDetections) {
             val offset = i * v5Attrs
-            val objectness = output[0][offset + 4]
+            if (offset + v5Attrs > output[0].size) break
+
+            val rawObj = output[0][offset + 4]
+            val objectness = if (needSigmoid) sigmoid(rawObj) else rawObj
 
             if (objectness < confThresh) continue
 
             var maxClassConf = 0f
             var maxClassId = 0
+            var maxRawClsLogit = 0f
             for (c in 0 until config.numClasses) {
-                val classConf = output[0][offset + 5 + c]
+                val clsIdx = offset + 5 + c
+                if (clsIdx >= output[0].size) break
+                val rawCls = output[0][clsIdx]
+                val classConf = if (needSigmoid) sigmoid(rawCls) else rawCls
                 if (classConf > maxClassConf) {
                     maxClassConf = classConf
                     maxClassId = c
+                    maxRawClsLogit = rawCls
                 }
             }
 
@@ -727,10 +842,12 @@ class UnifiedYoloDecoder : YoloDecoder {
                 w = output[0][offset + 2],
                 h = output[0][offset + 3],
                 classId = maxClassId,
-                confidence = finalConf
+                confidence = finalConf,
+                rawLogit = maxRawClsLogit
             ))
         }
 
+        android.util.Log.i(TAG, "V5_FLAT decoded: ${detections.size} raw detections, needSigmoid=$needSigmoid")
         return detections
     }
 

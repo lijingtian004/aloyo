@@ -60,6 +60,13 @@ class DetectionOverlayView(context: Context) : View(context) {
     @Volatile
     private var captureRegion: com.aloyo.common.CaptureRegion = com.aloyo.common.CaptureRegion.FULL_SCREEN
 
+    // 导航栏信息：是否可见及高度
+    @Volatile
+    private var isNavigationBarVisible: Boolean = false
+
+    @Volatile
+    private var navigationBarHeight: Int = 0
+
     // 诊断：onDraw调用计数
     private var drawCount = 0
     private var lastDrawLogTime = 0L
@@ -184,6 +191,17 @@ class DetectionOverlayView(context: Context) : View(context) {
         this.captureRegion = region
     }
 
+    /**
+     * 设置导航栏信息
+     * @param isVisible 导航栏（手势指示条）是否可见
+     * @param height 导航栏高度（像素），0表示不可见或沉浸模式
+     */
+    fun setNavigationBarInfo(isVisible: Boolean, height: Int) {
+        this.isNavigationBarVisible = isVisible
+        this.navigationBarHeight = height
+        invalidate()
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
@@ -218,18 +236,20 @@ class DetectionOverlayView(context: Context) : View(context) {
         // 计算坐标映射比例：原图像素 → 屏幕像素
         // 检测框坐标是全屏像素坐标(0到srcWidth/srcHeight)
         // overlay窗口使用FLAG_LAYOUT_IN_SCREEN，从屏幕顶部(Y=0)开始
-        // canvas的Y=0对应屏幕Y=0，所以直接用1:1映射（不缩放）
-        // 如果canvas高度小于全屏高度（不含导航栏），超出部分自然裁剪
+        // 当overlay覆盖完整屏幕（含导航栏）时，viewW==srcWidth, viewH==srcHeight, scale=1.0
+        // 当overlay未覆盖导航栏时，需要按比例缩放坐标
         val scaleX = if (srcWidth > 0) viewW.toFloat() / srcWidth else 1f
-        val scaleY = if (srcHeight > 0) viewW.toFloat() / srcWidth else 1f
-        // 保持等比缩放：使用相同的scale避免X/Y比例不一致导致框变形
-        val uniformScale = if (srcWidth > 0 && srcHeight > 0) {
-            minOf(viewW.toFloat() / srcWidth, viewH.toFloat() / srcHeight)
-        } else 1f
+        val scaleY = if (srcHeight > 0) viewH.toFloat() / srcHeight else 1f
+        // 使用独立X/Y缩放而非uniformScale
+        // 当overlay完整覆盖屏幕时，scaleX≈1.0, scaleY≈1.0，框不会变形
+        // 当overlay未覆盖导航栏时，scaleY<1.0，Y坐标按比例压缩到可见区域
+        // 这样检测框不会因uniformScale而在X方向也被压缩
+        val useScaleX = scaleX
+        val useScaleY = scaleY
 
         // 绘制检测框
         for (detection in detections) {
-            drawDetection(canvas, detection, uniformScale, uniformScale)
+            drawDetection(canvas, detection, useScaleX, useScaleY)
         }
 
         // 绘制性能指标
@@ -237,7 +257,7 @@ class DetectionOverlayView(context: Context) : View(context) {
 
         // 绘制截屏区域框（如果启用且非全屏）
         if (showCaptureRegion && !captureRegion.isFullScreen && srcWidth > 0 && srcHeight > 0) {
-            drawCaptureRegion(canvas, uniformScale, uniformScale, viewW, viewH)
+            drawCaptureRegion(canvas, useScaleX, useScaleY, viewW, viewH)
         }
 
         // 始终绘制状态指示器
@@ -277,21 +297,30 @@ class DetectionOverlayView(context: Context) : View(context) {
 
     /**
      * 绘制状态指示器（右下角小字，确认悬浮窗可见）
+     * 当导航栏（手势指示条）可见时，在导航栏上方保持适当边距
+     * 当导航栏隐藏时（沉浸模式），紧贴屏幕底部
      */
     private fun drawStatusIndicator(canvas: Canvas, viewW: Int, viewH: Int) {
         val text = "ALOYO | ${detections.size} dets"
         val textWidth = statusPaint.measureText(text)
         val textHeight = statusPaint.fontMetrics.let { it.descent - it.ascent }
         val padding = 8f
+        // 导航栏可见时，在导航栏上方留出空间，避免与手势指示条重叠
+        // 导航栏隐藏时，紧贴屏幕底部
+        val bottomMargin = if (isNavigationBarVisible && navigationBarHeight > 0) {
+            navigationBarHeight.toFloat() + 12f
+        } else {
+            12f
+        }
         val x = viewW.toFloat() - textWidth - padding * 2 - 12f
-        val y = viewH.toFloat() - textHeight - padding * 2 - 12f
+        val y = viewH.toFloat() - textHeight - padding * 2 - bottomMargin
 
         // 绘制背景
         canvas.drawRect(
             x - padding,
             y - padding,
             viewW.toFloat() - 12f + padding,
-            viewH.toFloat() - 12f + padding,
+            viewH.toFloat() - bottomMargin + padding,
             statusBgPaint
         )
 
