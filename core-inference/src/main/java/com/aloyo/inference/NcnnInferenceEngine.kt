@@ -225,6 +225,12 @@ class NcnnInferenceEngine : IInferenceEngine {
 
         val detections = postProc.processRawDetections(rawDetections, srcWidth, srcHeight, actualTargetWidth, actualTargetHeight)
 
+        // 首次推理时记录后处理后的检测数量（诊断用）
+        if (shouldLogDiag) {
+            android.util.Log.i(TAG, "After postProc: rawDetections=${rawDetections.size}, finalDetections=${detections.size}, " +
+                    "srcSize=${srcWidth}x${srcHeight}, actualTarget=${actualTargetWidth}x${actualTargetHeight}")
+        }
+
         // 首次推理时记录前几个检测结果的坐标（诊断用）
         if (!hasLoggedOutputDiag || detections.isNotEmpty()) {
             if (detections.isNotEmpty()) {

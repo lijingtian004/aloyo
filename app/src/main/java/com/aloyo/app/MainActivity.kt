@@ -1023,27 +1023,37 @@ class MainActivity : AppCompatActivity() {
             screenHeight = displayMetrics.heightPixels
         }
 
+        // 获取窗口可见区域（排除刘海/状态栏和导航栏），用于计算真正的居中位置
+        // getRealMetrics返回包含系统装饰的全屏尺寸，但用户感知的"居中"应基于可见区域
+        val visibleRect = android.graphics.Rect()
+        window.decorView.getWindowVisibleDisplayFrame(visibleRect)
+        val visibleWidth = visibleRect.width()
+        val visibleHeight = visibleRect.height()
+        // 可见区域在全屏中的偏移（状态栏高度等）
+        val visibleOffsetX = visibleRect.left
+        val visibleOffsetY = visibleRect.top
+
         val region = when (captureRegionSpinner.selectedItemPosition) {
             1 -> {
-                // 256×256 居中
+                // 256×256 居中（基于可见区域）
                 val size = 256
-                CaptureRegion((screenWidth - size) / 2, (screenHeight - size) / 2, size, size)
+                CaptureRegion(visibleOffsetX + (visibleWidth - size) / 2, visibleOffsetY + (visibleHeight - size) / 2, size, size)
             }
             2 -> {
-                // 320×320 居中
+                // 320×320 居中（基于可见区域）
                 val size = 320
-                CaptureRegion((screenWidth - size) / 2, (screenHeight - size) / 2, size, size)
+                CaptureRegion(visibleOffsetX + (visibleWidth - size) / 2, visibleOffsetY + (visibleHeight - size) / 2, size, size)
             }
             3 -> {
-                // 640×640 居中
+                // 640×640 居中（基于可见区域）
                 val size = 640
-                CaptureRegion((screenWidth - size) / 2, (screenHeight - size) / 2, size, size)
+                CaptureRegion(visibleOffsetX + (visibleWidth - size) / 2, visibleOffsetY + (visibleHeight - size) / 2, size, size)
             }
             4 -> {
-                // 居中75%区域
-                val w = (screenWidth * 0.75).toInt()
-                val h = (screenHeight * 0.75).toInt()
-                CaptureRegion((screenWidth - w) / 2, (screenHeight - h) / 2, w, h)
+                // 居中75%区域（基于可见区域）
+                val w = (visibleWidth * 0.75).toInt()
+                val h = (visibleHeight * 0.75).toInt()
+                CaptureRegion(visibleOffsetX + (visibleWidth - w) / 2, visibleOffsetY + (visibleHeight - h) / 2, w, h)
             }
             else -> CaptureRegion.FULL_SCREEN
         }

@@ -100,10 +100,10 @@ class YoloPostProcessor(
 
         // 过滤退化检测框：宽或高极小的框通常是解码噪声产生的假阳性
         // 使用相对于源图像尺寸的百分比阈值，适应不同分辨率的输入
-        // 2%阈值：对于256×256的小尺寸输入，5%阈值(12.8px)会过滤掉锚框缩放后的合理检测
-        // 对于640×640的标准输入，2%阈值(12.8px)与之前5%阈值一致
+        // 1%阈值：对于256×256的小尺寸输入，锚框缩放后可能很小(4-13px)
+        // 之前5%阈值(12.8px)和2%阈值(5.12px)都导致零检测，进一步降低到1%
         val minDim = minOf(srcWidth, srcHeight).toFloat()
-        val minBoxSize = maxOf(4.0f, minDim * 0.02f)
+        val minBoxSize = maxOf(2.0f, minDim * 0.01f)
         val validDetections = mappedDetections.filter { det ->
             (det.x2 - det.x1) >= minBoxSize && (det.y2 - det.y1) >= minBoxSize
         }
@@ -111,9 +111,12 @@ class YoloPostProcessor(
         // 首次推理时记录后处理诊断信息
         if (!hasLoggedPostProcDiag) {
             hasLoggedPostProcDiag = true
+            // 统计boxSize过滤前后的数量
+            val filteredBySize = mappedDetections.size - validDetections.size
             android.util.Log.i(TAG, "PostProc: srcSize=${srcWidth}x${srcHeight}, targetSize=${targetW}x${targetH}, " +
                     "scale=${scaleFactors.scale}, pad=(${scaleFactors.padX},${scaleFactors.padY}), " +
-                    "minBoxSize=$minBoxSize, rawCount=${rawDetections.size}")
+                    "minBoxSize=$minBoxSize, rawCount=${rawDetections.size}, " +
+                    "mappedCount=${mappedDetections.size}, validCount=${validDetections.size}, filteredBySize=$filteredBySize")
             // 记录前5个原始检测的坐标和映射后坐标
             rawDetections.take(5).forEachIndexed { idx, raw ->
                 val mx1 = (raw.cx - raw.w / 2f - scaleFactors.padX) / scaleFactors.scale

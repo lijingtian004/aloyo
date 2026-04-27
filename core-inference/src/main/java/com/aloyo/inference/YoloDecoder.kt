@@ -185,7 +185,10 @@ class UnifiedYoloDecoder : YoloDecoder {
 
         // 全局自适应过滤：当objectness被跳过时，类别置信度无法区分前景/背景
         // 使用gap-based方法：在排序后的置信度中找到最大间隔作为前景/背景分离点
-        if (lastSkipObjectness && detections.size > 5) {
+        // 仅当检测数量过多(>200)时才启用，避免过度过滤导致零检测
+        // gap-based过滤可能把不同stride的检测全部替换为同一stride的高logit检测，
+        // 而高logit检测可能来自小锚框(stride=8)，后续boxSize过滤后全部消失
+        if (lastSkipObjectness && detections.size > 200) {
             return applyGapBasedFiltering(detections, confidenceThreshold)
         }
 
