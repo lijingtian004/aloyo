@@ -1113,17 +1113,14 @@ class MainActivity : AppCompatActivity() {
             // 设置原图尺寸（用于坐标映射：原图像素→屏幕像素）
             // 全屏截屏时：bitmap就是全屏截图，直接用bitmap尺寸
             // 截屏区域时：检测框已偏移到全屏坐标，需要用全屏尺寸
-            // 旋转后bitmap尺寸会自动变化（AUTO_MIRROR），但全屏尺寸需要实时查询
+            // 重要：AUTO_MIRROR模式下VirtualDisplay的bitmap尺寸不会随旋转变化，
+            // 但内容会被旋转。必须使用实时屏幕方向来确定正确的source size。
             if (!currentCaptureRegion.isFullScreen) {
-                val curWidth = captureService?.currentScreenWidth ?: 0
-                val curHeight = captureService?.currentScreenHeight ?: 0
-                if (curWidth > 0 && curHeight > 0) {
-                    overlayManager.setSourceSize(curWidth, curHeight)
-                } else {
-                    // 回退到displayMetrics
-                    val displayMetrics = resources.displayMetrics
-                    overlayManager.setSourceSize(displayMetrics.widthPixels, displayMetrics.heightPixels)
-                }
+                // 优先使用getRealMetrics获取实时屏幕尺寸（比缓存值更可靠）
+                val realMetrics = android.util.DisplayMetrics()
+                @Suppress("DEPRECATION")
+                (getSystemService(WINDOW_SERVICE) as WindowManager).defaultDisplay.getRealMetrics(realMetrics)
+                overlayManager.setSourceSize(realMetrics.widthPixels, realMetrics.heightPixels)
             } else {
                 // 全屏截屏：bitmap尺寸就是源尺寸，旋转后bitmap会自动变为新方向
                 overlayManager.setSourceSize(bitmap.width, bitmap.height)
