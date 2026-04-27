@@ -48,7 +48,7 @@ class NcnnInferenceEngine : IInferenceEngine {
 
     // 置信度阈值和NMS阈值
     private var confidenceThreshold: Float = 0.5f
-    private var nmsThreshold: Float = 0.4f
+    private var nmsThreshold: Float = 0.35f
 
     // 预处理器和后处理器
     private var preProcessor: YoloPreProcessor? = null

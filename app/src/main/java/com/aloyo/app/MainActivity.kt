@@ -741,7 +741,7 @@ class MainActivity : AppCompatActivity() {
             "inputHeight": 640,
             "numClasses": 80,
             "confidenceThreshold": 0.5,
-            "nmsThreshold": 0.4,
+            "nmsThreshold": 0.35,
             "boxScale": 1.3,
             "labels": [
                 ${DEFAULT_COCO_LABELS.joinToString(",\n                ") { "\"$it\"" }}
@@ -897,7 +897,7 @@ class MainActivity : AppCompatActivity() {
                 val inputHeight = etHeight.text.toString().toIntOrNull() ?: 640
                 val numClasses = etNumClasses.text.toString().toIntOrNull() ?: 80
                 val confThresh = etConfThresh.text.toString().toFloatOrNull() ?: 0.5f
-                val nmsThresh = etNmsThresh.text.toString().toFloatOrNull() ?: 0.4f
+                val nmsThresh = etNmsThresh.text.toString().toFloatOrNull() ?: 0.35f
                 val boxScale = etBoxScale.text.toString().toFloatOrNull() ?: 1.3f
                 val useV8StyleDecode = decodeRadioGroup.checkedRadioButtonId == 101  // id 101 = YOLOv8风格
                 val labels = etLabels.text.toString().lines().filter { it.isNotBlank() }

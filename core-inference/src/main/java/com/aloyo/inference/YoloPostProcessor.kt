@@ -19,7 +19,12 @@ class YoloPostProcessor(
         // 时序过滤：检测框需要在连续多帧中出现才被保留
         // 这可以有效过滤单帧假阳（如背景纹理被误检）
         private const val TEMPORAL_FRAMES = 2
-        private const val TEMPORAL_IOU_THRESHOLD = 0.5f
+        // 提高IoU阈值到0.7：要求框的位置更稳定才算同一目标
+        // 这可以减少因目标微移导致的闪烁，同时保持假阳过滤能力
+        private const val TEMPORAL_IOU_THRESHOLD = 0.7f
+        // EMA平滑系数：0.3表示新帧占30%，历史占70%
+        // 越大越跟手，越小越平滑
+        private const val EMA_ALPHA = 0.3f
     }
 
     // 后处理诊断信息（供NcnnInferenceEngine读取并写入应用日志）
@@ -30,6 +35,10 @@ class YoloPostProcessor(
     // 时序过滤状态：记录最近几帧的检测结果
     private val detectionHistory = ArrayDeque<List<Detection>>()
     private var frameCounter = 0
+
+    // EMA平滑状态：记录每个跟踪目标的平滑后坐标
+    // key: "classId_index", value: 平滑后的检测框
+    private val smoothedDetections = mutableMapOf<String, Detection>()
 
     /**
      * 处理模型输出
@@ -193,7 +202,11 @@ class YoloPostProcessor(
         // 这可以有效过滤单帧假阳（如背景纹理、光影变化被误检）
         val temporallyFiltered = applyTemporalFiltering(deduplicated)
 
-        return temporallyFiltered
+        // EMA平滑：对检测框坐标进行指数移动平均，减少闪烁和跳动
+        // 原理：新框位置 = alpha * 新检测 + (1-alpha) * 历史位置
+        val smoothed = applyEMASmoothing(temporallyFiltered)
+
+        return smoothed
     }
 
     /**
@@ -254,6 +267,11 @@ class YoloPostProcessor(
      * 检测框需要在连续多帧中稳定出现才被保留
      * 原理：真实目标在连续帧中位置相对稳定，假阳通常只出现1帧
      *
+     * 改进策略：
+     * 1. 首帧不过滤：直接返回全部结果，避免启动延迟
+     * 2. 提高IoU阈值到0.7：要求框位置更稳定才算同一目标，减少微移导致的丢失
+     * 3. 丢失回退：如果时序过滤后没有结果，回退到当前帧（避免闪烁）
+     *
      * @param detections 当前帧的检测结果
      * @return 经过时序过滤后的检测结果
      */
@@ -266,9 +284,9 @@ class YoloPostProcessor(
             detectionHistory.removeFirst()
         }
 
-        // 历史帧不足时，直接返回当前结果（但限制数量避免首帧假阳过多）
+        // 历史帧不足时，直接返回当前结果（首帧不过滤）
         if (detectionHistory.size < TEMPORAL_FRAMES) {
-            return detections.take(5)
+            return detections
         }
 
         // 只保留在当前帧和至少一帧历史帧中都出现的检测
@@ -278,7 +296,7 @@ class YoloPostProcessor(
             var foundInHistory = false
             for (historyFrame in detectionHistory.dropLast(1)) {
                 for (histDet in historyFrame) {
-                    // 同一类别且IoU足够大
+                    // 同一类别且IoU足够大（0.7要求位置更稳定）
                     if (det.classId == histDet.classId && computeIoU(det, histDet) > TEMPORAL_IOU_THRESHOLD) {
                         foundInHistory = true
                         break
@@ -292,12 +310,73 @@ class YoloPostProcessor(
         }
 
         // 如果时序过滤后没有检测结果，回退到当前帧结果（避免闪烁）
-        // 但只保留置信度最高的3个，减少假阳
+        // 返回全部结果，让EMA平滑来处理稳定性
         return if (stableDetections.isNotEmpty()) {
             stableDetections
         } else {
-            detections.sortedByDescending { it.confidence }.take(3)
+            detections
         }
+    }
+
+    /**
+     * EMA（指数移动平均）平滑
+     * 对检测框坐标进行平滑处理，减少帧间闪烁和跳动
+     *
+     * 原理：
+     * - 为每个检测目标维护一个平滑后的位置
+     * - 新帧检测到目标时：smooth = alpha * new + (1-alpha) * old
+     * - 新帧未检测到目标时：保持旧位置（但降低置信度）
+     *
+     * @param detections 当前帧的检测结果
+     * @return 平滑后的检测结果
+     */
+    private fun applyEMASmoothing(detections: List<Detection>): List<Detection> {
+        if (detections.isEmpty()) {
+            // 当前帧没有检测，清空平滑状态（避免残留旧框）
+            smoothedDetections.clear()
+            return emptyList()
+        }
+
+        val result = mutableListOf<Detection>()
+        val matchedKeys = mutableSetOf<String>()
+
+        for ((idx, det) in detections.withIndex()) {
+            // 生成唯一key：类别ID + 索引
+            val key = "${det.classId}_$idx"
+
+            val smoothed = smoothedDetections[key]
+            if (smoothed != null) {
+                // 已有历史记录，进行EMA平滑
+                val newX1 = EMA_ALPHA * det.x1 + (1 - EMA_ALPHA) * smoothed.x1
+                val newY1 = EMA_ALPHA * det.y1 + (1 - EMA_ALPHA) * smoothed.y1
+                val newX2 = EMA_ALPHA * det.x2 + (1 - EMA_ALPHA) * smoothed.x2
+                val newY2 = EMA_ALPHA * det.y2 + (1 - EMA_ALPHA) * smoothed.y2
+                val newConf = EMA_ALPHA * det.confidence + (1 - EMA_ALPHA) * smoothed.confidence
+
+                val smoothedDet = det.copy(
+                    x1 = newX1,
+                    y1 = newY1,
+                    x2 = newX2,
+                    y2 = newY2,
+                    confidence = newConf
+                )
+                result.add(smoothedDet)
+                smoothedDetections[key] = smoothedDet
+            } else {
+                // 首次出现，直接使用当前值
+                result.add(det)
+                smoothedDetections[key] = det
+            }
+            matchedKeys.add(key)
+        }
+
+        // 清理未匹配的历史记录（目标已消失）
+        val keysToRemove = smoothedDetections.keys.filter { it !in matchedKeys }
+        for (key in keysToRemove) {
+            smoothedDetections.remove(key)
+        }
+
+        return result
     }
 
     /**

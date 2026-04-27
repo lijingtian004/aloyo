@@ -14,7 +14,7 @@ data class ModelConfig(
     val inputHeight: Int,
     val numClasses: Int,
     val confidenceThreshold: Float = 0.5f,
-    val nmsThreshold: Float = 0.4f,
+    val nmsThreshold: Float = 0.35f,
     val labels: List<String> = emptyList(),
     /**
      * 检测框缩放因子
@@ -51,7 +51,7 @@ data class ModelConfig(
             boxScale = if (boxScale <= 0f) 1.3f else boxScale,
             // 其他可能有类似问题的字段
             confidenceThreshold = if (confidenceThreshold <= 0f) 0.5f else confidenceThreshold,
-            nmsThreshold = if (nmsThreshold <= 0f) 0.4f else nmsThreshold
+            nmsThreshold = if (nmsThreshold <= 0f) 0.35f else nmsThreshold
         )
     }
 }
