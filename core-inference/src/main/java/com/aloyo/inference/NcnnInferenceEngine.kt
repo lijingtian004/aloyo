@@ -216,7 +216,7 @@ class NcnnInferenceEngine : IInferenceEngine {
                 if (rawDetections.isNotEmpty()) {
                     append("\n  Top detections:")
                     rawDetections.sortedByDescending { it.confidence }.take(5).forEachIndexed { idx, det ->
-                        append("\n  [$idx] conf=${String.format("%.4f", det.confidence)}, logit=${String.format("%.4f", det.rawLogit)}, class=${det.classId}, cx=${String.format("%.1f", det.cx)}, cy=${String.format("%.1f", det.cy)}")
+                        append("\n  [$idx] conf=${String.format("%.4f", det.confidence)}, logit=${String.format("%.4f", det.rawLogit)}, class=${det.classId}, cx=${String.format("%.1f", det.cx)}, cy=${String.format("%.1f", det.cy)}, w=${String.format("%.1f", det.w)}, h=${String.format("%.1f", det.h)}")
                     }
                 }
             }

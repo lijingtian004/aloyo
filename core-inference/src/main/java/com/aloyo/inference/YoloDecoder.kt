@@ -257,8 +257,9 @@ class UnifiedYoloDecoder : YoloDecoder {
                     "max=${"%.4f".format(maxValue)}, median=${"%.4f".format(medianValue)}, " +
                     "before=$beforeCount, after=${result.size}")
         } else {
-            // 无显著间隔：保守保留top-10检测
-            val topN = minOf(10, values.size)
+            // 无显著间隔：保守保留top-30检测
+            // top-10太少，可能全部来自同一stride的小锚框，导致后续boxSize过滤后为零检测
+            val topN = minOf(30, values.size)
             val topThresh = values[topN - 1]
             result = if (hasLogits) {
                 detections.filter { it.rawLogit >= topThresh }

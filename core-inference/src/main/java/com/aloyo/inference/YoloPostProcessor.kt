@@ -16,6 +16,10 @@ class YoloPostProcessor(
 ) {
     companion object {
         private const val TAG = "YoloPostProcessor"
+
+        // 是否已记录过后处理诊断（仅首次推理时记录）
+        @Volatile
+        private var hasLoggedPostProcDiag = false
     }
 
     /**
@@ -96,11 +100,34 @@ class YoloPostProcessor(
 
         // 过滤退化检测框：宽或高极小的框通常是解码噪声产生的假阳性
         // 使用相对于源图像尺寸的百分比阈值，适应不同分辨率的输入
-        // 5%阈值：真实目标通常占图像至少5%的宽或高，噪声框通常<3%
+        // 2%阈值：对于256×256的小尺寸输入，5%阈值(12.8px)会过滤掉锚框缩放后的合理检测
+        // 对于640×640的标准输入，2%阈值(12.8px)与之前5%阈值一致
         val minDim = minOf(srcWidth, srcHeight).toFloat()
-        val minBoxSize = maxOf(8.0f, minDim * 0.05f)
+        val minBoxSize = maxOf(4.0f, minDim * 0.02f)
         val validDetections = mappedDetections.filter { det ->
             (det.x2 - det.x1) >= minBoxSize && (det.y2 - det.y1) >= minBoxSize
+        }
+
+        // 首次推理时记录后处理诊断信息
+        if (!hasLoggedPostProcDiag) {
+            hasLoggedPostProcDiag = true
+            android.util.Log.i(TAG, "PostProc: srcSize=${srcWidth}x${srcHeight}, targetSize=${targetW}x${targetH}, " +
+                    "scale=${scaleFactors.scale}, pad=(${scaleFactors.padX},${scaleFactors.padY}), " +
+                    "minBoxSize=$minBoxSize, rawCount=${rawDetections.size}")
+            // 记录前5个原始检测的坐标和映射后坐标
+            rawDetections.take(5).forEachIndexed { idx, raw ->
+                val mx1 = (raw.cx - raw.w / 2f - scaleFactors.padX) / scaleFactors.scale
+                val my1 = (raw.cy - raw.h / 2f - scaleFactors.padY) / scaleFactors.scale
+                val mx2 = (raw.cx + raw.w / 2f - scaleFactors.padX) / scaleFactors.scale
+                val my2 = (raw.cy + raw.h / 2f - scaleFactors.padY) / scaleFactors.scale
+                val bw = mx2 - mx1
+                val bh = my2 - my1
+                val passSize = bw >= minBoxSize && bh >= minBoxSize
+                android.util.Log.i(TAG, "  raw[$idx]: cx=${"%.1f".format(raw.cx)}, cy=${"%.1f".format(raw.cy)}, " +
+                        "w=${"%.1f".format(raw.w)}, h=${"%.1f".format(raw.h)}, " +
+                        "mapped=(${ "%.1f".format(mx1)},${"%.1f".format(my1)})-(${ "%.1f".format(mx2)},${"%.1f".format(my2)}), " +
+                        "boxSize=${"%.1f".format(bw)}x${"%.1f".format(bh)}, passSize=$passSize, conf=${"%.4f".format(raw.confidence)}")
+            }
         }
 
         // 按类别执行NMS
