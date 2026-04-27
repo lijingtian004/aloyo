@@ -354,11 +354,30 @@ class CaptureManager(private val context: Context) : ICaptureSource {
             screenWidth = newWidth
             screenHeight = newHeight
             screenDensity = displayMetrics.densityDpi
-            // 不重建VirtualDisplay！AUTO_MIRROR标志会自动适配旋转
-            // 只更新screenWidth/screenHeight供外部查询
+
+            // 重建VirtualDisplay：AUTO_MIRROR不会自动调整尺寸，必须重建
+            // 否则截屏内容会被拉伸或压缩
+            teardownVirtualDisplay()
+            setupVirtualDisplay()
+
             return true
         }
         return false
+    }
+
+    /**
+     * 销毁VirtualDisplay和ImageReader（用于旋转重建）
+     */
+    private fun teardownVirtualDisplay() {
+        try {
+            virtualDisplay?.release()
+            virtualDisplay = null
+            imageReader?.close()
+            imageReader = null
+            android.util.Log.i(TAG, "VirtualDisplay and ImageReader released for rotation")
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "Error releasing VirtualDisplay", e)
+        }
     }
 
     override fun startCapture(): Boolean {
