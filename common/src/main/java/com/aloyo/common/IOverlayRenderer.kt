@@ -43,6 +43,7 @@ data class OverlayConfig(
     val textColor: Int = 0xFFFFFFFF.toInt(),
     val textBgColor: Int = 0x99000000.toInt(),
     val showConfidence: Boolean = true,
+    val showLabel: Boolean = true,
     val showFps: Boolean = true,
     val showLatency: Boolean = true,
     val opacity: Float = 0.9f

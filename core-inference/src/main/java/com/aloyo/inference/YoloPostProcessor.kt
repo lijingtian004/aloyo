@@ -176,8 +176,13 @@ class YoloPostProcessor(
         }
         lastDiagInfo = diagBuilder.toString()
 
+        // 高置信度聚类过滤：当多个检测的置信度过于接近时，可能是假阳
+        // 假阳特征：多个检测的置信度差异极小（<0.001），且位置分散
+        // 真实目标：置信度有明显分层，或只有一个高置信度检测
+        val clustered = applyConfidenceClustering(validDetections)
+
         // 按类别执行NMS
-        val afterNMS = applyNMS(validDetections)
+        val afterNMS = applyNMS(clustered)
 
         // 跨类别去重：同一目标可能被检测为多个类别（如Head和Body）
         // 当不同类别的检测框高度重叠时，只保留置信度最高的那个
@@ -189,6 +194,59 @@ class YoloPostProcessor(
         val temporallyFiltered = applyTemporalFiltering(deduplicated)
 
         return temporallyFiltered
+    }
+
+    /**
+     * 置信度聚类过滤
+     * 当多个检测的置信度过于接近（差异 < 阈值）时，只保留最可靠的一个
+     *
+     * 假阳特征分析：
+     * - 假阳通常来自同一锚点/网格的多个重叠预测
+     * - 这些预测的置信度差异极小（如0.9983 vs 0.9984）
+     * - 真实目标的置信度通常有明显分层（如0.95 vs 0.85）
+     *
+     * 策略：
+     * 1. 按置信度降序排序
+     * 2. 如果相邻检测的置信度差异 < 阈值，认为是同一簇
+     * 3. 每个簇只保留置信度最高的一个检测
+     */
+    private fun applyConfidenceClustering(detections: List<Detection>): List<Detection> {
+        if (detections.size <= 1) return detections
+
+        // 置信度聚类阈值：差异小于此值认为是同一簇
+        // 0.001 = 0.1% 置信度差异
+        val clusterThreshold = 0.001f
+
+        val sorted = detections.sortedByDescending { it.confidence }
+        val clusters = mutableListOf<MutableList<Detection>>()
+        var currentCluster = mutableListOf(sorted[0])
+
+        for (i in 1 until sorted.size) {
+            val prevConf = sorted[i - 1].confidence
+            val currConf = sorted[i].confidence
+            if (prevConf - currConf < clusterThreshold) {
+                // 同一簇
+                currentCluster.add(sorted[i])
+            } else {
+                // 新簇
+                clusters.add(currentCluster)
+                currentCluster = mutableListOf(sorted[i])
+            }
+        }
+        clusters.add(currentCluster)
+
+        // 每个簇只保留一个检测：优先保留面积最大的（通常更可靠）
+        val result = clusters.map { cluster ->
+            cluster.maxByOrNull { det ->
+                (det.x2 - det.x1) * (det.y2 - det.y1)
+            } ?: cluster[0]
+        }
+
+        if (result.size < detections.size) {
+            android.util.Log.i(TAG, "Confidence clustering: before=${detections.size}, after=${result.size}, clusters=${clusters.size}")
+        }
+
+        return result
     }
 
     /**

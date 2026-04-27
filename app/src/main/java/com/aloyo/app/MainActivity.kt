@@ -79,6 +79,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnStopCapture: Button
     private lateinit var btnShowOverlay: Button
     private lateinit var btnHideOverlay: Button
+    private lateinit var btnToggleLabel: Button
+    private lateinit var btnToggleConfidence: Button
     private lateinit var tvStatus: TextView
     private lateinit var tvMetrics: TextView
     private lateinit var seekbarConfidence: SeekBar
@@ -231,6 +233,8 @@ class MainActivity : AppCompatActivity() {
         btnStopCapture = findViewById(R.id.btn_stop_capture)
         btnShowOverlay = findViewById(R.id.btn_show_overlay)
         btnHideOverlay = findViewById(R.id.btn_hide_overlay)
+        btnToggleLabel = findViewById(R.id.btn_toggle_label)
+        btnToggleConfidence = findViewById(R.id.btn_toggle_confidence)
         tvStatus = findViewById(R.id.tv_status)
         tvMetrics = findViewById(R.id.tv_metrics)
         seekbarConfidence = findViewById(R.id.seekbar_confidence)
@@ -354,6 +358,24 @@ class MainActivity : AppCompatActivity() {
             overlayManager.setShowCaptureRegion(isCaptureRegionDisplayShown)
             overlayManager.setCaptureRegion(currentCaptureRegion)
             btnToggleCaptureRegionDisplay.text = if (isCaptureRegionDisplayShown) "隐藏区域" else "显示区域"
+        }
+
+        // 标签显示切换按钮
+        btnToggleLabel.setOnClickListener {
+            val currentConfig = overlayManager.getConfig()
+            val newConfig = currentConfig.copy(showLabel = !currentConfig.showLabel)
+            overlayManager.setConfig(newConfig)
+            btnToggleLabel.text = if (newConfig.showLabel) "隐藏标签" else "显示标签"
+            Toast.makeText(this, if (newConfig.showLabel) "标签已显示" else "标签已隐藏", Toast.LENGTH_SHORT).show()
+        }
+
+        // 置信度显示切换按钮
+        btnToggleConfidence.setOnClickListener {
+            val currentConfig = overlayManager.getConfig()
+            val newConfig = currentConfig.copy(showConfidence = !currentConfig.showConfidence)
+            overlayManager.setConfig(newConfig)
+            btnToggleConfidence.text = if (newConfig.showConfidence) "隐藏置信度" else "显示置信度"
+            Toast.makeText(this, if (newConfig.showConfidence) "置信度已显示" else "置信度已隐藏", Toast.LENGTH_SHORT).show()
         }
     }
 

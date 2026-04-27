@@ -357,6 +357,11 @@ class DetectionOverlayView(context: Context) : View(context) {
         // 绘制边界框
         canvas.drawRect(x1, y1, x2, y2, boxPaint)
 
+        // 如果不显示标签，只绘制框
+        if (!config.showLabel) {
+            return
+        }
+
         // 绘制标签背景和文字
         val labelText = if (config.showConfidence) {
             "${detection.label} ${(detection.confidence * 100).toInt()}%"

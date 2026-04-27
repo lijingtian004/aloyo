@@ -316,6 +316,13 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
     }
 
     /**
+     * 获取当前渲染配置
+     */
+    fun getConfig(): OverlayConfig {
+        return config
+    }
+
+    /**
      * 检查是否有悬浮窗权限
      */
     fun hasOverlayPermission(): Boolean {

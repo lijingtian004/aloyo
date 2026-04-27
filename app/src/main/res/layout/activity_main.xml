@@ -209,7 +209,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginBottom="16dp">
+        android:layout_marginBottom="8dp">
 
         <Button
             android:id="@+id/btn_show_overlay"
@@ -228,6 +228,34 @@
             android:layout_weight="1"
             android:text="隐藏悬浮窗"
             android:backgroundTint="#533483"
+            android:textColor="#FFFFFF"
+            android:layout_marginStart="4dp" />
+    </LinearLayout>
+
+    <!-- 显示设置按钮区域 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="16dp">
+
+        <Button
+            android:id="@+id/btn_toggle_label"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:text="隐藏标签"
+            android:backgroundTint="#0F3460"
+            android:textColor="#FFFFFF"
+            android:layout_marginEnd="4dp" />
+
+        <Button
+            android:id="@+id/btn_toggle_confidence"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:text="隐藏置信度"
+            android:backgroundTint="#0F3460"
             android:textColor="#FFFFFF"
             android:layout_marginStart="4dp" />
     </LinearLayout>
