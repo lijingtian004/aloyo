@@ -386,7 +386,36 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
         // 创建新窗口（使用当前屏幕尺寸）
         showDetectionOverlay()
 
+        // 重新创建控制面板，确保其布局参数也使用新的屏幕尺寸
+        recreateControlPanel()
+
         android.util.Log.i(TAG, "Detection overlay recreated")
+    }
+
+    /**
+     * 重新创建控制面板
+     * 屏幕旋转后控制面板需要更新位置以适应新的屏幕方向
+     */
+    private fun recreateControlPanel() {
+        val oldPanel = controlPanel
+
+        // 清除旧引用
+        controlPanel = null
+        controlLayoutParams = null
+
+        // 移除旧窗口
+        if (oldPanel != null) {
+            try {
+                windowManager.removeView(oldPanel)
+            } catch (e: Exception) {
+                android.util.Log.w(TAG, "Error removing old control panel", e)
+            }
+        }
+
+        // 创建新控制面板（使用当前屏幕方向计算初始位置）
+        showControlPanel()
+
+        android.util.Log.i(TAG, "Control panel recreated")
     }
 
     /**

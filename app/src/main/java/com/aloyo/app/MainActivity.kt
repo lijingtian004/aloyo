@@ -1186,9 +1186,11 @@ class MainActivity : AppCompatActivity() {
             // 1. 检测框坐标始终基于当前屏幕方向的像素坐标系
             // 2. overlay窗口也使用当前屏幕方向的尺寸
             // 3. 只有实时屏幕尺寸能保证两者一致
+            // 注意：必须使用与overlay窗口相同的尺寸来源（DisplayManager），避免缓存问题
+            val displayManager = getSystemService(Context.DISPLAY_SERVICE) as android.hardware.display.DisplayManager
+            val display = displayManager.getDisplay(android.view.Display.DEFAULT_DISPLAY)
             val realMetrics = android.util.DisplayMetrics()
-            @Suppress("DEPRECATION")
-            (getSystemService(WINDOW_SERVICE) as WindowManager).defaultDisplay.getRealMetrics(realMetrics)
+            display.getRealMetrics(realMetrics)
             overlayManager.setSourceSize(realMetrics.widthPixels, realMetrics.heightPixels)
 
             // 执行推理
