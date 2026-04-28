@@ -117,9 +117,9 @@ class MainActivity : AppCompatActivity() {
     private var captureService: ScreenCaptureService? = null
     private var isServiceBound = false
 
-    // 屏幕旋转处理：使用 OrientationEventListener 实时检测旋转
-    private var orientationEventListener: android.view.OrientationEventListener? = null
-    private var lastOrientation = -1
+    // 屏幕旋转处理：标记是否需要刷新overlay（在onConfigurationChanged中设置）
+    @Volatile
+    private var pendingOrientationRefresh = false
 
     // 服务连接回调
     private val serviceConnection = object : ServiceConnection {
@@ -225,6 +225,22 @@ class MainActivity : AppCompatActivity() {
         initButtons()
 
         logger.info(TAG, "MainActivity created")
+    }
+
+    /**
+     * 屏幕旋转/配置变化回调
+     * 当设备横竖屏切换时，系统会调用此方法
+     * 我们在此时标记需要刷新overlay，并在下一帧处理时执行刷新
+     */
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        val isLandscape = newConfig.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val orientationName = if (isLandscape) "landscape" else "portrait"
+        logger.info(TAG, "onConfigurationChanged: orientation=$orientationName")
+
+        if (isCapturing) {
+            pendingOrientationRefresh = true
+        }
     }
 
     /**
@@ -1043,9 +1059,6 @@ class MainActivity : AppCompatActivity() {
         // 显示悬浮窗
         overlayManager.show()
 
-        // 注册屏幕旋转监听器，实时检测横竖屏切换
-        registerOrientationListener()
-
         isCapturing = true
         updateStatus("截屏推理运行中")
         logger.info(TAG, "Capture and inference started")
@@ -1078,6 +1091,7 @@ class MainActivity : AppCompatActivity() {
 
         // 判断当前是否为横屏模式（宽 > 高）
         val isLandscape = screenWidth > screenHeight
+        logger.info(TAG, "applyCaptureRegion: screen=${screenWidth}x${screenHeight}, landscape=$isLandscape")
 
         val region = when (captureRegionSpinner.selectedItemPosition) {
             1 -> {
@@ -1144,11 +1158,6 @@ class MainActivity : AppCompatActivity() {
         ScreenCaptureService.stop(this)
         overlayManager.hide()
 
-        // 注销屏幕旋转监听器
-        orientationEventListener?.disable()
-        orientationEventListener = null
-        lastOrientation = -1
-
         isCapturing = false
         updateStatus("已停止")
         logger.info(TAG, "Capture and inference stopped")
@@ -1176,20 +1185,30 @@ class MainActivity : AppCompatActivity() {
         }
 
         try {
-            // 定期检查屏幕旋转（每3秒检查一次，避免每帧都查询系统服务）
-            val now = System.currentTimeMillis()
-            if (now - lastRotationCheckTime >= 3000) {
-                lastRotationCheckTime = now
-                val rotated = captureService?.checkAndRecreateForRotation() ?: false
-                if (rotated) {
-                    // 屏幕旋转了，重新计算截屏区域
-                    applyCaptureRegion()
-                    // 刷新overlay导航栏状态和窗口尺寸
-                    overlayManager.refreshNavigationBarState()
-                } else {
-                    // 即使未旋转，也定期刷新导航栏状态
-                    // 用户可能在运行中切换手势导航模式
-                    overlayManager.refreshNavigationBarState()
+            // 检查是否有待处理的屏幕旋转刷新（由onConfigurationChanged设置）
+            if (pendingOrientationRefresh) {
+                pendingOrientationRefresh = false
+                logger.info(TAG, "Processing pending orientation refresh")
+                // 屏幕旋转了，重新计算截屏区域
+                applyCaptureRegion()
+                // 刷新overlay导航栏状态和窗口尺寸
+                overlayManager.refreshNavigationBarState()
+            } else {
+                // 定期检查屏幕旋转（每3秒检查一次，作为兜底机制）
+                val now = System.currentTimeMillis()
+                if (now - lastRotationCheckTime >= 3000) {
+                    lastRotationCheckTime = now
+                    val rotated = captureService?.checkAndRecreateForRotation() ?: false
+                    if (rotated) {
+                        // 屏幕旋转了，重新计算截屏区域
+                        applyCaptureRegion()
+                        // 刷新overlay导航栏状态和窗口尺寸
+                        overlayManager.refreshNavigationBarState()
+                    } else {
+                        // 即使未旋转，也定期刷新导航栏状态
+                        // 用户可能在运行中切换手势导航模式
+                        overlayManager.refreshNavigationBarState()
+                    }
                 }
             }
 
@@ -1341,45 +1360,7 @@ class MainActivity : AppCompatActivity() {
         stopCapture()
         inferenceEngine.release()
         overlayManager.release()
-        orientationEventListener?.disable()
         logger.info(TAG, "MainActivity destroyed")
         super.onDestroy()
-    }
-
-    /**
-     * 注册屏幕旋转监听器
-     * 使用 OrientationEventListener 实时检测设备旋转角度
-     * 当检测到横竖屏切换时，立即刷新 overlay 窗口尺寸
-     */
-    private fun registerOrientationListener() {
-        orientationEventListener = object : android.view.OrientationEventListener(this) {
-            override fun onOrientationChanged(orientation: Int) {
-                if (orientation == ORIENTATION_UNKNOWN) return
-
-                // 将角度转换为屏幕方向 (0=竖屏, 1=横屏)
-                val newOrientation = when (orientation) {
-                    in 45..134 -> 1   // 横屏（左侧朝上）
-                    in 225..314 -> 1  // 横屏（右侧朝上）
-                    else -> 0         // 竖屏
-                }
-
-                if (newOrientation != lastOrientation) {
-                    lastOrientation = newOrientation
-                    val orientationName = if (newOrientation == 1) "landscape" else "portrait"
-                    logger.info(TAG, "Orientation changed to $orientationName (angle=$orientation)")
-
-                    // 延迟500ms后刷新overlay，等待系统完成旋转动画和Display尺寸更新
-                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                        if (isCapturing) {
-                            overlayManager.refreshNavigationBarState()
-                            applyCaptureRegion()
-                            logger.info(TAG, "Overlay refreshed after orientation change")
-                        }
-                    }, 500)
-                }
-            }
-        }
-        orientationEventListener?.enable()
-        logger.info(TAG, "Orientation listener registered")
     }
 }
