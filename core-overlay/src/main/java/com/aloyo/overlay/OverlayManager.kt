@@ -397,6 +397,27 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
     }
 
     /**
+     * 公开方法：强制重新创建overlay窗口
+     * 供外部调用（如MainActivity检测到方向变化时）
+     */
+    fun forceRecreateOverlay() {
+        if (!isShowing) {
+            android.util.Log.w(TAG, "Cannot recreate overlay: not showing")
+            return
+        }
+        android.util.Log.i(TAG, "Force recreating overlay")
+        recreateDetectionOverlay()
+    }
+
+    /**
+     * 获取当前overlay布局参数
+     * 供外部调用检查overlay窗口尺寸
+     */
+    fun getOverlayLayoutParams(): WindowManager.LayoutParams? {
+        return overlayLayoutParams
+    }
+
+    /**
      * 重新创建控制面板
      * 屏幕旋转后控制面板需要更新位置以适应新的屏幕方向
      */
