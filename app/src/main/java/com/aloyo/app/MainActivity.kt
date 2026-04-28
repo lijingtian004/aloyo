@@ -1143,21 +1143,16 @@ class MainActivity : AppCompatActivity() {
         // 横竖屏切换时，强制重新创建overlay窗口以确保尺寸正确
         // 原因：onConfigurationChanged 在游戏全屏模式下可能不被调用
         // 而 applyCaptureRegion 在每次截屏帧处理时都会被调用，可以确保及时检测方向变化
+        // 关键：使用 screenWidth/screenHeight（与截屏区域计算使用相同的值）来判断方向
+        // 避免使用 WindowManager 再次获取尺寸，因为可能存在时序问题
         if (overlayManager.isShowing) {
-            val windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
-            val displayMetrics = android.util.DisplayMetrics()
-            @Suppress("DEPRECATION")
-            windowManager.defaultDisplay.getRealMetrics(displayMetrics)
-            val currentWidth = displayMetrics.widthPixels
-            val currentHeight = displayMetrics.heightPixels
-            val isCurrentlyLandscape = currentWidth > currentHeight
-
-            // 如果当前方向与overlay窗口方向不一致，强制重建
             val overlayParams = overlayManager.getOverlayLayoutParams()
             if (overlayParams != null) {
                 val overlayIsLandscape = overlayParams.width > overlayParams.height
+                // 使用 screenWidth/screenHeight（已在此方法开头获取）
+                val isCurrentlyLandscape = screenWidth > screenHeight
                 if (isCurrentlyLandscape != overlayIsLandscape) {
-                    logger.info(TAG, "Orientation mismatch: overlay=${overlayParams.width}x${overlayParams.height}, screen=${currentWidth}x${currentHeight}, forcing recreation")
+                    logger.info(TAG, "Orientation mismatch: overlay=${overlayParams.width}x${overlayParams.height}, screen=${screenWidth}x${screenHeight}, forcing recreation")
                     overlayManager.forceRecreateOverlay()
                 }
             }
