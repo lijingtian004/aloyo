@@ -1092,29 +1092,24 @@ class MainActivity : AppCompatActivity() {
      * 横屏模式下自动适配宽高，确保截屏区域始终居中
      */
     private fun applyCaptureRegion() {
-        // 获取物理屏幕尺寸：优先使用截屏bitmap尺寸（来自MediaProjection，反映真实方向）
-        // Display/WindowManager在声明configChanges的应用中返回应用窗口尺寸（始终竖屏）
-        val bmpW = captureService?.lastBitmapWidth ?: 0
-        val bmpH = captureService?.lastBitmapHeight ?: 0
-        val screenWidth: Int
-        val screenHeight: Int
-        if (bmpW > 0 && bmpH > 0) {
-            screenWidth = bmpW
-            screenHeight = bmpH
-        } else {
-            // fallback：使用Display.getRealSize
-            val windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
-            @Suppress("DEPRECATION")
-            val display = windowManager.defaultDisplay
-            val realSize = android.graphics.Point()
-            @Suppress("DEPRECATION")
-            display.getRealSize(realSize)
-            screenWidth = realSize.x
-            screenHeight = realSize.y
-        }
+        // 获取屏幕尺寸
+        // 注意：由于应用声明了configChanges，所有显示API都返回竖屏尺寸
+        // 使用OrientationEventListener检测到的方向来判断横竖屏
+        val windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
+        @Suppress("DEPRECATION")
+        val display = windowManager.defaultDisplay
+        val realSize = android.graphics.Point()
+        @Suppress("DEPRECATION")
+        display.getRealSize(realSize)
+        // 始终以竖屏尺寸为基础（短边x长边）
+        val shortSide = minOf(realSize.x, realSize.y)
+        val longSide = maxOf(realSize.x, realSize.y)
 
-        // 判断当前是否为横屏模式（宽 > 高）
-        val isLandscape = screenWidth > screenHeight
+        // 使用OrientationEventListener检测到的方向（比尺寸判断更可靠）
+        val isLandscape = lastKnownOrientation == 1
+        // 横屏时：宽=长边，高=短边；竖屏时：宽=短边，高=长边
+        val screenWidth = if (isLandscape) longSide else shortSide
+        val screenHeight = if (isLandscape) shortSide else longSide
         logger.info(TAG, "applyCaptureRegion: screen=${screenWidth}x${screenHeight}, landscape=$isLandscape")
 
         val region = when (captureRegionSpinner.selectedItemPosition) {
@@ -1243,26 +1238,18 @@ class MainActivity : AppCompatActivity() {
         }
 
         try {
-            // 获取物理屏幕尺寸：优先使用截屏bitmap尺寸（来自MediaProjection，反映真实方向）
-            // Display/WindowManager在声明configChanges的应用中返回应用窗口尺寸（始终竖屏）
-            val bmpW = captureService?.lastBitmapWidth ?: 0
-            val bmpH = captureService?.lastBitmapHeight ?: 0
-            val currentScreenWidth: Int
-            val currentScreenHeight: Int
-            if (bmpW > 0 && bmpH > 0) {
-                currentScreenWidth = bmpW
-                currentScreenHeight = bmpH
-            } else {
-                // fallback：使用Display.getRealSize
-                val wm = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
-                @Suppress("DEPRECATION")
-                val display = wm.defaultDisplay
-                val realSize = android.graphics.Point()
-                @Suppress("DEPRECATION")
-                display.getRealSize(realSize)
-                currentScreenWidth = realSize.x
-                currentScreenHeight = realSize.y
-            }
+            // 获取屏幕尺寸（使用OrientationEventListener判断方向）
+            val wm = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
+            @Suppress("DEPRECATION")
+            val display = wm.defaultDisplay
+            val realSize = android.graphics.Point()
+            @Suppress("DEPRECATION")
+            display.getRealSize(realSize)
+            val shortSide = minOf(realSize.x, realSize.y)
+            val longSide = maxOf(realSize.x, realSize.y)
+            val isLandscape = lastKnownOrientation == 1
+            val currentScreenWidth = if (isLandscape) longSide else shortSide
+            val currentScreenHeight = if (isLandscape) shortSide else longSide
 
             // 检查是否有待处理的屏幕旋转刷新（由onConfigurationChanged设置）
             if (pendingOrientationRefresh) {
