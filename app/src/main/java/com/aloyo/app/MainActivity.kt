@@ -1139,34 +1139,6 @@ class MainActivity : AppCompatActivity() {
         // 同步截屏区域到overlay（用于绘制截屏范围框）
         overlayManager.setCaptureRegion(region)
         logger.info(TAG, "Capture region set: ${if (region.isFullScreen) "FULL_SCREEN" else "${region.width}x${region.height} at (${region.x},${region.y})"}, landscape=$isLandscape")
-
-        // 横竖屏切换时，强制重新创建overlay窗口以确保尺寸正确
-        // 原因：refreshNavigationBarState()中的方向检测可能因时序问题未触发
-        // 在applyCaptureRegion中我们已经获取了正确的屏幕尺寸，可以直接判断
-        if (overlayManager.isShowing) {
-            val windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
-            val displayMetrics = android.util.DisplayMetrics()
-            @Suppress("DEPRECATION")
-            windowManager.defaultDisplay.getRealMetrics(displayMetrics)
-            val currentWidth = displayMetrics.widthPixels
-            val currentHeight = displayMetrics.heightPixels
-            val isCurrentlyLandscape = currentWidth > currentHeight
-
-            // 如果当前方向与overlay窗口方向不一致，强制重建
-            // 注意：这里不直接调用recreateDetectionOverlay，而是通过refreshNavigationBarState
-            // 让它自己检测并处理，但我们在调用前确保Display尺寸已经更新
-            if (isCurrentlyLandscape != isLandscape) {
-                logger.info(TAG, "Orientation mismatch detected: overlay may need recreation")
-            }
-            // 无论方向是否匹配，都调用refreshNavigationBarState让它自己判断
-            // 但延迟一点执行，确保Display尺寸已经更新
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                if (isCapturing) {
-                    overlayManager.refreshNavigationBarState()
-                    logger.info(TAG, "Delayed refreshNavigationBarState executed")
-                }
-            }, 300)
-        }
     }
 
     /**
@@ -1220,6 +1192,8 @@ class MainActivity : AppCompatActivity() {
                 // 屏幕旋转了，重新计算截屏区域
                 applyCaptureRegion()
                 // 刷新overlay导航栏状态和窗口尺寸
+                // 注意：先调用refreshNavigationBarState检测方向变化并重建overlay
+                // 然后再设置sourceSize，确保使用最新的屏幕尺寸
                 overlayManager.refreshNavigationBarState()
             } else {
                 // 定期检查屏幕旋转（每3秒检查一次，作为兜底机制）
@@ -1246,11 +1220,11 @@ class MainActivity : AppCompatActivity() {
             // 1. 检测框坐标始终基于当前屏幕方向的像素坐标系
             // 2. overlay窗口也使用当前屏幕方向的尺寸
             // 3. 只有实时屏幕尺寸能保证两者一致
-            // 注意：必须使用与overlay窗口相同的尺寸来源（DisplayManager），避免缓存问题
-            val displayManager = getSystemService(Context.DISPLAY_SERVICE) as android.hardware.display.DisplayManager
-            val display = displayManager.getDisplay(android.view.Display.DEFAULT_DISPLAY)
+            // 使用 WindowManager 获取当前窗口尺寸（与 OverlayManager 保持一致）
+            val windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
             val realMetrics = android.util.DisplayMetrics()
-            display.getRealMetrics(realMetrics)
+            @Suppress("DEPRECATION")
+            windowManager.defaultDisplay.getRealMetrics(realMetrics)
             overlayManager.setSourceSize(realMetrics.widthPixels, realMetrics.heightPixels)
 
             // 执行推理
