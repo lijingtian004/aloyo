@@ -121,6 +121,10 @@ class MainActivity : AppCompatActivity() {
     @Volatile
     private var pendingOrientationRefresh = false
 
+    // 上一次记录的屏幕方向（用于OrientationEventListener检测旋转）
+    private var lastKnownOrientation: Int = -1  // -1=未知, 0=竖屏, 1=横屏
+    private var orientationListener: android.view.OrientationEventListener? = null
+
     // 服务连接回调
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -223,6 +227,24 @@ class MainActivity : AppCompatActivity() {
         initViews()
         initModelSpinner()
         initButtons()
+
+        // 初始化方向监听器（作为onConfigurationChanged的备用方案）
+        // 某些设备（如OnePlus Android 15）在游戏全屏模式下可能不调用onConfigurationChanged
+        orientationListener = object : android.view.OrientationEventListener(this) {
+            override fun onOrientationChanged(orientation: Int) {
+                if (orientation == ORIENTATION_UNKNOWN) return
+                // 0-45度或315-360度=竖屏，其他范围=横屏
+                val newOrientation = if (orientation in 45..314) 1 else 0
+                if (newOrientation != lastKnownOrientation && lastKnownOrientation != -1) {
+                    logger.info(TAG, "OrientationEventListener: orientation changed from ${if (lastKnownOrientation==1) "landscape" else "portrait"} to ${if (newOrientation==1) "landscape" else "portrait"}")
+                    if (isCapturing) {
+                        pendingOrientationRefresh = true
+                    }
+                }
+                lastKnownOrientation = newOrientation
+            }
+        }
+        orientationListener?.enable()
 
         logger.info(TAG, "MainActivity created")
     }
@@ -1070,14 +1092,17 @@ class MainActivity : AppCompatActivity() {
      * 横屏模式下自动适配宽高，确保截屏区域始终居中
      */
     private fun applyCaptureRegion() {
-        // 始终使用WindowManager获取最新屏幕尺寸
-        // 不能依赖captureService的缓存值，因为旋转后缓存值可能还没更新
+        // 获取物理屏幕尺寸（而非应用窗口尺寸）
+        // OnePlus Android 15 上 WindowManager.getRealMetrics() 返回应用窗口尺寸（始终竖屏）
+        // 使用 Display.getRealSize() 获取物理屏幕尺寸
         val windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
-        val displayMetrics = android.util.DisplayMetrics()
         @Suppress("DEPRECATION")
-        windowManager.defaultDisplay.getRealMetrics(displayMetrics)
-        val screenWidth = displayMetrics.widthPixels
-        val screenHeight = displayMetrics.heightPixels
+        val display = windowManager.defaultDisplay
+        val realSize = android.graphics.Point()
+        @Suppress("DEPRECATION")
+        display.getRealSize(realSize)
+        val screenWidth = realSize.x
+        val screenHeight = realSize.y
 
         // 判断当前是否为横屏模式（宽 > 高）
         val isLandscape = screenWidth > screenHeight
@@ -1209,14 +1234,15 @@ class MainActivity : AppCompatActivity() {
         }
 
         try {
-            // 始终使用WindowManager获取最新屏幕尺寸
-            // 不能依赖captureService的缓存值，因为旋转后缓存值可能还没更新
+            // 获取物理屏幕尺寸（使用Display.getRealSize，与applyCaptureRegion一致）
             val wm = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
-            val dm = android.util.DisplayMetrics()
             @Suppress("DEPRECATION")
-            wm.defaultDisplay.getRealMetrics(dm)
-            val currentScreenWidth = dm.widthPixels
-            val currentScreenHeight = dm.heightPixels
+            val display = wm.defaultDisplay
+            val realSize = android.graphics.Point()
+            @Suppress("DEPRECATION")
+            display.getRealSize(realSize)
+            val currentScreenWidth = realSize.x
+            val currentScreenHeight = realSize.y
 
             // 检查是否有待处理的屏幕旋转刷新（由onConfigurationChanged设置）
             if (pendingOrientationRefresh) {
@@ -1387,6 +1413,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        orientationListener?.disable()
+        orientationListener = null
         stopCapture()
         inferenceEngine.release()
         overlayManager.release()
