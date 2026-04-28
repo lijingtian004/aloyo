@@ -83,8 +83,12 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
      * FLAG_NOT_TOUCHABLE：触摸穿透到下层应用
      * 使用getRealMetrics获取真实全屏尺寸（含刘海和导航栏），显式设置窗口大小
      * 确保overlay覆盖完整屏幕，包括刘海区域和导航栏区域
+     *
+     * @param forcedWidth 强制指定的窗口宽度（可选，用于方向变化时确保使用正确尺寸）
+     * @param forcedHeight 强制指定的窗口高度（可选，用于方向变化时确保使用正确尺寸）
+     *                    当外部已经获取到正确的屏幕尺寸时，传入此参数可避免WindowManager返回旧尺寸的问题
      */
-    private fun showDetectionOverlay() {
+    private fun showDetectionOverlay(forcedWidth: Int = 0, forcedHeight: Int = 0) {
         overlayView = DetectionOverlayView(context).apply {
             setOverlayConfig(config)
             onLog = { msg -> this@OverlayManager.onLog?.invoke(msg) }
@@ -98,7 +102,15 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
         }
 
         // 获取真实全屏尺寸（含刘海和导航栏）
-        val realScreenSize = getRealScreenSize()
+        // 如果外部传入了强制尺寸，优先使用外部传入的值
+        // 原因：在某些设备上（如OnePlus/Android 15），当应用未随方向旋转时，
+        // WindowManager.currentWindowMetrics 可能返回旧方向的尺寸
+        val realScreenSize = if (forcedWidth > 0 && forcedHeight > 0) {
+            android.util.Log.i(TAG, "Using forced screen size: ${forcedWidth}x${forcedHeight}")
+            ScreenSize(forcedWidth, forcedHeight)
+        } else {
+            getRealScreenSize()
+        }
 
         // 使用真实全屏尺寸显式设置窗口大小，而非MATCH_PARENT
         // MATCH_PARENT不包含导航栏区域，导致overlay底部留白
@@ -303,11 +315,19 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
      *
      * 重要：屏幕旋转时（宽高互换），必须重新创建overlay窗口，
      * 因为updateViewLayout无法正确处理方向变化导致的尺寸翻转。
+     *
+     * @param forcedWidth 强制指定的窗口宽度（可选，当外部已获取到正确尺寸时传入）
+     * @param forcedHeight 强制指定的窗口高度（可选，当外部已获取到正确尺寸时传入）
      */
-    fun refreshNavigationBarState() {
+    fun refreshNavigationBarState(forcedWidth: Int = 0, forcedHeight: Int = 0) {
         updateNavigationBarInfo()
 
-        val realSize = getRealScreenSize()
+        // 优先使用外部传入的强制尺寸，避免WindowManager返回旧尺寸
+        val realSize = if (forcedWidth > 0 && forcedHeight > 0) {
+            ScreenSize(forcedWidth, forcedHeight)
+        } else {
+            getRealScreenSize()
+        }
         val params = overlayLayoutParams
 
         if (params != null && overlayView != null) {
@@ -317,7 +337,7 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
             if (isOrientationChanged) {
                 // 方向变化了，必须重新创建overlay窗口
                 android.util.Log.i(TAG, "Orientation changed, recreating overlay window: ${params.width}x${params.height} -> ${realSize.width}x${realSize.height}")
-                recreateDetectionOverlay()
+                recreateDetectionOverlay(forcedWidth, forcedHeight)
             } else if (params.width != realSize.width || params.height != realSize.height) {
                 // 只是尺寸微调（如导航栏显示/隐藏），更新布局参数即可
                 params.width = realSize.width
@@ -370,8 +390,11 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
     /**
      * 重新创建检测覆盖层窗口
      * 屏幕旋转时必须重新创建，因为updateViewLayout无法正确处理方向变化
+     *
+     * @param forcedWidth 强制指定的窗口宽度（可选）
+     * @param forcedHeight 强制指定的窗口高度（可选）
      */
-    private fun recreateDetectionOverlay() {
+    private fun recreateDetectionOverlay(forcedWidth: Int = 0, forcedHeight: Int = 0) {
         val oldView = overlayView
 
         // 清除旧引用，确保showDetectionOverlay创建全新的窗口
@@ -387,8 +410,8 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
             }
         }
 
-        // 创建新窗口（使用当前屏幕尺寸）
-        showDetectionOverlay()
+        // 创建新窗口（使用传入的强制尺寸或自行查询当前屏幕尺寸）
+        showDetectionOverlay(forcedWidth, forcedHeight)
 
         // 重新创建控制面板，确保其布局参数也使用新的屏幕尺寸
         recreateControlPanel()
@@ -399,14 +422,18 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
     /**
      * 公开方法：强制重新创建overlay窗口
      * 供外部调用（如MainActivity检测到方向变化时）
+     *
+     * @param forcedWidth 强制指定的窗口宽度（可选，当外部已获取到正确尺寸时传入）
+     * @param forcedHeight 强制指定的窗口高度（可选，当外部已获取到正确尺寸时传入）
+     *                    传入强制尺寸可避免WindowManager在方向变化后返回旧尺寸的问题
      */
-    fun forceRecreateOverlay() {
+    fun forceRecreateOverlay(forcedWidth: Int = 0, forcedHeight: Int = 0) {
         if (!isShowing) {
             android.util.Log.w(TAG, "Cannot recreate overlay: not showing")
             return
         }
-        android.util.Log.i(TAG, "Force recreating overlay")
-        recreateDetectionOverlay()
+        android.util.Log.i(TAG, "Force recreating overlay, forcedSize=${if (forcedWidth > 0) "${forcedWidth}x${forcedHeight}" else "auto"}")
+        recreateDetectionOverlay(forcedWidth, forcedHeight)
     }
 
     /**
