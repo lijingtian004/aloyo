@@ -49,8 +49,6 @@ class MainActivity : AppCompatActivity() {
         private const val TAG = "MainActivity"
         private const val REQUEST_MEDIA_PROJECTION = 1001
         private const val REQUEST_OVERLAY_PERMISSION = 1002
-        private const val ORIENTATION_DEBOUNCE_MS = 500L   // 防抖延迟：方向变化后等500ms确认稳定
-        private const val ORIENTATION_COOLDOWN_MS = 1500L  // 冷却期：overlay重建后1.5s内不再重建
 
         // YOLOv8 COCO 80类默认标签
         private val DEFAULT_COCO_LABELS = listOf(
@@ -118,23 +116,6 @@ class MainActivity : AppCompatActivity() {
     // 截屏服务绑定相关
     private var captureService: ScreenCaptureService? = null
     private var isServiceBound = false
-
-    // 屏幕旋转处理：标记是否需要刷新overlay（在onConfigurationChanged中设置）
-    @Volatile
-    private var pendingOrientationRefresh = false
-
-    // 上一次记录的屏幕方向（0=竖屏, 1=横屏）
-    // 使用OrientationEventListener（传感器）检测物理旋转
-    // OnePlus Android 15 上 Display.getRotation() 和 getRealSize() 都返回竖屏值，不可靠
-    private var lastKnownOrientation: Int = -1  // -1=未知
-
-    // 屏幕旋转监听器（使用传感器检测物理方向）
-    private var orientationListener: android.view.OrientationEventListener? = null
-
-    // 旋转防抖：传感器在边界角度会快速震荡，需要等方向稳定后再触发overlay重建
-    private val orientationHandler = android.os.Handler(android.os.Looper.getMainLooper())
-    private var pendingOrientationRunnable: Runnable? = null
-    private var lastOrientationChangeTime = 0L
 
     // 服务连接回调
     private val serviceConnection = object : ServiceConnection {
@@ -239,70 +220,13 @@ class MainActivity : AppCompatActivity() {
         initModelSpinner()
         initButtons()
 
-        // 初始化屏幕方向
-        // 使用OrientationEventListener（传感器）检测物理旋转方向
-        // OnePlus Android 15 上 Display.getRotation() 不可靠，始终返回竖屏
-        // 使用迟滞（hysteresis）防止边界角度震荡 + 防抖确认方向稳定
-        orientationListener = object : android.view.OrientationEventListener(this) {
-            override fun onOrientationChanged(orientation: Int) {
-                if (orientation == ORIENTATION_UNKNOWN) return
-                val current = lastKnownOrientation
-                val newOrientation = if (current == 1) {
-                    // 当前横屏，只有角度退出到竖屏范围才切换（<30° 或 >330°）
-                    if (orientation < 30 || orientation > 330) 0 else 1
-                } else {
-                    // 当前竖屏（或未知），只有角度进入横屏范围才切换（60°-300°）
-                    if (orientation in 60..300) 1 else 0
-                }
-                if (newOrientation != lastKnownOrientation) {
-                    // 检查冷却期：overlay刚重建后不要立即再触发
-                    val now = System.currentTimeMillis()
-                    if (now - lastOrientationChangeTime < ORIENTATION_COOLDOWN_MS) {
-                        return
-                    }
-                    logger.info(TAG, "OrientationEventListener: orientation pending ${if (newOrientation==1) "landscape" else "portrait"} ($orientation°), debouncing...")
-                    // 取消之前的防抖
-                    pendingOrientationRunnable?.let { orientationHandler.removeCallbacks(it) }
-                    // 启动新的防抖定时器
-                    pendingOrientationRunnable = Runnable {
-                        if (newOrientation != lastKnownOrientation) {
-                            lastKnownOrientation = newOrientation
-                            lastOrientationChangeTime = System.currentTimeMillis()
-                            logger.info(TAG, "OrientationEventListener: orientation confirmed ${if (newOrientation==1) "landscape" else "portrait"}")
-                            if (isCapturing) {
-                                pendingOrientationRefresh = true
-                            }
-                        }
-                    }
-                    orientationHandler.postDelayed(pendingOrientationRunnable!!, ORIENTATION_DEBOUNCE_MS)
-                }
-            }
-        }
-        orientationListener?.enable()
+        // 屏幕旋转处理说明：
+        // OnePlus Android 15 上 Display.getRotation() 和 getRealSize() 都返回竖屏值
+        // MediaProjection 截图也始终是竖屏尺寸
+        // 系统会自动旋转所有窗口内容（包括 overlay），无需手动重建 overlay
+        // 始终使用竖屏坐标系，让系统处理视觉旋转
 
-        // 初始方向用传感器当前值，如果传感器未知则默认竖屏
-        lastKnownOrientation = getDisplayOrientation()
-        logger.info(TAG, "MainActivity created, initial orientation=${if (lastKnownOrientation==1) "landscape" else "portrait"}")
-    }
-
-    /**
-     * 屏幕旋转/配置变化回调
-     * 当设备横竖屏切换时，系统会调用此方法
-     * 我们在此时标记需要刷新overlay，并在下一帧处理时执行刷新
-     */
-    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
-        super.onConfigurationChanged(newConfig)
-        val isLandscape = newConfig.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-        val orientationName = if (isLandscape) "landscape" else "portrait"
-        logger.info(TAG, "onConfigurationChanged: orientation=$orientationName")
-
-        // 同步更新lastKnownOrientation
-        // 注意：OnePlus上此回调可能不触发，主要依赖OrientationEventListener
-        lastKnownOrientation = if (isLandscape) 1 else 0
-
-        if (isCapturing) {
-            pendingOrientationRefresh = true
-        }
+        logger.info(TAG, "MainActivity created")
     }
 
     /**
@@ -1128,61 +1052,40 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * 根据UI选择应用截屏区域
-     * 使用WindowManager获取实时屏幕尺寸，确保旋转后也能正确计算
-     * 横屏模式下自动适配宽高，确保截屏区域始终居中
+     * 始终使用竖屏坐标系（OnePlus Android 15 上所有显示API都返回竖屏尺寸）
+     * 系统会自动旋转 overlay 窗口内容，无需手动处理横屏
      */
     private fun applyCaptureRegion() {
-        // 获取屏幕尺寸
-        // 注意：由于应用声明了configChanges，所有显示API都返回竖屏尺寸
-        // 使用OrientationEventListener检测到的方向来判断横竖屏
+        // 获取屏幕尺寸（始终返回竖屏尺寸）
         val windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
         @Suppress("DEPRECATION")
         val display = windowManager.defaultDisplay
         val realSize = android.graphics.Point()
         @Suppress("DEPRECATION")
         display.getRealSize(realSize)
-        // 始终以竖屏尺寸为基础（短边x长边）
-        val shortSide = minOf(realSize.x, realSize.y)
-        val longSide = maxOf(realSize.x, realSize.y)
-
-        // 使用OrientationEventListener检测到的方向（比尺寸判断更可靠）
-        val isLandscape = lastKnownOrientation == 1
-        // 横屏时：宽=长边，高=短边；竖屏时：宽=短边，高=长边
-        val screenWidth = if (isLandscape) longSide else shortSide
-        val screenHeight = if (isLandscape) shortSide else longSide
-        logger.info(TAG, "applyCaptureRegion: screen=${screenWidth}x${screenHeight}, landscape=$isLandscape")
+        val screenWidth = minOf(realSize.x, realSize.y)  // 短边 = 宽
+        val screenHeight = maxOf(realSize.x, realSize.y)  // 长边 = 高
 
         val region = when (captureRegionSpinner.selectedItemPosition) {
             1 -> {
-                // 256×256 居中（基于全屏尺寸，包含刘海和导航栏）
-                // 横屏时确保区域不超出屏幕边界
                 val size = 256
                 val x = ((screenWidth - size) / 2).coerceAtLeast(0)
                 val y = ((screenHeight - size) / 2).coerceAtLeast(0)
                 CaptureRegion(x, y, size, size)
             }
             2 -> {
-                // 320×320 居中（基于全屏尺寸）
                 val size = 320
                 val x = ((screenWidth - size) / 2).coerceAtLeast(0)
                 val y = ((screenHeight - size) / 2).coerceAtLeast(0)
                 CaptureRegion(x, y, size, size)
             }
             3 -> {
-                // 640×640 居中（基于全屏尺寸）
-                // 横屏时若屏幕高度不足640，自动缩小到屏幕短边的90%
-                val size = if (isLandscape && screenHeight < 640) {
-                    (screenHeight * 0.9).toInt()
-                } else {
-                    640
-                }
+                val size = 640
                 val x = ((screenWidth - size) / 2).coerceAtLeast(0)
                 val y = ((screenHeight - size) / 2).coerceAtLeast(0)
                 CaptureRegion(x, y, size, size)
             }
             4 -> {
-                // 居中75%区域（基于全屏尺寸）
-                // 横屏时使用屏幕短边的75%作为区域尺寸，确保区域不会超出屏幕
                 val minDimension = minOf(screenWidth, screenHeight)
                 val w = (minDimension * 0.75).toInt()
                 val h = w
@@ -1195,49 +1098,8 @@ class MainActivity : AppCompatActivity() {
 
         currentCaptureRegion = region
         captureService?.setCaptureRegion(region)
-        // 同步截屏区域到overlay（用于绘制截屏范围框）
         overlayManager.setCaptureRegion(region)
-        logger.info(TAG, "Capture region set: ${if (region.isFullScreen) "FULL_SCREEN" else "${region.width}x${region.height} at (${region.x},${region.y})"}, landscape=$isLandscape")
-
-        // 横竖屏切换时，强制重新创建overlay窗口以确保尺寸正确
-        // 注意：必须在主线程延迟执行，避免在 onDraw 回调中直接操作 WindowManager 导致闪退
-        // 关键：延迟执行时必须重新获取方向，不能用闭包中的旧值
-        if (overlayManager.isShowing) {
-            val overlayParams = overlayManager.getOverlayLayoutParams()
-            if (overlayParams != null) {
-                val overlayIsLandscape = overlayParams.width > overlayParams.height
-                val isCurrentlyLandscape = screenWidth > screenHeight
-                if (isCurrentlyLandscape != overlayIsLandscape) {
-                    logger.info(TAG, "Orientation mismatch: overlay=${overlayParams.width}x${overlayParams.height}, screen=${screenWidth}x${screenHeight}, will recreate after delay")
-                    // 延迟100ms后在主线程执行重建
-                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                        if (isCapturing && overlayManager.isShowing) {
-                            // 重新获取当前方向和尺寸（不能用闭包中的旧值）
-                            val currentIsLandscape = lastKnownOrientation == 1
-                            val currentParams = overlayManager.getOverlayLayoutParams()
-                            if (currentParams != null) {
-                                val currentOverlayIsLandscape = currentParams.width > currentParams.height
-                                if (currentIsLandscape != currentOverlayIsLandscape) {
-                                    // 根据当前方向计算正确的屏幕尺寸
-                                    val wm = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
-                                    @Suppress("DEPRECATION")
-                                    val display = wm.defaultDisplay
-                                    val realSize = android.graphics.Point()
-                                    @Suppress("DEPRECATION")
-                                    display.getRealSize(realSize)
-                                    val shortSide = minOf(realSize.x, realSize.y)
-                                    val longSide = maxOf(realSize.x, realSize.y)
-                                    val correctWidth = if (currentIsLandscape) longSide else shortSide
-                                    val correctHeight = if (currentIsLandscape) shortSide else longSide
-                                    logger.info(TAG, "Delayed recreation executing: overlay=${currentParams.width}x${currentParams.height}, orientation=${if (currentIsLandscape) "landscape" else "portrait"}, size=${correctWidth}x${correctHeight}")
-                                    overlayManager.forceRecreateOverlay(correctWidth, correctHeight)
-                                }
-                            }
-                        }
-                    }, 100)
-                }
-            }
-        }
+        logger.info(TAG, "Capture region set: ${if (region.isFullScreen) "FULL_SCREEN" else "${region.width}x${region.height} at (${region.x},${region.y})"}")
     }
 
     /**
@@ -1278,51 +1140,30 @@ class MainActivity : AppCompatActivity() {
      */
     private fun onCaptureFrame(bitmap: Bitmap, captureTimeMs: Long) {
         if (!isInferenceReady) {
-            // 推理未就绪，回收Bitmap
             bitmap.recycle()
             return
         }
 
         try {
-            // 获取屏幕尺寸（使用OrientationEventListener判断方向）
+            // 始终使用竖屏坐标系（OnePlus Android 15 上 getRealSize 始终返回竖屏值）
             val wm = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
             @Suppress("DEPRECATION")
             val display = wm.defaultDisplay
             val realSize = android.graphics.Point()
             @Suppress("DEPRECATION")
             display.getRealSize(realSize)
-            val shortSide = minOf(realSize.x, realSize.y)
-            val longSide = maxOf(realSize.x, realSize.y)
-            val isLandscape = lastKnownOrientation == 1
-            val currentScreenWidth = if (isLandscape) longSide else shortSide
-            val currentScreenHeight = if (isLandscape) shortSide else longSide
+            val screenWidth = minOf(realSize.x, realSize.y)  // 短边 = 宽
+            val screenHeight = maxOf(realSize.x, realSize.y)  // 长边 = 高
 
-            // 检查是否有待处理的屏幕旋转刷新（由onConfigurationChanged设置）
-            if (pendingOrientationRefresh) {
-                pendingOrientationRefresh = false
-                logger.info(TAG, "Processing pending orientation refresh")
-                // 屏幕旋转了，重新计算截屏区域
-                // applyCaptureRegion 内部已处理overlay重建（延迟100ms），无需再调用 refreshNavigationBarState
-                applyCaptureRegion()
-                // 重置定时器，避免延迟重建期间再次触发定期检查
-                lastRotationCheckTime = System.currentTimeMillis()
-            } else {
-                // 定期刷新导航栏状态（用户可能在运行中切换手势导航模式）
-                val now = System.currentTimeMillis()
-                if (now - lastRotationCheckTime >= 3000) {
-                    lastRotationCheckTime = now
-                    overlayManager.refreshNavigationBarState(currentScreenWidth, currentScreenHeight)
-                }
+            // 定期刷新导航栏状态
+            val now = System.currentTimeMillis()
+            if (now - lastRotationCheckTime >= 3000) {
+                lastRotationCheckTime = now
+                overlayManager.refreshNavigationBarState(screenWidth, screenHeight)
             }
 
-            // 设置原图尺寸（用于坐标映射：原图像素→屏幕像素）
-            // 统一使用实时屏幕尺寸作为source size，确保横屏/竖屏切换时坐标映射正确
-            // 原因：
-            // 1. 检测框坐标始终基于当前屏幕方向的像素坐标系
-            // 2. overlay窗口也使用当前屏幕方向的尺寸
-            // 3. 只有实时屏幕尺寸能保证两者一致
-            // 使用已经获取到的 currentScreenWidth/currentScreenHeight，避免重复查询WindowManager可能返回旧尺寸
-            overlayManager.setSourceSize(currentScreenWidth, currentScreenHeight)
+            // 设置源尺寸（竖屏坐标系，与 overlay 和 bitmap 一致）
+            overlayManager.setSourceSize(screenWidth, screenHeight)
 
             // 执行推理
             val (detections, metrics) = inferenceEngine.inferWithMetrics(bitmap)
@@ -1455,27 +1296,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * 获取当前显示方向
-     * 使用Display.getRotation()判断实际屏幕方向
-     * ROTATION_0/ROTATION_180 = 竖屏, ROTATION_90/ROTATION_270 = 横屏
-     * 尊重用户的手动旋转按钮，而非仅依赖传感器
-     */
-    private fun getDisplayOrientation(): Int {
-        val wm = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
-        @Suppress("DEPRECATION")
-        val rotation = wm.defaultDisplay.rotation
-        return if (rotation == android.view.Surface.ROTATION_90 || rotation == android.view.Surface.ROTATION_270) {
-            1  // 横屏
-        } else {
-            0  // 竖屏
-        }
-    }
-
     override fun onDestroy() {
-        pendingOrientationRunnable?.let { orientationHandler.removeCallbacks(it) }
-        orientationListener?.disable()
-        orientationListener = null
         stopCapture()
         inferenceEngine.release()
         overlayManager.release()
