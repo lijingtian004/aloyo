@@ -59,7 +59,7 @@ class CaptureManager(private val context: Context) : ICaptureSource {
     @Volatile private var screenHeight: Int = 0
     private var screenDensity: Int = 0
 
-    // VirtualDisplay创建时的方向（用于判断是否需要旋转bitmap）
+    // VirtualDisplay创建时的方向（仅用于日志记录）
     // 0=竖屏(portrait), 1=横屏(landscape)
     @Volatile private var displayOrientation: Int = 0
 
@@ -200,6 +200,16 @@ class CaptureManager(private val context: Context) : ICaptureSource {
 
     /**
      * 处理ImageReader中的新帧
+     *
+     * 重要：VirtualDisplay使用AUTO_MIRROR标志，旋转后bitmap会自动适配新方向
+     * 不需要手动旋转bitmap！手动旋转会导致坐标系错乱。
+     *
+     * 横屏适配原理：
+     * 1. VirtualDisplay的AUTO_MIRROR会自动将主屏幕内容（包括旋转后的）镜像到VirtualDisplay
+     * 2. 横屏时，bitmap的宽高 = 横屏的宽高（如1920x1080）
+     * 3. 截屏区域坐标也是基于横屏坐标系计算的
+     * 4. 推理在横屏bitmap上进行，检测框坐标自然就是横屏坐标
+     * 5. overlay使用横屏屏幕尺寸，坐标映射一致
      */
     private fun processImage(reader: ImageReader) {
         val captureStartTime = System.currentTimeMillis()
@@ -217,24 +227,17 @@ class CaptureManager(private val context: Context) : ICaptureSource {
             // 将Image转换为Bitmap
             val bitmap = imageToBitmap(image)
             if (bitmap != null) {
-                // 获取当前实时屏幕方向
-                val currentOrientation = getCurrentOrientation()
-                val bitmapOrientation = if (bitmap.width > bitmap.height) 1 else 0
-
-                // 检测屏幕是否旋转：bitmap方向与当前屏幕方向不匹配时需要旋转
-                val rotatedBitmap = if (bitmapOrientation != currentOrientation) {
-                    // 屏幕旋转了，bitmap需要旋转90度以匹配当前方向
-                    rotateBitmapToOrientation(bitmap, currentOrientation)
-                } else {
-                    bitmap
+                // 诊断：记录bitmap尺寸和当前屏幕尺寸
+                if (frameCount == 0) {
+                    android.util.Log.i(TAG, "processImage: bitmap=${bitmap.width}x${bitmap.height}, screen=${screenWidth}x${screenHeight}")
                 }
 
                 // 如果设置了截屏区域，裁剪Bitmap到指定区域
-                // 截屏区域坐标是基于当前屏幕方向的，需要确保bitmap方向正确后再裁剪
+                // 截屏区域坐标是基于当前屏幕方向的，bitmap也是当前屏幕方向，直接裁剪即可
                 val finalBitmap = if (!captureRegion.isFullScreen) {
-                    cropBitmap(rotatedBitmap, captureRegion)
+                    cropBitmap(bitmap, captureRegion)
                 } else {
-                    rotatedBitmap
+                    bitmap
                 }
 
                 val captureTimeMs = System.currentTimeMillis() - captureStartTime
@@ -264,18 +267,6 @@ class CaptureManager(private val context: Context) : ICaptureSource {
         } finally {
             image?.close()
         }
-    }
-
-    /**
-     * 获取当前屏幕方向
-     * 0=竖屏(portrait), 1=横屏(landscape)
-     */
-    private fun getCurrentOrientation(): Int {
-        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        val displayMetrics = DisplayMetrics()
-        @Suppress("DEPRECATION")
-        windowManager.defaultDisplay.getRealMetrics(displayMetrics)
-        return if (displayMetrics.widthPixels > displayMetrics.heightPixels) 1 else 0
     }
 
     /**
@@ -328,64 +319,17 @@ class CaptureManager(private val context: Context) : ICaptureSource {
     }
 
     /**
-     * 根据目标方向旋转Bitmap
+     * 保留方法但不再使用：AUTO_MIRROR已自动处理旋转
      * 当VirtualDisplay的bitmap方向与当前屏幕方向不匹配时（旋转后），
      * 需要将bitmap旋转90度以匹配当前屏幕方向
      *
-     * @param bitmap 原始bitmap
-     * @param targetOrientation 目标方向 0=竖屏, 1=横屏
+     * @deprecated AUTO_MIRROR标志已自动处理旋转，此方法不再调用
      */
+    @Deprecated("AUTO_MIRROR handles rotation automatically")
     private fun rotateBitmapToOrientation(bitmap: Bitmap, targetOrientation: Int): Bitmap {
-        val matrix = android.graphics.Matrix()
-
-        // 确定bitmap当前方向
-        val bitmapOrientation = if (bitmap.width > bitmap.height) 1 else 0
-
-        // 计算旋转角度
-        // 竖屏(0) -> 横屏(1): 顺时针90度
-        // 横屏(1) -> 竖屏(0): 逆时针90度
-        val rotation = when {
-            bitmapOrientation == 0 && targetOrientation == 1 -> 90f   // 竖屏转横屏
-            bitmapOrientation == 1 && targetOrientation == 0 -> -90f  // 横屏转竖屏
-            else -> 90f // 默认顺时针90度
-        }
-
-        matrix.postRotate(rotation)
-
-        val rotatedBitmap = Bitmap.createBitmap(
-            bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true
-        )
-
-        // 旋转后获取实时屏幕尺寸作为目标尺寸
-        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        val displayMetrics = DisplayMetrics()
-        @Suppress("DEPRECATION")
-        windowManager.defaultDisplay.getRealMetrics(displayMetrics)
-        val targetWidth = displayMetrics.widthPixels
-        val targetHeight = displayMetrics.heightPixels
-
-        // 旋转后可能需要裁剪到屏幕尺寸
-        val result = if (rotatedBitmap.width != targetWidth || rotatedBitmap.height != targetHeight) {
-            // 裁剪到目标尺寸（取中心区域）
-            val cropX = ((rotatedBitmap.width - targetWidth) / 2).coerceAtLeast(0)
-            val cropY = ((rotatedBitmap.height - targetHeight) / 2).coerceAtLeast(0)
-            val cropW = targetWidth.coerceAtMost(rotatedBitmap.width - cropX)
-            val cropH = targetHeight.coerceAtMost(rotatedBitmap.height - cropY)
-            Bitmap.createBitmap(rotatedBitmap, cropX, cropY, cropW, cropH)
-        } else {
-            rotatedBitmap
-        }
-
-        // 回收原始bitmap（如果创建了新的）
-        if (result !== bitmap) {
-            bitmap.recycle()
-        }
-        if (result !== rotatedBitmap) {
-            rotatedBitmap.recycle()
-        }
-
-        android.util.Log.i(TAG, "Bitmap rotated: ${bitmap.width}x${bitmap.height} -> ${result.width}x${result.height}, rotation=$rotation, targetOrientation=${if (targetOrientation==1) "landscape" else "portrait"}")
-        return result
+        // 直接返回原bitmap，不做任何旋转
+        android.util.Log.w(TAG, "rotateBitmapToOrientation called but AUTO_MIRROR already handles rotation, returning original bitmap")
+        return bitmap
     }
 
     /**
