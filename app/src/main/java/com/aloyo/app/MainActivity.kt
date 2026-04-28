@@ -1274,7 +1274,8 @@ class MainActivity : AppCompatActivity() {
                     } else {
                         // 即使未旋转，也定期刷新导航栏状态
                         // 用户可能在运行中切换手势导航模式
-                        overlayManager.refreshNavigationBarState()
+                        // 传入正确尺寸，避免getRealScreenSize()在OnePlus上返回竖屏尺寸
+                        overlayManager.refreshNavigationBarState(currentScreenWidth, currentScreenHeight)
                     }
                 }
             }
