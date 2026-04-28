@@ -127,16 +127,20 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
 
     /**
      * 获取真实全屏尺寸（包含刘海和导航栏）
-     * 使用DisplayManager获取最新Display对象，避免缓存问题
-     * 这是获取屏幕旋转后最新尺寸最可靠的方法
+     * 使用WindowManager获取当前Display对象，这是获取屏幕旋转后最新尺寸最可靠的方法
      */
     private fun getRealScreenSize(): ScreenSize {
-        // 使用DisplayManager获取最新Display对象，避免defaultDisplay缓存问题
-        val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as android.hardware.display.DisplayManager
-        val display = displayManager.getDisplay(android.view.Display.DEFAULT_DISPLAY)
         val displayMetrics = DisplayMetrics()
-        display.getRealMetrics(displayMetrics)
-        return ScreenSize(displayMetrics.widthPixels, displayMetrics.heightPixels)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Android 11+ 使用 WindowManager.getCurrentWindowMetrics()
+            val windowMetrics = windowManager.currentWindowMetrics
+            val bounds = windowMetrics.bounds
+            return ScreenSize(bounds.width(), bounds.height())
+        } else {
+            @Suppress("DEPRECATION")
+            windowManager.defaultDisplay.getRealMetrics(displayMetrics)
+            return ScreenSize(displayMetrics.widthPixels, displayMetrics.heightPixels)
+        }
     }
 
     /**

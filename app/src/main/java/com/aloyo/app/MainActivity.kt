@@ -1139,6 +1139,34 @@ class MainActivity : AppCompatActivity() {
         // 同步截屏区域到overlay（用于绘制截屏范围框）
         overlayManager.setCaptureRegion(region)
         logger.info(TAG, "Capture region set: ${if (region.isFullScreen) "FULL_SCREEN" else "${region.width}x${region.height} at (${region.x},${region.y})"}, landscape=$isLandscape")
+
+        // 横竖屏切换时，强制重新创建overlay窗口以确保尺寸正确
+        // 原因：refreshNavigationBarState()中的方向检测可能因时序问题未触发
+        // 在applyCaptureRegion中我们已经获取了正确的屏幕尺寸，可以直接判断
+        if (overlayManager.isShowing) {
+            val windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
+            val displayMetrics = android.util.DisplayMetrics()
+            @Suppress("DEPRECATION")
+            windowManager.defaultDisplay.getRealMetrics(displayMetrics)
+            val currentWidth = displayMetrics.widthPixels
+            val currentHeight = displayMetrics.heightPixels
+            val isCurrentlyLandscape = currentWidth > currentHeight
+
+            // 如果当前方向与overlay窗口方向不一致，强制重建
+            // 注意：这里不直接调用recreateDetectionOverlay，而是通过refreshNavigationBarState
+            // 让它自己检测并处理，但我们在调用前确保Display尺寸已经更新
+            if (isCurrentlyLandscape != isLandscape) {
+                logger.info(TAG, "Orientation mismatch detected: overlay may need recreation")
+            }
+            // 无论方向是否匹配，都调用refreshNavigationBarState让它自己判断
+            // 但延迟一点执行，确保Display尺寸已经更新
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                if (isCapturing) {
+                    overlayManager.refreshNavigationBarState()
+                    logger.info(TAG, "Delayed refreshNavigationBarState executed")
+                }
+            }, 300)
+        }
     }
 
     /**
