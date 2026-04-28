@@ -49,6 +49,8 @@ class MainActivity : AppCompatActivity() {
         private const val TAG = "MainActivity"
         private const val REQUEST_MEDIA_PROJECTION = 1001
         private const val REQUEST_OVERLAY_PERMISSION = 1002
+        private const val ORIENTATION_DEBOUNCE_MS = 500L   // 防抖延迟：方向变化后等500ms确认稳定
+        private const val ORIENTATION_COOLDOWN_MS = 1500L  // 冷却期：overlay重建后1.5s内不再重建
 
         // YOLOv8 COCO 80类默认标签
         private val DEFAULT_COCO_LABELS = listOf(
@@ -128,6 +130,11 @@ class MainActivity : AppCompatActivity() {
 
     // 屏幕旋转监听器（使用传感器检测物理方向）
     private var orientationListener: android.view.OrientationEventListener? = null
+
+    // 旋转防抖：传感器在边界角度会快速震荡，需要等方向稳定后再触发overlay重建
+    private val orientationHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var pendingOrientationRunnable: Runnable? = null
+    private var lastOrientationChangeTime = 0L
 
     // 服务连接回调
     private val serviceConnection = object : ServiceConnection {
@@ -235,17 +242,39 @@ class MainActivity : AppCompatActivity() {
         // 初始化屏幕方向
         // 使用OrientationEventListener（传感器）检测物理旋转方向
         // OnePlus Android 15 上 Display.getRotation() 不可靠，始终返回竖屏
+        // 使用迟滞（hysteresis）防止边界角度震荡 + 防抖确认方向稳定
         orientationListener = object : android.view.OrientationEventListener(this) {
             override fun onOrientationChanged(orientation: Int) {
                 if (orientation == ORIENTATION_UNKNOWN) return
-                // 0°±45 和 180°±45 = 竖屏, 90°±45 和 270°±45 = 横屏
-                val newOrientation = if ((orientation in 45..135) || (orientation in 225..315)) 1 else 0
+                val current = lastKnownOrientation
+                val newOrientation = if (current == 1) {
+                    // 当前横屏，只有角度退出到竖屏范围才切换（<30° 或 >330°）
+                    if (orientation < 30 || orientation > 330) 0 else 1
+                } else {
+                    // 当前竖屏（或未知），只有角度进入横屏范围才切换（60°-300°）
+                    if (orientation in 60..300) 1 else 0
+                }
                 if (newOrientation != lastKnownOrientation) {
-                    lastKnownOrientation = newOrientation
-                    logger.info(TAG, "OrientationEventListener: orientation changed to ${if (newOrientation==1) "landscape" else "portrait"} ($orientation°)")
-                    if (isCapturing) {
-                        pendingOrientationRefresh = true
+                    // 检查冷却期：overlay刚重建后不要立即再触发
+                    val now = System.currentTimeMillis()
+                    if (now - lastOrientationChangeTime < ORIENTATION_COOLDOWN_MS) {
+                        return
                     }
+                    logger.info(TAG, "OrientationEventListener: orientation pending ${if (newOrientation==1) "landscape" else "portrait"} ($orientation°), debouncing...")
+                    // 取消之前的防抖
+                    pendingOrientationRunnable?.let { orientationHandler.removeCallbacks(it) }
+                    // 启动新的防抖定时器
+                    pendingOrientationRunnable = Runnable {
+                        if (newOrientation != lastKnownOrientation) {
+                            lastKnownOrientation = newOrientation
+                            lastOrientationChangeTime = System.currentTimeMillis()
+                            logger.info(TAG, "OrientationEventListener: orientation confirmed ${if (newOrientation==1) "landscape" else "portrait"}")
+                            if (isCapturing) {
+                                pendingOrientationRefresh = true
+                            }
+                        }
+                    }
+                    orientationHandler.postDelayed(pendingOrientationRunnable!!, ORIENTATION_DEBOUNCE_MS)
                 }
             }
         }
@@ -1444,6 +1473,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        pendingOrientationRunnable?.let { orientationHandler.removeCallbacks(it) }
         orientationListener?.disable()
         orientationListener = null
         stopCapture()
