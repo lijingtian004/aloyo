@@ -117,6 +117,10 @@ class MainActivity : AppCompatActivity() {
     private var captureService: ScreenCaptureService? = null
     private var isServiceBound = false
 
+    // 屏幕旋转处理：使用 OrientationEventListener 实时检测旋转
+    private var orientationEventListener: android.view.OrientationEventListener? = null
+    private var lastOrientation = -1
+
     // 服务连接回调
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -1039,6 +1043,9 @@ class MainActivity : AppCompatActivity() {
         // 显示悬浮窗
         overlayManager.show()
 
+        // 注册屏幕旋转监听器，实时检测横竖屏切换
+        registerOrientationListener()
+
         isCapturing = true
         updateStatus("截屏推理运行中")
         logger.info(TAG, "Capture and inference started")
@@ -1136,6 +1143,12 @@ class MainActivity : AppCompatActivity() {
         // 停止截屏服务
         ScreenCaptureService.stop(this)
         overlayManager.hide()
+
+        // 注销屏幕旋转监听器
+        orientationEventListener?.disable()
+        orientationEventListener = null
+        lastOrientation = -1
+
         isCapturing = false
         updateStatus("已停止")
         logger.info(TAG, "Capture and inference stopped")
@@ -1328,7 +1341,45 @@ class MainActivity : AppCompatActivity() {
         stopCapture()
         inferenceEngine.release()
         overlayManager.release()
+        orientationEventListener?.disable()
         logger.info(TAG, "MainActivity destroyed")
         super.onDestroy()
+    }
+
+    /**
+     * 注册屏幕旋转监听器
+     * 使用 OrientationEventListener 实时检测设备旋转角度
+     * 当检测到横竖屏切换时，立即刷新 overlay 窗口尺寸
+     */
+    private fun registerOrientationListener() {
+        orientationEventListener = object : android.view.OrientationEventListener(this) {
+            override fun onOrientationChanged(orientation: Int) {
+                if (orientation == ORIENTATION_UNKNOWN) return
+
+                // 将角度转换为屏幕方向 (0=竖屏, 1=横屏)
+                val newOrientation = when (orientation) {
+                    in 45..134 -> 1   // 横屏（左侧朝上）
+                    in 225..314 -> 1  // 横屏（右侧朝上）
+                    else -> 0         // 竖屏
+                }
+
+                if (newOrientation != lastOrientation) {
+                    lastOrientation = newOrientation
+                    val orientationName = if (newOrientation == 1) "landscape" else "portrait"
+                    logger.info(TAG, "Orientation changed to $orientationName (angle=$orientation)")
+
+                    // 延迟500ms后刷新overlay，等待系统完成旋转动画和Display尺寸更新
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        if (isCapturing) {
+                            overlayManager.refreshNavigationBarState()
+                            applyCaptureRegion()
+                            logger.info(TAG, "Overlay refreshed after orientation change")
+                        }
+                    }, 500)
+                }
+            }
+        }
+        orientationEventListener?.enable()
+        logger.info(TAG, "Orientation listener registered")
     }
 }
