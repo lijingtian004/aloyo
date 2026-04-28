@@ -285,14 +285,26 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
      * 刷新导航栏状态
      * 在屏幕旋转、导航栏显示/隐藏变化时调用
      * 同时更新overlay窗口尺寸以匹配当前真实全屏尺寸
+     *
+     * 重要：屏幕旋转时（宽高互换），必须重新创建overlay窗口，
+     * 因为updateViewLayout无法正确处理方向变化导致的尺寸翻转。
      */
     fun refreshNavigationBarState() {
         updateNavigationBarInfo()
-        // 更新overlay窗口尺寸以匹配当前真实全屏尺寸
+
         val realSize = getRealScreenSize()
         val params = overlayLayoutParams
+
         if (params != null && overlayView != null) {
-            if (params.width != realSize.width || params.height != realSize.height) {
+            // 检测是否发生了方向变化（宽高互换）
+            val isOrientationChanged = (params.width > params.height) != (realSize.width > realSize.height)
+
+            if (isOrientationChanged) {
+                // 方向变化了，必须重新创建overlay窗口
+                android.util.Log.i(TAG, "Orientation changed, recreating overlay window: ${params.width}x${params.height} -> ${realSize.width}x${realSize.height}")
+                recreateDetectionOverlay()
+            } else if (params.width != realSize.width || params.height != realSize.height) {
+                // 只是尺寸微调（如导航栏显示/隐藏），更新布局参数即可
                 params.width = realSize.width
                 params.height = realSize.height
                 try {
@@ -303,6 +315,37 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
                 }
             }
         }
+    }
+
+    /**
+     * 重新创建检测覆盖层窗口
+     * 屏幕旋转时必须重新创建，因为updateViewLayout无法正确处理方向变化
+     */
+    private fun recreateDetectionOverlay() {
+        val oldView = overlayView
+        val oldParams = overlayLayoutParams
+
+        // 保存当前状态
+        val currentDetections = oldView?.let {
+            // 通过反射或直接访问获取当前检测数据（如果可能）
+            // 实际上DetectionOverlayView没有公开获取detections的方法
+            // 所以重新创建后会等待下一帧数据
+            emptyList<com.aloyo.common.Detection>()
+        } ?: emptyList()
+
+        // 移除旧窗口
+        if (oldView != null) {
+            try {
+                windowManager.removeView(oldView)
+            } catch (e: Exception) {
+                android.util.Log.w(TAG, "Error removing old overlay", e)
+            }
+        }
+
+        // 创建新窗口（使用当前屏幕尺寸）
+        showDetectionOverlay()
+
+        android.util.Log.i(TAG, "Detection overlay recreated")
     }
 
     /**
