@@ -1160,31 +1160,37 @@ class MainActivity : AppCompatActivity() {
         logger.info(TAG, "Capture region set: ${if (region.isFullScreen) "FULL_SCREEN" else "${region.width}x${region.height} at (${region.x},${region.y})"}, landscape=$isLandscape")
 
         // 横竖屏切换时，强制重新创建overlay窗口以确保尺寸正确
-        // 原因：onConfigurationChanged 在游戏全屏模式下可能不被调用
-        // 而 applyCaptureRegion 在每次截屏帧处理时都会被调用，可以确保及时检测方向变化
-        // 关键：使用 screenWidth/screenHeight（与截屏区域计算使用相同的值）来判断方向
-        // 避免使用 WindowManager 再次获取尺寸，因为可能存在时序问题
         // 注意：必须在主线程延迟执行，避免在 onDraw 回调中直接操作 WindowManager 导致闪退
+        // 关键：延迟执行时必须重新获取方向，不能用闭包中的旧值
         if (overlayManager.isShowing) {
             val overlayParams = overlayManager.getOverlayLayoutParams()
             if (overlayParams != null) {
                 val overlayIsLandscape = overlayParams.width > overlayParams.height
-                // 使用 screenWidth/screenHeight（已在此方法开头获取）
                 val isCurrentlyLandscape = screenWidth > screenHeight
                 if (isCurrentlyLandscape != overlayIsLandscape) {
                     logger.info(TAG, "Orientation mismatch: overlay=${overlayParams.width}x${overlayParams.height}, screen=${screenWidth}x${screenHeight}, will recreate after delay")
-                    // 延迟100ms后在主线程执行重建，避免在 onDraw 回调中直接操作 WindowManager
+                    // 延迟100ms后在主线程执行重建
                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                         if (isCapturing && overlayManager.isShowing) {
+                            // 重新获取当前方向和尺寸（不能用闭包中的旧值）
+                            val currentIsLandscape = lastKnownOrientation == 1
                             val currentParams = overlayManager.getOverlayLayoutParams()
                             if (currentParams != null) {
                                 val currentOverlayIsLandscape = currentParams.width > currentParams.height
-                                val currentScreenIsLandscape = screenWidth > screenHeight
-                                if (currentScreenIsLandscape != currentOverlayIsLandscape) {
-                                    logger.info(TAG, "Delayed recreation executing: overlay=${currentParams.width}x${currentParams.height}, screen=${screenWidth}x${screenHeight}")
-                                    // 传入已经获取到的正确屏幕尺寸，避免OverlayManager自己查询时返回旧尺寸
-                                    // 这是修复横屏闪退/尺寸不正确的关键：MainActivity通过captureService已经获取到了正确的尺寸
-                                    overlayManager.forceRecreateOverlay(screenWidth, screenHeight)
+                                if (currentIsLandscape != currentOverlayIsLandscape) {
+                                    // 根据当前方向计算正确的屏幕尺寸
+                                    val wm = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
+                                    @Suppress("DEPRECATION")
+                                    val display = wm.defaultDisplay
+                                    val realSize = android.graphics.Point()
+                                    @Suppress("DEPRECATION")
+                                    display.getRealSize(realSize)
+                                    val shortSide = minOf(realSize.x, realSize.y)
+                                    val longSide = maxOf(realSize.x, realSize.y)
+                                    val correctWidth = if (currentIsLandscape) longSide else shortSide
+                                    val correctHeight = if (currentIsLandscape) shortSide else longSide
+                                    logger.info(TAG, "Delayed recreation executing: overlay=${currentParams.width}x${currentParams.height}, orientation=${if (currentIsLandscape) "landscape" else "portrait"}, size=${correctWidth}x${correctHeight}")
+                                    overlayManager.forceRecreateOverlay(correctWidth, correctHeight)
                                 }
                             }
                         }
