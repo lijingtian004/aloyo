@@ -59,10 +59,16 @@ jobs:
           echo "NCNN SDK downloaded and extracted"
           ls -la core-inference/libs/ncnn-android-vulkan/
 
-      # 安装Android NDK
+      # 安装Android NDK（带重试，处理zip损坏问题）
       - name: 安装Android NDK
         run: |
-          echo "y" | ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --install "ndk;27.0.12077973" --channel=0
+          for i in 1 2 3; do
+            echo "Attempt $i: Installing NDK..."
+            ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --install "ndk;27.0.12077973" --channel=0 && break
+            echo "Attempt $i failed, cleaning cache and retrying..."
+            rm -rf ${ANDROID_SDK_ROOT}/ndk/27.0.12077973
+            sleep 5
+          done
           echo "NDK installed at: ${ANDROID_SDK_ROOT}/ndk/27.0.12077973"
 
       # 生成gradle-wrapper.jar（仓库中不含此文件）
