@@ -127,13 +127,22 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
 
     /**
      * 获取真实全屏尺寸（包含刘海和导航栏）
-     * getRealMetrics返回包含系统装饰的完整屏幕尺寸
+     * 使用WindowMetrics API (Android 11+) 或 fallback 到 getRealMetrics
+     * WindowMetrics在旋转后能更可靠地返回最新尺寸
      */
     private fun getRealScreenSize(): ScreenSize {
-        val displayMetrics = DisplayMetrics()
-        @Suppress("DEPRECATION")
-        windowManager.defaultDisplay.getRealMetrics(displayMetrics)
-        return ScreenSize(displayMetrics.widthPixels, displayMetrics.heightPixels)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Android 11+ 使用 WindowMetrics，旋转后更可靠
+            val windowMetrics = windowManager.currentWindowMetrics
+            val bounds = windowMetrics.bounds
+            ScreenSize(bounds.width(), bounds.height())
+        } else {
+            // Android 10 及以下使用 getRealMetrics
+            val displayMetrics = DisplayMetrics()
+            @Suppress("DEPRECATION")
+            windowManager.defaultDisplay.getRealMetrics(displayMetrics)
+            ScreenSize(displayMetrics.widthPixels, displayMetrics.heightPixels)
+        }
     }
 
     /**
@@ -323,15 +332,10 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
      */
     private fun recreateDetectionOverlay() {
         val oldView = overlayView
-        val oldParams = overlayLayoutParams
 
-        // 保存当前状态
-        val currentDetections = oldView?.let {
-            // 通过反射或直接访问获取当前检测数据（如果可能）
-            // 实际上DetectionOverlayView没有公开获取detections的方法
-            // 所以重新创建后会等待下一帧数据
-            emptyList<com.aloyo.common.Detection>()
-        } ?: emptyList()
+        // 清除旧引用，确保showDetectionOverlay创建全新的窗口
+        overlayView = null
+        overlayLayoutParams = null
 
         // 移除旧窗口
         if (oldView != null) {
