@@ -1092,17 +1092,26 @@ class MainActivity : AppCompatActivity() {
      * 横屏模式下自动适配宽高，确保截屏区域始终居中
      */
     private fun applyCaptureRegion() {
-        // 获取物理屏幕尺寸（而非应用窗口尺寸）
-        // OnePlus Android 15 上 WindowManager.getRealMetrics() 返回应用窗口尺寸（始终竖屏）
-        // 使用 Display.getRealSize() 获取物理屏幕尺寸
-        val windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
-        @Suppress("DEPRECATION")
-        val display = windowManager.defaultDisplay
-        val realSize = android.graphics.Point()
-        @Suppress("DEPRECATION")
-        display.getRealSize(realSize)
-        val screenWidth = realSize.x
-        val screenHeight = realSize.y
+        // 获取物理屏幕尺寸：优先使用截屏bitmap尺寸（来自MediaProjection，反映真实方向）
+        // Display/WindowManager在声明configChanges的应用中返回应用窗口尺寸（始终竖屏）
+        val bmpW = captureService?.lastBitmapWidth ?: 0
+        val bmpH = captureService?.lastBitmapHeight ?: 0
+        val screenWidth: Int
+        val screenHeight: Int
+        if (bmpW > 0 && bmpH > 0) {
+            screenWidth = bmpW
+            screenHeight = bmpH
+        } else {
+            // fallback：使用Display.getRealSize
+            val windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
+            @Suppress("DEPRECATION")
+            val display = windowManager.defaultDisplay
+            val realSize = android.graphics.Point()
+            @Suppress("DEPRECATION")
+            display.getRealSize(realSize)
+            screenWidth = realSize.x
+            screenHeight = realSize.y
+        }
 
         // 判断当前是否为横屏模式（宽 > 高）
         val isLandscape = screenWidth > screenHeight
@@ -1234,15 +1243,26 @@ class MainActivity : AppCompatActivity() {
         }
 
         try {
-            // 获取物理屏幕尺寸（使用Display.getRealSize，与applyCaptureRegion一致）
-            val wm = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
-            @Suppress("DEPRECATION")
-            val display = wm.defaultDisplay
-            val realSize = android.graphics.Point()
-            @Suppress("DEPRECATION")
-            display.getRealSize(realSize)
-            val currentScreenWidth = realSize.x
-            val currentScreenHeight = realSize.y
+            // 获取物理屏幕尺寸：优先使用截屏bitmap尺寸（来自MediaProjection，反映真实方向）
+            // Display/WindowManager在声明configChanges的应用中返回应用窗口尺寸（始终竖屏）
+            val bmpW = captureService?.lastBitmapWidth ?: 0
+            val bmpH = captureService?.lastBitmapHeight ?: 0
+            val currentScreenWidth: Int
+            val currentScreenHeight: Int
+            if (bmpW > 0 && bmpH > 0) {
+                currentScreenWidth = bmpW
+                currentScreenHeight = bmpH
+            } else {
+                // fallback：使用Display.getRealSize
+                val wm = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
+                @Suppress("DEPRECATION")
+                val display = wm.defaultDisplay
+                val realSize = android.graphics.Point()
+                @Suppress("DEPRECATION")
+                display.getRealSize(realSize)
+                currentScreenWidth = realSize.x
+                currentScreenHeight = realSize.y
+            }
 
             // 检查是否有待处理的屏幕旋转刷新（由onConfigurationChanged设置）
             if (pendingOrientationRefresh) {

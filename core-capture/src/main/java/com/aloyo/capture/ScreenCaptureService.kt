@@ -208,4 +208,14 @@ class ScreenCaptureService : Service() {
      * 获取当前屏幕高度（旋转后会更新）
      */
     val currentScreenHeight: Int get() = captureManager?.currentScreenHeight ?: 0
+
+    /**
+     * 获取最新截屏bitmap的宽度（反映物理屏幕真实方向）
+     */
+    val lastBitmapWidth: Int get() = captureManager?.lastBitmapWidth ?: 0
+
+    /**
+     * 获取最新截屏bitmap的高度（反映物理屏幕真实方向）
+     */
+    val lastBitmapHeight: Int get() = captureManager?.lastBitmapHeight ?: 0
 }

@@ -67,6 +67,13 @@ class CaptureManager(private val context: Context) : ICaptureSource {
     val currentScreenWidth: Int get() = screenWidth
     val currentScreenHeight: Int get() = screenHeight
 
+    // 最新截屏bitmap的尺寸（反映物理屏幕真实方向）
+    // 比WindowManager/Display更可靠，因为来自MediaProjection实际捕获的图像
+    @Volatile var lastBitmapWidth: Int = 0
+        private set
+    @Volatile var lastBitmapHeight: Int = 0
+        private set
+
     // 上一帧时间戳，用于计算截屏延迟
     private var lastFrameTimeMs: Long = 0
 
@@ -227,6 +234,10 @@ class CaptureManager(private val context: Context) : ICaptureSource {
             // 将Image转换为Bitmap
             val bitmap = imageToBitmap(image)
             if (bitmap != null) {
+                // 记录全屏bitmap尺寸（裁剪前，反映物理屏幕真实方向）
+                lastBitmapWidth = bitmap.width
+                lastBitmapHeight = bitmap.height
+
                 // 诊断：记录bitmap尺寸和当前屏幕尺寸
                 if (frameCount == 0) {
                     android.util.Log.i(TAG, "processImage: bitmap=${bitmap.width}x${bitmap.height}, screen=${screenWidth}x${screenHeight}")
