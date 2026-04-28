@@ -121,9 +121,9 @@ class MainActivity : AppCompatActivity() {
     @Volatile
     private var pendingOrientationRefresh = false
 
-    // 上一次记录的屏幕方向（用于OrientationEventListener检测旋转）
-    private var lastKnownOrientation: Int = -1  // -1=未知, 0=竖屏, 1=横屏
-    private var orientationListener: android.view.OrientationEventListener? = null
+    // 上一次记录的屏幕方向（0=竖屏, 1=横屏）
+    // 使用Display.getRotation()判断，尊重用户手动旋转按钮
+    private var lastKnownOrientation: Int = -1  // -1=未知
 
     // 服务连接回调
     private val serviceConnection = object : ServiceConnection {
@@ -228,25 +228,11 @@ class MainActivity : AppCompatActivity() {
         initModelSpinner()
         initButtons()
 
-        // 初始化方向监听器（作为onConfigurationChanged的备用方案）
-        // 某些设备（如OnePlus Android 15）在游戏全屏模式下可能不调用onConfigurationChanged
-        orientationListener = object : android.view.OrientationEventListener(this) {
-            override fun onOrientationChanged(orientation: Int) {
-                if (orientation == ORIENTATION_UNKNOWN) return
-                // 0-45度或315-360度=竖屏，其他范围=横屏
-                val newOrientation = if (orientation in 45..314) 1 else 0
-                if (newOrientation != lastKnownOrientation && lastKnownOrientation != -1) {
-                    logger.info(TAG, "OrientationEventListener: orientation changed from ${if (lastKnownOrientation==1) "landscape" else "portrait"} to ${if (newOrientation==1) "landscape" else "portrait"}")
-                    if (isCapturing) {
-                        pendingOrientationRefresh = true
-                    }
-                }
-                lastKnownOrientation = newOrientation
-            }
-        }
-        orientationListener?.enable()
-
-        logger.info(TAG, "MainActivity created")
+        // 初始化屏幕方向
+        // 使用Display.getRotation()判断实际显示方向（尊重用户的手动旋转按钮）
+        // 而非OrientationEventListener（只读传感器，不考虑自动旋转开关）
+        lastKnownOrientation = getDisplayOrientation()
+        logger.info(TAG, "MainActivity created, initial orientation=${if (lastKnownOrientation==1) "landscape" else "portrait"}")
     }
 
     /**
@@ -259,6 +245,9 @@ class MainActivity : AppCompatActivity() {
         val isLandscape = newConfig.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val orientationName = if (isLandscape) "landscape" else "portrait"
         logger.info(TAG, "onConfigurationChanged: orientation=$orientationName")
+
+        // 同步更新lastKnownOrientation（使用Display.getRotation()确认实际方向）
+        lastKnownOrientation = getDisplayOrientation()
 
         if (isCapturing) {
             pendingOrientationRefresh = true
@@ -1268,14 +1257,15 @@ class MainActivity : AppCompatActivity() {
                 lastRotationCheckTime = System.currentTimeMillis()
             } else {
                 // 定期检查屏幕旋转（每3秒检查一次，作为兜底机制）
+                // 使用Display.getRotation()检测实际显示方向，尊重用户手动旋转按钮
                 val now = System.currentTimeMillis()
                 if (now - lastRotationCheckTime >= 3000) {
                     lastRotationCheckTime = now
-                    val rotated = captureService?.checkAndRecreateForRotation() ?: false
-                    if (rotated) {
-                        // 屏幕旋转了，重新计算截屏区域
+                    val currentOrientation = getDisplayOrientation()
+                    if (currentOrientation != lastKnownOrientation) {
+                        lastKnownOrientation = currentOrientation
+                        logger.info(TAG, "Rotation detected via periodic check: orientation=${if (currentOrientation==1) "landscape" else "portrait"}")
                         applyCaptureRegion()
-                        // 重置定时器，避免延迟重建期间再次触发
                         lastRotationCheckTime = System.currentTimeMillis()
                     } else {
                         // 即使未旋转，也定期刷新导航栏状态
@@ -1426,9 +1416,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * 获取当前显示方向
+     * 使用Display.getRotation()判断实际屏幕方向
+     * ROTATION_0/ROTATION_180 = 竖屏, ROTATION_90/ROTATION_270 = 横屏
+     * 尊重用户的手动旋转按钮，而非仅依赖传感器
+     */
+    private fun getDisplayOrientation(): Int {
+        val wm = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
+        @Suppress("DEPRECATION")
+        val rotation = wm.defaultDisplay.rotation
+        return if (rotation == android.view.Surface.ROTATION_90 || rotation == android.view.Surface.ROTATION_270) {
+            1  // 横屏
+        } else {
+            0  // 竖屏
+        }
+    }
+
     override fun onDestroy() {
-        orientationListener?.disable()
-        orientationListener = null
         stopCapture()
         inferenceEngine.release()
         overlayManager.release()
