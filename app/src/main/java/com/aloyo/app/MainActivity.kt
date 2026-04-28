@@ -1070,24 +1070,14 @@ class MainActivity : AppCompatActivity() {
      * 横屏模式下自动适配宽高，确保截屏区域始终居中
      */
     private fun applyCaptureRegion() {
-        // 使用包含刘海和导航栏的全屏尺寸来计算居中位置
-        // getRealMetrics返回包含系统装饰的全屏尺寸，截屏图像也包含这些区域
-        // 因此居中计算应基于全屏尺寸，使截屏区域在完整截屏图像中居中
-        val screenWidth: Int
-        val screenHeight: Int
-        val svcWidth = captureService?.currentScreenWidth ?: 0
-        val svcHeight = captureService?.currentScreenHeight ?: 0
-        if (svcWidth > 0 && svcHeight > 0) {
-            screenWidth = svcWidth
-            screenHeight = svcHeight
-        } else {
-            val windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
-            val displayMetrics = android.util.DisplayMetrics()
-            @Suppress("DEPRECATION")
-            windowManager.defaultDisplay.getRealMetrics(displayMetrics)
-            screenWidth = displayMetrics.widthPixels
-            screenHeight = displayMetrics.heightPixels
-        }
+        // 始终使用WindowManager获取最新屏幕尺寸
+        // 不能依赖captureService的缓存值，因为旋转后缓存值可能还没更新
+        val windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
+        val displayMetrics = android.util.DisplayMetrics()
+        @Suppress("DEPRECATION")
+        windowManager.defaultDisplay.getRealMetrics(displayMetrics)
+        val screenWidth = displayMetrics.widthPixels
+        val screenHeight = displayMetrics.heightPixels
 
         // 判断当前是否为横屏模式（宽 > 高）
         val isLandscape = screenWidth > screenHeight
@@ -1219,34 +1209,24 @@ class MainActivity : AppCompatActivity() {
         }
 
         try {
-            // 获取当前正确的屏幕尺寸（用于后续所有操作，确保一致性）
-            // 优先使用captureService的尺寸，因为它来自MediaProjection的实时图像尺寸
-            val svcWidth = captureService?.currentScreenWidth ?: 0
-            val svcHeight = captureService?.currentScreenHeight ?: 0
-            val currentScreenWidth: Int
-            val currentScreenHeight: Int
-            if (svcWidth > 0 && svcHeight > 0) {
-                currentScreenWidth = svcWidth
-                currentScreenHeight = svcHeight
-            } else {
-                // fallback：使用WindowManager获取
-                val wm = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
-                val dm = android.util.DisplayMetrics()
-                @Suppress("DEPRECATION")
-                wm.defaultDisplay.getRealMetrics(dm)
-                currentScreenWidth = dm.widthPixels
-                currentScreenHeight = dm.heightPixels
-            }
+            // 始终使用WindowManager获取最新屏幕尺寸
+            // 不能依赖captureService的缓存值，因为旋转后缓存值可能还没更新
+            val wm = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
+            val dm = android.util.DisplayMetrics()
+            @Suppress("DEPRECATION")
+            wm.defaultDisplay.getRealMetrics(dm)
+            val currentScreenWidth = dm.widthPixels
+            val currentScreenHeight = dm.heightPixels
 
             // 检查是否有待处理的屏幕旋转刷新（由onConfigurationChanged设置）
             if (pendingOrientationRefresh) {
                 pendingOrientationRefresh = false
                 logger.info(TAG, "Processing pending orientation refresh")
                 // 屏幕旋转了，重新计算截屏区域
+                // applyCaptureRegion 内部已处理overlay重建（延迟100ms），无需再调用 refreshNavigationBarState
                 applyCaptureRegion()
-                // 刷新overlay导航栏状态和窗口尺寸
-                // 传入已经获取到的正确屏幕尺寸，避免OverlayManager自己查询时返回旧尺寸
-                overlayManager.refreshNavigationBarState(currentScreenWidth, currentScreenHeight)
+                // 重置定时器，避免延迟重建期间再次触发定期检查
+                lastRotationCheckTime = System.currentTimeMillis()
             } else {
                 // 定期检查屏幕旋转（每3秒检查一次，作为兜底机制）
                 val now = System.currentTimeMillis()
@@ -1256,8 +1236,8 @@ class MainActivity : AppCompatActivity() {
                     if (rotated) {
                         // 屏幕旋转了，重新计算截屏区域
                         applyCaptureRegion()
-                        // 刷新overlay导航栏状态和窗口尺寸，传入正确尺寸
-                        overlayManager.refreshNavigationBarState(currentScreenWidth, currentScreenHeight)
+                        // 重置定时器，避免延迟重建期间再次触发
+                        lastRotationCheckTime = System.currentTimeMillis()
                     } else {
                         // 即使未旋转，也定期刷新导航栏状态
                         // 用户可能在运行中切换手势导航模式
