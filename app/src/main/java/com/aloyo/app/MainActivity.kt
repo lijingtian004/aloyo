@@ -1047,6 +1047,7 @@ class MainActivity : AppCompatActivity() {
     /**
      * 根据UI选择应用截屏区域
      * 使用WindowManager获取实时屏幕尺寸，确保旋转后也能正确计算
+     * 横屏模式下自动适配宽高，确保截屏区域始终居中
      */
     private fun applyCaptureRegion() {
         // 使用包含刘海和导航栏的全屏尺寸来计算居中位置
@@ -1068,27 +1069,46 @@ class MainActivity : AppCompatActivity() {
             screenHeight = displayMetrics.heightPixels
         }
 
+        // 判断当前是否为横屏模式（宽 > 高）
+        val isLandscape = screenWidth > screenHeight
+
         val region = when (captureRegionSpinner.selectedItemPosition) {
             1 -> {
                 // 256×256 居中（基于全屏尺寸，包含刘海和导航栏）
+                // 横屏时确保区域不超出屏幕边界
                 val size = 256
-                CaptureRegion((screenWidth - size) / 2, (screenHeight - size) / 2, size, size)
+                val x = ((screenWidth - size) / 2).coerceAtLeast(0)
+                val y = ((screenHeight - size) / 2).coerceAtLeast(0)
+                CaptureRegion(x, y, size, size)
             }
             2 -> {
                 // 320×320 居中（基于全屏尺寸）
                 val size = 320
-                CaptureRegion((screenWidth - size) / 2, (screenHeight - size) / 2, size, size)
+                val x = ((screenWidth - size) / 2).coerceAtLeast(0)
+                val y = ((screenHeight - size) / 2).coerceAtLeast(0)
+                CaptureRegion(x, y, size, size)
             }
             3 -> {
                 // 640×640 居中（基于全屏尺寸）
-                val size = 640
-                CaptureRegion((screenWidth - size) / 2, (screenHeight - size) / 2, size, size)
+                // 横屏时若屏幕高度不足640，自动缩小到屏幕短边的90%
+                val size = if (isLandscape && screenHeight < 640) {
+                    (screenHeight * 0.9).toInt()
+                } else {
+                    640
+                }
+                val x = ((screenWidth - size) / 2).coerceAtLeast(0)
+                val y = ((screenHeight - size) / 2).coerceAtLeast(0)
+                CaptureRegion(x, y, size, size)
             }
             4 -> {
                 // 居中75%区域（基于全屏尺寸）
-                val w = (screenWidth * 0.75).toInt()
-                val h = (screenHeight * 0.75).toInt()
-                CaptureRegion((screenWidth - w) / 2, (screenHeight - h) / 2, w, h)
+                // 横屏时使用屏幕短边的75%作为区域尺寸，确保区域不会超出屏幕
+                val minDimension = minOf(screenWidth, screenHeight)
+                val w = (minDimension * 0.75).toInt()
+                val h = w
+                val x = ((screenWidth - w) / 2).coerceAtLeast(0)
+                val y = ((screenHeight - h) / 2).coerceAtLeast(0)
+                CaptureRegion(x, y, w, h)
             }
             else -> CaptureRegion.FULL_SCREEN
         }
@@ -1097,7 +1117,7 @@ class MainActivity : AppCompatActivity() {
         captureService?.setCaptureRegion(region)
         // 同步截屏区域到overlay（用于绘制截屏范围框）
         overlayManager.setCaptureRegion(region)
-        logger.info(TAG, "Capture region set: ${if (region.isFullScreen) "FULL_SCREEN" else "${region.width}x${region.height} at (${region.x},${region.y})"}")
+        logger.info(TAG, "Capture region set: ${if (region.isFullScreen) "FULL_SCREEN" else "${region.width}x${region.height} at (${region.x},${region.y})"}, landscape=$isLandscape")
     }
 
     /**

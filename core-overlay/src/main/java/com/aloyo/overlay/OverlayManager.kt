@@ -179,6 +179,7 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
     /**
      * 创建可拖拽控制面板
      * 可交互：支持拖拽移动、暂停/继续、隐藏操作
+     * 横屏模式下自动调整初始位置，避免遮挡画面中央
      */
     private fun showControlPanel() {
         controlPanel = OverlayControlPanel(context).apply {
@@ -201,6 +202,13 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
             WindowManager.LayoutParams.TYPE_PHONE
         }
 
+        // 根据当前屏幕方向计算控制面板初始位置
+        // 横屏时放在左上角，竖屏时也放在左上角但留出状态栏空间
+        val realSize = getRealScreenSize()
+        val isLandscape = realSize.width > realSize.height
+        val initialX = 16
+        val initialY = if (isLandscape) 16 else 100
+
         controlLayoutParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -211,8 +219,8 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = 16
-            y = 100
+            x = initialX
+            y = initialY
         }
 
         windowManager.addView(controlPanel, controlLayoutParams)
@@ -315,6 +323,41 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
                     android.util.Log.i(TAG, "Overlay size updated to ${realSize.width}x${realSize.height}")
                 } catch (e: Exception) {
                     android.util.Log.w(TAG, "Failed to update overlay size", e)
+                }
+            }
+        }
+
+        // 同步更新控制面板位置，确保横竖屏切换后控制面板在合适位置
+        updateControlPanelPositionForOrientation()
+    }
+
+    /**
+     * 根据当前屏幕方向更新控制面板位置
+     * 横屏时确保控制面板不会遮挡画面中央区域
+     */
+    private fun updateControlPanelPositionForOrientation() {
+        val cpParams = controlLayoutParams
+        val cpView = controlPanel
+        if (cpParams == null || cpView == null) return
+
+        val realSize = getRealScreenSize()
+        val isLandscape = realSize.width > realSize.height
+
+        // 横屏时如果控制面板在屏幕中央区域，将其移到左上角
+        if (isLandscape) {
+            val centerX = realSize.width / 2
+            val centerY = realSize.height / 2
+            // 如果控制面板位于屏幕中央30%区域内，将其重置到左上角
+            if (cpParams.x > centerX - realSize.width * 0.15 && cpParams.x < centerX + realSize.width * 0.15 &&
+                cpParams.y > centerY - realSize.height * 0.15 && cpParams.y < centerY + realSize.height * 0.15
+            ) {
+                cpParams.x = 16
+                cpParams.y = 16
+                try {
+                    windowManager.updateViewLayout(cpView, cpParams)
+                    android.util.Log.i(TAG, "Control panel repositioned to top-left for landscape")
+                } catch (e: Exception) {
+                    android.util.Log.w(TAG, "Failed to update control panel position", e)
                 }
             }
         }
