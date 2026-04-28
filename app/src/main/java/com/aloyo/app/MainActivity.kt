@@ -122,8 +122,12 @@ class MainActivity : AppCompatActivity() {
     private var pendingOrientationRefresh = false
 
     // 上一次记录的屏幕方向（0=竖屏, 1=横屏）
-    // 使用Display.getRotation()判断，尊重用户手动旋转按钮
+    // 使用OrientationEventListener（传感器）检测物理旋转
+    // OnePlus Android 15 上 Display.getRotation() 和 getRealSize() 都返回竖屏值，不可靠
     private var lastKnownOrientation: Int = -1  // -1=未知
+
+    // 屏幕旋转监听器（使用传感器检测物理方向）
+    private var orientationListener: android.view.OrientationEventListener? = null
 
     // 服务连接回调
     private val serviceConnection = object : ServiceConnection {
@@ -229,8 +233,25 @@ class MainActivity : AppCompatActivity() {
         initButtons()
 
         // 初始化屏幕方向
-        // 使用Display.getRotation()判断实际显示方向（尊重用户的手动旋转按钮）
-        // 而非OrientationEventListener（只读传感器，不考虑自动旋转开关）
+        // 使用OrientationEventListener（传感器）检测物理旋转方向
+        // OnePlus Android 15 上 Display.getRotation() 不可靠，始终返回竖屏
+        orientationListener = object : android.view.OrientationEventListener(this) {
+            override fun onOrientationChanged(orientation: Int) {
+                if (orientation == ORIENTATION_UNKNOWN) return
+                // 0°±45 和 180°±45 = 竖屏, 90°±45 和 270°±45 = 横屏
+                val newOrientation = if ((orientation in 45..135) || (orientation in 225..315)) 1 else 0
+                if (newOrientation != lastKnownOrientation) {
+                    lastKnownOrientation = newOrientation
+                    logger.info(TAG, "OrientationEventListener: orientation changed to ${if (newOrientation==1) "landscape" else "portrait"} ($orientation°)")
+                    if (isCapturing) {
+                        pendingOrientationRefresh = true
+                    }
+                }
+            }
+        }
+        orientationListener?.enable()
+
+        // 初始方向用传感器当前值，如果传感器未知则默认竖屏
         lastKnownOrientation = getDisplayOrientation()
         logger.info(TAG, "MainActivity created, initial orientation=${if (lastKnownOrientation==1) "landscape" else "portrait"}")
     }
@@ -246,8 +267,9 @@ class MainActivity : AppCompatActivity() {
         val orientationName = if (isLandscape) "landscape" else "portrait"
         logger.info(TAG, "onConfigurationChanged: orientation=$orientationName")
 
-        // 同步更新lastKnownOrientation（使用Display.getRotation()确认实际方向）
-        lastKnownOrientation = getDisplayOrientation()
+        // 同步更新lastKnownOrientation
+        // 注意：OnePlus上此回调可能不触发，主要依赖OrientationEventListener
+        lastKnownOrientation = if (isLandscape) 1 else 0
 
         if (isCapturing) {
             pendingOrientationRefresh = true
@@ -1256,23 +1278,11 @@ class MainActivity : AppCompatActivity() {
                 // 重置定时器，避免延迟重建期间再次触发定期检查
                 lastRotationCheckTime = System.currentTimeMillis()
             } else {
-                // 定期检查屏幕旋转（每3秒检查一次，作为兜底机制）
-                // 使用Display.getRotation()检测实际显示方向，尊重用户手动旋转按钮
+                // 定期刷新导航栏状态（用户可能在运行中切换手势导航模式）
                 val now = System.currentTimeMillis()
                 if (now - lastRotationCheckTime >= 3000) {
                     lastRotationCheckTime = now
-                    val currentOrientation = getDisplayOrientation()
-                    if (currentOrientation != lastKnownOrientation) {
-                        lastKnownOrientation = currentOrientation
-                        logger.info(TAG, "Rotation detected via periodic check: orientation=${if (currentOrientation==1) "landscape" else "portrait"}")
-                        applyCaptureRegion()
-                        lastRotationCheckTime = System.currentTimeMillis()
-                    } else {
-                        // 即使未旋转，也定期刷新导航栏状态
-                        // 用户可能在运行中切换手势导航模式
-                        // 传入正确尺寸，避免getRealScreenSize()在OnePlus上返回竖屏尺寸
-                        overlayManager.refreshNavigationBarState(currentScreenWidth, currentScreenHeight)
-                    }
+                    overlayManager.refreshNavigationBarState(currentScreenWidth, currentScreenHeight)
                 }
             }
 
@@ -1434,6 +1444,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        orientationListener?.disable()
+        orientationListener = null
         stopCapture()
         inferenceEngine.release()
         overlayManager.release()
