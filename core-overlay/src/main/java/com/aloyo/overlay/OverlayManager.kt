@@ -309,6 +309,17 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
     }
 
     /**
+     * 设置显示旋转角度
+     * 用于在横屏时旋转overlay的canvas坐标系，使绘制内容匹配实际显示方向
+     * @param degrees 旋转角度（0, 90, 180, 270）
+     */
+    fun setDisplayRotation(degrees: Int) {
+        mainHandler.post {
+            overlayView?.setDisplayRotation(degrees)
+        }
+    }
+
+    /**
      * 刷新导航栏状态
      * 在屏幕旋转、导航栏显示/隐藏变化时调用
      * 同时更新overlay窗口尺寸以匹配当前真实全屏尺寸

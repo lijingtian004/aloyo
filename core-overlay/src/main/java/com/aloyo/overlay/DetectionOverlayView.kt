@@ -67,6 +67,11 @@ class DetectionOverlayView(context: Context) : View(context) {
     @Volatile
     private var navigationBarHeight: Int = 0
 
+    // 屏幕旋转角度（0=竖屏, 90=横屏, 180=反向竖屏, 270=反向横屏）
+    // 用于在 onDraw 中旋转 canvas，使绘制内容匹配实际显示方向
+    @Volatile
+    private var displayRotation: Int = 0
+
     // 诊断：onDraw调用计数
     private var drawCount = 0
     private var lastDrawLogTime = 0L
@@ -202,11 +207,44 @@ class DetectionOverlayView(context: Context) : View(context) {
         invalidate()
     }
 
+    /**
+     * 设置屏幕旋转角度
+     * 用于在 onDraw 中旋转 canvas，使绘制内容匹配实际显示方向
+     * @param degrees 旋转角度（0, 90, 180, 270）
+     */
+    fun setDisplayRotation(degrees: Int) {
+        if (this.displayRotation != degrees) {
+            this.displayRotation = degrees
+            invalidate()
+        }
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
         val viewW = width
         val viewH = height
+
+        // 屏幕旋转处理：
+        // overlay 窗口始终使用竖屏尺寸（如 1264x2780）
+        // 当设备横屏时，系统会旋转显示内容，但 canvas 坐标系不变
+        // 需要手动旋转 canvas 并变换坐标，使绘制内容匹配实际显示方向
+        val rotation = displayRotation
+        val isRotated = rotation == 90 || rotation == 270
+
+        if (isRotated) {
+            canvas.save()
+            // 系统会自动旋转 overlay 窗口的视觉显示
+            // 但 canvas 坐标系仍是竖屏方向
+            // 需要旋转 canvas 来抵消系统旋转，使绘制内容在物理屏幕上正确显示
+            // 90° 显示旋转（系统顺时针 90°）→ canvas 旋转 270° 顺时针抵消
+            // 270° 显示旋转（系统顺时针 270°）→ canvas 旋转 90° 顺时针抵消
+            if (rotation == 90) {
+                canvas.rotate(270f, viewW / 2f, viewH / 2f)
+            } else {
+                canvas.rotate(90f, viewW / 2f, viewH / 2f)
+            }
+        }
 
         // 始终绘制诊断边框（确认悬浮窗可见）
         canvas.drawRect(0f, 0f, viewW.toFloat(), viewH.toFloat(), diagBorderPaint)
@@ -220,7 +258,7 @@ class DetectionOverlayView(context: Context) : View(context) {
             val sample = detections.firstOrNull()
             val msg = "onDraw: count=$drawCount, view=${viewW}x${viewH}, src=${srcWidth}x${srcHeight}, " +
                     "scale=${String.format("%.2f", scaleX)}x${String.format("%.2f", scaleY)}, " +
-                    "dets=${detections.size}, hasData=$hasReceivedData, " +
+                    "dets=${detections.size}, hasData=$hasReceivedData, rotation=$rotation, " +
                     "sample=${sample?.let { "x1=${it.x1},y1=${it.y1},x2=${it.x2},y2=${it.y2},label=${it.label}" } ?: "none"}"
             onLog?.invoke(msg)
             lastDrawLogTime = now
@@ -230,38 +268,44 @@ class DetectionOverlayView(context: Context) : View(context) {
         if (!hasReceivedData) {
             drawWaitingHint(canvas)
             drawStatusIndicator(canvas, viewW, viewH)
+            if (isRotated) canvas.restore()
             return
         }
 
-        // 计算坐标映射比例：原图像素 → 屏幕像素
-        // 检测框坐标是全屏像素坐标(0到srcWidth/srcHeight)
-        // overlay窗口使用FLAG_LAYOUT_IN_SCREEN，从屏幕顶部(Y=0)开始
-        // 当overlay覆盖完整屏幕（含导航栏）时，viewW==srcWidth, viewH==srcHeight, scale=1.0
-        // 当overlay未覆盖导航栏时，需要按比例缩放坐标
-        val scaleX = if (srcWidth > 0) viewW.toFloat() / srcWidth else 1f
-        val scaleY = if (srcHeight > 0) viewH.toFloat() / srcHeight else 1f
-        // 使用独立X/Y缩放而非uniformScale
-        // 当overlay完整覆盖屏幕时，scaleX≈1.0, scaleY≈1.0，框不会变形
-        // 当overlay未覆盖导航栏时，scaleY<1.0，Y坐标按比例压缩到可见区域
-        // 这样检测框不会因uniformScale而在X方向也被压缩
-        val useScaleX = scaleX
-        val useScaleY = scaleY
+        // 计算坐标映射比例
+        // 旋转后，canvas 坐标系变为 (viewH x viewW)，源坐标也需要变换
+        val effectiveW = if (isRotated) viewH else viewW
+        val effectiveH = if (isRotated) viewW else viewH
+        val scaleX = if (srcWidth > 0) effectiveW.toFloat() / srcWidth else 1f
+        val scaleY = if (srcHeight > 0) effectiveH.toFloat() / srcHeight else 1f
 
-        // 绘制检测框
+        // 绘制检测框（需要变换坐标从竖屏源空间到旋转后的 canvas 空间）
         for (detection in detections) {
-            drawDetection(canvas, detection, useScaleX, useScaleY)
+            if (isRotated) {
+                drawDetectionRotated(canvas, detection, scaleX, scaleY, rotation, srcWidth, srcHeight)
+            } else {
+                drawDetection(canvas, detection, scaleX, scaleY)
+            }
         }
 
         // 绘制性能指标
         metrics?.let { drawMetrics(canvas, it) }
 
-        // 绘制截屏区域框（如果启用且非全屏）
+        // 绘制截屏区域框
         if (showCaptureRegion && !captureRegion.isFullScreen && srcWidth > 0 && srcHeight > 0) {
-            drawCaptureRegion(canvas, useScaleX, useScaleY, viewW, viewH)
+            if (isRotated) {
+                drawCaptureRegionRotated(canvas, scaleX, scaleY, rotation, srcWidth, srcHeight, effectiveW, effectiveH)
+            } else {
+                drawCaptureRegion(canvas, scaleX, scaleY, viewW, viewH)
+            }
         }
 
         // 始终绘制状态指示器
-        drawStatusIndicator(canvas, viewW, viewH)
+        drawStatusIndicator(canvas, if (isRotated) effectiveW else viewW, if (isRotated) effectiveH else viewH)
+
+        if (isRotated) {
+            canvas.restore()
+        }
     }
 
     /**
@@ -293,6 +337,37 @@ class DetectionOverlayView(context: Context) : View(context) {
         val textWidth = captureRegionLabelPaint.measureText(labelText)
         val textHeight = captureRegionLabelPaint.fontMetrics.let { it.descent - it.ascent }
         canvas.drawText(labelText, rx1 + 4f, ry1 - 4f, captureRegionLabelPaint)
+    }
+
+    /**
+     * 绘制旋转后的截屏区域框
+     * 将竖屏源坐标变换到旋转后的 canvas 坐标系
+     */
+    private fun drawCaptureRegionRotated(canvas: Canvas, scaleX: Float, scaleY: Float,
+                                          rotation: Int, srcW: Int, srcH: Int,
+                                          effectiveW: Int, effectiveH: Int) {
+        val region = captureRegion
+        // 变换截屏区域的四个角
+        val (tx1, ty1) = transformCoord(region.x.toFloat(), region.y.toFloat(), rotation, srcW, srcH)
+        val (tx2, ty2) = transformCoord((region.x + region.width).toFloat(), (region.y + region.height).toFloat(), rotation, srcW, srcH)
+
+        val left = minOf(tx1, tx2) * scaleX
+        val top = minOf(ty1, ty2) * scaleY
+        val right = maxOf(tx1, tx2) * scaleX
+        val bottom = maxOf(ty1, ty2) * scaleY
+
+        // 绘制区域外遮罩
+        canvas.drawRect(0f, 0f, effectiveW.toFloat(), top, captureRegionMaskPaint)
+        canvas.drawRect(0f, bottom, effectiveW.toFloat(), effectiveH.toFloat(), captureRegionMaskPaint)
+        canvas.drawRect(0f, top, left, bottom, captureRegionMaskPaint)
+        canvas.drawRect(right, top, effectiveW.toFloat(), bottom, captureRegionMaskPaint)
+
+        // 绘制虚线边框
+        canvas.drawRect(left, top, right, bottom, captureRegionPaint)
+
+        // 绘制标签
+        val labelText = "${region.width}×${region.height}"
+        canvas.drawText(labelText, left + 4f, top - 4f, captureRegionLabelPaint)
     }
 
     /**
@@ -387,6 +462,61 @@ class DetectionOverlayView(context: Context) : View(context) {
 
         // 绘制标签文字
         canvas.drawText(labelText, labelX + 4f, labelY + textHeight, textPaint)
+    }
+
+    /**
+     * 绘制旋转后的检测结果
+     * 将竖屏源坐标变换到旋转后的 canvas 坐标系
+     * @param rotation 旋转角度（90 或 270）
+     * @param srcW 竖屏源宽度（如 1264）
+     * @param srcH 竖屏源高度（如 2780）
+     */
+    private fun drawDetectionRotated(canvas: Canvas, detection: Detection, scaleX: Float, scaleY: Float,
+                                      rotation: Int, srcW: Int, srcH: Int) {
+        // 将竖屏源坐标变换到旋转后的 canvas 坐标系
+        val (rx1, ry1) = transformCoord(detection.x1, detection.y1, rotation, srcW, srcH)
+        val (rx2, ry2) = transformCoord(detection.x2, detection.y2, rotation, srcW, srcH)
+
+        // 确保坐标有序（旋转后可能反转）
+        val left = minOf(rx1, rx2) * scaleX
+        val top = minOf(ry1, ry2) * scaleY
+        val right = maxOf(rx1, rx2) * scaleX
+        val bottom = maxOf(ry1, ry2) * scaleY
+
+        canvas.drawRect(left, top, right, bottom, boxPaint)
+
+        if (!config.showLabel) return
+
+        val labelText = if (config.showConfidence) {
+            "${detection.label} ${(detection.confidence * 100).toInt()}%"
+        } else {
+            detection.label
+        }
+
+        val textWidth = textPaint.measureText(labelText)
+        val textHeight = textPaint.fontMetrics.let { it.descent - it.ascent }
+        val labelX = left
+        val labelY = top - textHeight - 4f
+
+        canvas.drawRect(labelX, labelY, labelX + textWidth + 8f, labelY + textHeight + 4f, textBgPaint)
+        canvas.drawText(labelText, labelX + 4f, labelY + textHeight, textPaint)
+    }
+
+    /**
+     * 将竖屏源坐标变换到旋转后的 canvas 坐标系
+     * 90° 顺时针: (x, y) → (srcH - y, x)
+     * 270° 顺时针: (x, y) → (y, srcW - x)
+     */
+    private fun transformCoord(x: Float, y: Float, rotation: Int, srcW: Int, srcH: Int): Pair<Float, Float> {
+        return when (rotation) {
+            // 90° 显示旋转：canvas 旋转 270° 顺时针抵消
+            // 变换：(x, y) → (srcH - y, x)
+            90 -> Pair(srcH.toFloat() - y, x)
+            // 270° 显示旋转：canvas 旋转 90° 顺时针抵消
+            // 变换：(x, y) → (y, srcW - x)
+            270 -> Pair(y, srcW.toFloat() - x)
+            else -> Pair(x, y)
+        }
     }
 
     /**
