@@ -1055,15 +1055,15 @@ class MainActivity : AppCompatActivity() {
      */
     private fun applyCaptureRegion() {
         // 获取物理屏幕尺寸
-        // MediaProjection捕获的是设备实际方向的bitmap，直接使用物理尺寸
         val windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
         @Suppress("DEPRECATION")
         val display = windowManager.defaultDisplay
         val realSize = android.graphics.Point()
         @Suppress("DEPRECATION")
         display.getRealSize(realSize)
-        val screenWidth = minOf(realSize.x, realSize.y)  // 短边
-        val screenHeight = maxOf(realSize.x, realSize.y)  // 长边
+        // 强制横屏：宽>高
+        val screenWidth = maxOf(realSize.x, realSize.y)  // 长边 = 宽
+        val screenHeight = minOf(realSize.x, realSize.y)  // 短边 = 高
 
         val region = when (captureRegionSpinner.selectedItemPosition) {
             1 -> {
@@ -1147,28 +1147,40 @@ class MainActivity : AppCompatActivity() {
         }
 
         try {
-            // 始终使用竖屏坐标系（OnePlus Android 15 上 getRealSize 始终返回竖屏值）
+            // 获取物理屏幕尺寸
             val wm = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
             @Suppress("DEPRECATION")
             val display = wm.defaultDisplay
             val realSize = android.graphics.Point()
             @Suppress("DEPRECATION")
             display.getRealSize(realSize)
-            val screenWidth = minOf(realSize.x, realSize.y)  // 短边 = 宽
-            val screenHeight = maxOf(realSize.x, realSize.y)  // 长边 = 高
+            val physicalWidth = minOf(realSize.x, realSize.y)  // 短边
+            val physicalHeight = maxOf(realSize.x, realSize.y)  // 长边
+
+            // 强制横屏：如果bitmap是竖屏的(宽<高)，旋转90度变成横屏
+            val isPortrait = bitmap.width < bitmap.height
+            val workingBitmap = if (isPortrait) {
+                val matrix = android.graphics.Matrix()
+                matrix.postRotate(90f)
+                val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+                bitmap.recycle()
+                rotated
+            } else {
+                bitmap
+            }
 
             // 定期刷新导航栏状态
             val now = System.currentTimeMillis()
             if (now - lastRotationCheckTime >= 3000) {
                 lastRotationCheckTime = now
-                overlayManager.refreshNavigationBarState(screenWidth, screenHeight)
+                overlayManager.refreshNavigationBarState(workingBitmap.width, workingBitmap.height)
             }
 
-            // 设置源尺寸（竖屏坐标系，与 overlay 和 bitmap 一致）
-            overlayManager.setSourceSize(screenWidth, screenHeight)
+            // 设置源尺寸（横屏坐标系）
+            overlayManager.setSourceSize(workingBitmap.width, workingBitmap.height)
 
             // 执行推理
-            val (detections, metrics) = inferenceEngine.inferWithMetrics(bitmap)
+            val (detections, metrics) = inferenceEngine.inferWithMetrics(workingBitmap)
 
             // 如果使用了截屏区域，检测框坐标需要加上区域偏移量
             // 因为推理是在裁剪后的Bitmap上进行的，坐标是相对于裁剪区域的

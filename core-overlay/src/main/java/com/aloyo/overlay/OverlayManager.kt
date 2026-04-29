@@ -101,19 +101,23 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
             WindowManager.LayoutParams.TYPE_PHONE
         }
 
-        // 获取屏幕实际尺寸（跟随设备方向）
-        val realScreenSize = if (forcedWidth > 0 && forcedHeight > 0) {
+        // 获取屏幕物理尺寸
+        val physicalSize = if (forcedWidth > 0 && forcedHeight > 0) {
             ScreenSize(forcedWidth, forcedHeight)
         } else {
             getRealScreenSize()
         }
 
-        android.util.Log.i(TAG, "Creating overlay: ${realScreenSize.width}x${realScreenSize.height}")
+        // 强制使用横屏尺寸（宽>高）
+        val landscapeWidth = maxOf(physicalSize.width, physicalSize.height)
+        val landscapeHeight = minOf(physicalSize.width, physicalSize.height)
 
-        // 使用屏幕实际尺寸创建overlay窗口
+        android.util.Log.i(TAG, "Creating landscape overlay: ${landscapeWidth}x${landscapeHeight}")
+
+        // 使用横屏尺寸创建overlay窗口
         overlayLayoutParams = WindowManager.LayoutParams(
-            realScreenSize.width,
-            realScreenSize.height,
+            landscapeWidth,
+            landscapeHeight,
             type,
             // 全屏检测层：不可触摸，让触摸穿透到下层应用
             WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
