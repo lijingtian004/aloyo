@@ -101,23 +101,24 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
             WindowManager.LayoutParams.TYPE_PHONE
         }
 
-        // 获取真实全屏尺寸（含刘海和导航栏）
-        // 如果外部传入了强制尺寸，优先使用外部传入的值
-        // 原因：在某些设备上（如OnePlus/Android 15），当应用未随方向旋转时，
-        // WindowManager.currentWindowMetrics 可能返回旧方向的尺寸
-        val realScreenSize = if (forcedWidth > 0 && forcedHeight > 0) {
-            android.util.Log.i(TAG, "Using forced screen size: ${forcedWidth}x${forcedHeight}")
+        // 获取屏幕物理尺寸
+        val physicalSize = if (forcedWidth > 0 && forcedHeight > 0) {
             ScreenSize(forcedWidth, forcedHeight)
         } else {
             getRealScreenSize()
         }
 
-        // 使用真实全屏尺寸显式设置窗口大小，而非MATCH_PARENT
-        // MATCH_PARENT不包含导航栏区域，导致overlay底部留白
-        // FLAG_LAYOUT_NO_LIMITS允许窗口延伸到系统装饰区域（刘海、导航栏）
+        // 强制使用横屏尺寸（宽>高）
+        // 无论设备当前方向如何，overlay窗口始终以横屏尺寸创建
+        val landscapeWidth = maxOf(physicalSize.width, physicalSize.height)
+        val landscapeHeight = minOf(physicalSize.width, physicalSize.height)
+
+        android.util.Log.i(TAG, "Creating landscape overlay: ${landscapeWidth}x${landscapeHeight} (physical: ${physicalSize.width}x${physicalSize.height})")
+
+        // 使用横屏尺寸创建overlay窗口
         overlayLayoutParams = WindowManager.LayoutParams(
-            realScreenSize.width,
-            realScreenSize.height,
+            landscapeWidth,
+            landscapeHeight,
             type,
             // 全屏检测层：不可触摸，让触摸穿透到下层应用
             WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
