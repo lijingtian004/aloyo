@@ -236,6 +236,14 @@ class MainActivity : AppCompatActivity() {
             private val LANDSCAPE_EXIT_MIN = 30
             private val LANDSCAPE_EXIT_MAX = 150
 
+            // 90°↔270° 切换迟滞：进入 270° 的区间比退出更窄
+            // 当前 90° → 切换到 270°：需要 orientation 在 250-290
+            // 当前 270° → 切换到 90°：需要 orientation < 230 或 > 310
+            private val ROT270_ENTER_MIN = 250
+            private val ROT270_ENTER_MAX = 290
+            private val ROT270_EXIT_MIN = 230
+            private val ROT270_EXIT_MAX = 310
+
             override fun onOrientationChanged(orientation: Int) {
                 if (orientation == ORIENTATION_UNKNOWN) return
 
@@ -246,10 +254,20 @@ class MainActivity : AppCompatActivity() {
                     // 已在横屏：使用较宽松的退出区间（迟滞）
                     if (orientation in LANDSCAPE_EXIT_MIN..LANDSCAPE_EXIT_MAX) {
                         newRotation = 0  // 回到竖屏
-                    } else if (orientation in 240..300) {
-                        newRotation = 270  // 反向横屏
+                    } else if (currentDisplayRotation == 270) {
+                        // 当前 270°：只在离开 230-310 范围时才切换到 90°
+                        if (orientation in ROT270_EXIT_MIN..ROT270_EXIT_MAX) {
+                            newRotation = 270  // 保持 270°
+                        } else {
+                            newRotation = 90   // 切换到 90°
+                        }
                     } else {
-                        newRotation = 90  // 保持横屏
+                        // 当前 90°：只在进入 250-290 范围时才切换到 270°
+                        if (orientation in ROT270_ENTER_MIN..ROT270_ENTER_MAX) {
+                            newRotation = 270  // 切换到 270°
+                        } else {
+                            newRotation = 90   // 保持 90°
+                        }
                     }
                 } else {
                     // 在竖屏：使用较严格的进入区间

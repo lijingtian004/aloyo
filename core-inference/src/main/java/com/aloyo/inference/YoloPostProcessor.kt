@@ -285,9 +285,10 @@ class YoloPostProcessor(
             detectionHistory.removeFirst()
         }
 
-        // 历史帧不足时，直接返回当前结果（首帧不过滤）
+        // 历史帧不足时，返回空结果（避免首帧假阳性）
+        // 只有在连续多帧中稳定出现的检测才被认为是真实的
         if (detectionHistory.size < TEMPORAL_FRAMES) {
-            return detections
+            return emptyList()
         }
 
         // 只保留在当前帧和至少一帧历史帧中都出现的检测
@@ -310,13 +311,9 @@ class YoloPostProcessor(
             }
         }
 
-        // 如果时序过滤后没有检测结果，回退到当前帧结果（避免闪烁）
-        // 返回全部结果，让EMA平滑来处理稳定性
-        return if (stableDetections.isNotEmpty()) {
-            stableDetections
-        } else {
-            detections
-        }
+        // 只返回在连续多帧中稳定出现的检测
+        // 不再回退到当前帧结果，避免假阳性被保留
+        return stableDetections
     }
 
     /**
