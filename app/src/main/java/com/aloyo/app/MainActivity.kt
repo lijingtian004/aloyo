@@ -1139,15 +1139,8 @@ class MainActivity : AppCompatActivity() {
     // 上次旋转检查时间（避免每帧都检查，每3秒检查一次）
     private var lastRotationCheckTime = 0L
 
-    // 当前屏幕旋转状态（根据屏幕宽高动态判断）
-    private val currentDisplayRotation: Int
-        get() {
-            val wm = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
-            val point = android.graphics.Point()
-            @Suppress("DEPRECATION")
-            wm.defaultDisplay.getRealSize(point)
-            return if (point.x > point.y) 90 else 0
-        }
+    // 固定横屏模式
+    private val currentDisplayRotation: Int = 90
 
     /**
      * 处理截屏帧回调
