@@ -285,10 +285,9 @@ class YoloPostProcessor(
             detectionHistory.removeFirst()
         }
 
-        // 历史帧不足时，返回空结果（避免首帧假阳性）
-        // 只有在连续多帧中稳定出现的检测才被认为是真实的
+        // 历史帧不足时，直接返回当前结果（首帧不过滤）
         if (detectionHistory.size < TEMPORAL_FRAMES) {
-            return emptyList()
+            return detections
         }
 
         // 只保留在当前帧和至少一帧历史帧中都出现的检测
