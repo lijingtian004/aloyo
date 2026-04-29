@@ -310,13 +310,9 @@ class YoloPostProcessor(
             }
         }
 
-        // 如果时序过滤后没有检测结果，回退到当前帧结果（避免闪烁）
-        // 返回全部结果，让EMA平滑来处理稳定性
-        return if (stableDetections.isNotEmpty()) {
-            stableDetections
-        } else {
-            detections
-        }
+        // 只返回在连续多帧中稳定出现的检测
+        // 不再回退到当前帧结果，避免假阳性被保留
+        return stableDetections
     }
 
     /**

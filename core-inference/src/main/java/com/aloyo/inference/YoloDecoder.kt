@@ -194,12 +194,13 @@ class UnifiedYoloDecoder : YoloDecoder {
 
         // logit绝对阈值过滤：当skipObjectness时，所有检测的sigmoid置信度都接近1.0(~99.8%)
         // 这个高置信度不可靠，不能用来区分前景/背景
-        // 改用logit绝对阈值：只保留logit > 5.0的检测（真实目标通常logit>5~7）
-        // sigmoid(5.0) ≈ 0.993，sigmoid(4.0) ≈ 0.982，sigmoid(3.0) ≈ 0.953
-        // 提高到5.0以减少假阳：背景logit通常在2~4之间，真实目标logit通常在5~8之间
+        // 改用logit绝对阈值：只保留logit > 阈值的检测
+        // sigmoid(2.0) ≈ 0.88，sigmoid(2.5) ≈ 0.92，sigmoid(3.0) ≈ 0.95
+        // 对于小尺寸输入(256)的模型，真实目标logit通常在2~4之间，背景logit在-1~1之间
+        // 阈值设为1.5可以在过滤背景的同时保留真实检测
         // 注意：此过滤必须在gap过滤之后也执行，作为双重保障
         if (lastSkipObjectness) {
-            val logitThreshold = 5.0f
+            val logitThreshold = 1.5f
             val beforeCount = result.size
             result = result.filter { it.rawLogit >= logitThreshold }
             if (result.size < beforeCount) {

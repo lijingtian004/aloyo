@@ -232,9 +232,30 @@ class CaptureManager(private val context: Context) : ICaptureSource {
             }
 
             // 将Image转换为Bitmap
-            val bitmap = imageToBitmap(image)
+            var bitmap = imageToBitmap(image)
             if (bitmap != null) {
-                // 记录全屏bitmap尺寸（裁剪前，反映物理屏幕真实方向）
+                // 检测bitmap方向是否与当前屏幕方向匹配
+                // VirtualDisplay创建时尺寸固定，旋转后bitmap仍然是旧方向
+                // 需要手动旋转bitmap以匹配当前屏幕方向
+                val isLandscape = displayOrientation == 1
+                val bitmapIsLandscape = bitmap.width > bitmap.height
+
+                if (isLandscape != bitmapIsLandscape) {
+                    // 方向不匹配，旋转bitmap
+                    // 竖屏bitmap(1264x2780) → 旋转90° → 横屏bitmap(2780x1264)
+                    val rotationDegrees = if (isLandscape) 90f else -90f
+                    val matrix = android.graphics.Matrix()
+                    matrix.postRotate(rotationDegrees)
+                    val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+                    bitmap.recycle()
+                    bitmap = rotatedBitmap
+
+                    if (frameCount == 0) {
+                        android.util.Log.i(TAG, "Rotated bitmap to match screen orientation: ${bitmap.width}x${bitmap.height}")
+                    }
+                }
+
+                // 记录全屏bitmap尺寸（裁剪前）
                 lastBitmapWidth = bitmap.width
                 lastBitmapHeight = bitmap.height
 
@@ -244,7 +265,7 @@ class CaptureManager(private val context: Context) : ICaptureSource {
                 }
 
                 // 如果设置了截屏区域，裁剪Bitmap到指定区域
-                // 截屏区域坐标是基于当前屏幕方向的，bitmap也是当前屏幕方向，直接裁剪即可
+                // 截屏区域坐标是基于当前屏幕方向的，bitmap也已旋转到当前方向，直接裁剪即可
                 val finalBitmap = if (!captureRegion.isFullScreen) {
                     cropBitmap(bitmap, captureRegion)
                 } else {

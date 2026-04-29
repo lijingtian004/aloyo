@@ -35,7 +35,6 @@ import com.aloyo.common.PerformanceMetrics
 import com.aloyo.inference.NcnnInferenceEngine
 import com.aloyo.model.ModelManager
 import com.aloyo.overlay.OverlayManager
-import android.view.OrientationEventListener
 import java.io.File
 import java.util.zip.ZipInputStream
 
@@ -220,56 +219,6 @@ class MainActivity : AppCompatActivity() {
         initViews()
         initModelSpinner()
         initButtons()
-
-        // 屏幕旋转处理说明：
-        // OnePlus Android 15 上 Display.getRotation() 和 getRealSize() 都返回竖屏值
-        // 系统会自动旋转 overlay 窗口的视觉显示，但 canvas 坐标系仍是竖屏方向
-        // 使用 OrientationEventListener 检测物理设备旋转，旋转 canvas 坐标系以匹配显示方向
-
-        // 初始化设备旋转检测（使用加速度传感器）
-        orientationListener = object : OrientationEventListener(this) {
-            // 使用迟滞区间防止边界角度振荡
-            // 横屏进入：角度在 60°-120° 范围
-            // 横屏退出：角度在 0°-30° 或 150°-330° 范围
-            private val LANDSCAPE_ENTER_MIN = 60
-            private val LANDSCAPE_ENTER_MAX = 120
-            private val LANDSCAPE_EXIT_MIN = 30
-            private val LANDSCAPE_EXIT_MAX = 150
-
-            override fun onOrientationChanged(orientation: Int) {
-                if (orientation == ORIENTATION_UNKNOWN) return
-
-                val wasLandscape = currentDisplayRotation == 90 || currentDisplayRotation == 270
-                val newRotation: Int
-
-                if (wasLandscape) {
-                    // 已在横屏：使用较宽松的退出区间（迟滞）
-                    if (orientation in LANDSCAPE_EXIT_MIN..LANDSCAPE_EXIT_MAX) {
-                        newRotation = 0  // 回到竖屏
-                    } else if (orientation in 240..300) {
-                        newRotation = 270  // 反向横屏
-                    } else {
-                        newRotation = 90  // 保持横屏
-                    }
-                } else {
-                    // 在竖屏：使用较严格的进入区间
-                    if (orientation in LANDSCAPE_ENTER_MIN..LANDSCAPE_ENTER_MAX) {
-                        newRotation = 90
-                    } else if (orientation in 240..300) {
-                        newRotation = 270
-                    } else {
-                        newRotation = 0
-                    }
-                }
-
-                if (newRotation != currentDisplayRotation) {
-                    currentDisplayRotation = newRotation
-                    logger.info(TAG, "Device rotation changed: $newRotation° (orientation=$orientation)")
-                    overlayManager.setDisplayRotation(newRotation)
-                }
-            }
-        }
-        orientationListener?.enable()
 
         logger.info(TAG, "MainActivity created")
     }
@@ -1101,19 +1050,20 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * 根据UI选择应用截屏区域
-     * 始终使用竖屏坐标系（OnePlus Android 15 上所有显示API都返回竖屏尺寸）
-     * 系统会自动旋转 overlay 窗口内容，无需手动处理横屏
+     * MediaProjection捕获的是物理屏幕实际像素，横屏时bitmap尺寸会变化
+     * 需要根据当前旋转状态使用正确的坐标系
      */
     private fun applyCaptureRegion() {
-        // 获取屏幕尺寸（始终返回竖屏尺寸）
+        // 获取物理屏幕尺寸
         val windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
         @Suppress("DEPRECATION")
         val display = windowManager.defaultDisplay
         val realSize = android.graphics.Point()
         @Suppress("DEPRECATION")
         display.getRealSize(realSize)
-        val screenWidth = minOf(realSize.x, realSize.y)  // 短边 = 宽
-        val screenHeight = maxOf(realSize.x, realSize.y)  // 长边 = 高
+        // 强制横屏：宽>高
+        val screenWidth = maxOf(realSize.x, realSize.y)  // 长边 = 宽
+        val screenHeight = minOf(realSize.x, realSize.y)  // 短边 = 高
 
         val region = when (captureRegionSpinner.selectedItemPosition) {
             1 -> {
@@ -1183,10 +1133,8 @@ class MainActivity : AppCompatActivity() {
     // 上次旋转检查时间（避免每帧都检查，每3秒检查一次）
     private var lastRotationCheckTime = 0L
 
-    // 设备旋转检测（使用加速度传感器，因为 OnePlus Android 15 上 Display.getRotation() 始终返回 0）
-    private var orientationListener: OrientationEventListener? = null
-    @Volatile
-    private var currentDisplayRotation: Int = 0  // 0=竖屏, 90=横屏（顺时针）, 270=横屏（逆时针）
+    // 固定横屏模式
+    private val currentDisplayRotation: Int = 90
 
     /**
      * 处理截屏帧回调
@@ -1199,28 +1147,40 @@ class MainActivity : AppCompatActivity() {
         }
 
         try {
-            // 始终使用竖屏坐标系（OnePlus Android 15 上 getRealSize 始终返回竖屏值）
+            // 获取物理屏幕尺寸
             val wm = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
             @Suppress("DEPRECATION")
             val display = wm.defaultDisplay
             val realSize = android.graphics.Point()
             @Suppress("DEPRECATION")
             display.getRealSize(realSize)
-            val screenWidth = minOf(realSize.x, realSize.y)  // 短边 = 宽
-            val screenHeight = maxOf(realSize.x, realSize.y)  // 长边 = 高
+            val physicalWidth = minOf(realSize.x, realSize.y)  // 短边
+            val physicalHeight = maxOf(realSize.x, realSize.y)  // 长边
+
+            // 强制横屏：如果bitmap是竖屏的(宽<高)，旋转90度变成横屏
+            val isPortrait = bitmap.width < bitmap.height
+            val workingBitmap = if (isPortrait) {
+                val matrix = android.graphics.Matrix()
+                matrix.postRotate(90f)
+                val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+                bitmap.recycle()
+                rotated
+            } else {
+                bitmap
+            }
 
             // 定期刷新导航栏状态
             val now = System.currentTimeMillis()
             if (now - lastRotationCheckTime >= 3000) {
                 lastRotationCheckTime = now
-                overlayManager.refreshNavigationBarState(screenWidth, screenHeight)
+                overlayManager.refreshNavigationBarState(workingBitmap.width, workingBitmap.height)
             }
 
-            // 设置源尺寸（竖屏坐标系，与 overlay 和 bitmap 一致）
-            overlayManager.setSourceSize(screenWidth, screenHeight)
+            // 设置源尺寸（横屏坐标系）
+            overlayManager.setSourceSize(workingBitmap.width, workingBitmap.height)
 
             // 执行推理
-            val (detections, metrics) = inferenceEngine.inferWithMetrics(bitmap)
+            val (detections, metrics) = inferenceEngine.inferWithMetrics(workingBitmap)
 
             // 如果使用了截屏区域，检测框坐标需要加上区域偏移量
             // 因为推理是在裁剪后的Bitmap上进行的，坐标是相对于裁剪区域的
@@ -1351,8 +1311,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        orientationListener?.disable()
-        orientationListener = null
         stopCapture()
         inferenceEngine.release()
         overlayManager.release()
