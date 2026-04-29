@@ -266,6 +266,10 @@ class MainActivity : AppCompatActivity() {
                     currentDisplayRotation = newRotation
                     logger.info(TAG, "Device rotation changed: $newRotation° (orientation=$orientation)")
                     overlayManager.setDisplayRotation(newRotation)
+                    // 旋转后重新计算截屏区域坐标（MediaProjection捕获的是物理屏幕实际像素）
+                    if (isCapturing) {
+                        applyCaptureRegion()
+                    }
                 }
             }
         }
@@ -1101,19 +1105,26 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * 根据UI选择应用截屏区域
-     * 始终使用竖屏坐标系（OnePlus Android 15 上所有显示API都返回竖屏尺寸）
-     * 系统会自动旋转 overlay 窗口内容，无需手动处理横屏
+     * MediaProjection捕获的是物理屏幕实际像素，横屏时bitmap尺寸会变化
+     * 需要根据当前旋转状态使用正确的坐标系
      */
     private fun applyCaptureRegion() {
-        // 获取屏幕尺寸（始终返回竖屏尺寸）
+        // 获取物理屏幕尺寸
         val windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
         @Suppress("DEPRECATION")
         val display = windowManager.defaultDisplay
         val realSize = android.graphics.Point()
         @Suppress("DEPRECATION")
         display.getRealSize(realSize)
-        val screenWidth = minOf(realSize.x, realSize.y)  // 短边 = 宽
-        val screenHeight = maxOf(realSize.x, realSize.y)  // 长边 = 高
+        val physicalWidth = minOf(realSize.x, realSize.y)  // 物理短边
+        val physicalHeight = maxOf(realSize.x, realSize.y)  // 物理长边
+
+        // 根据当前旋转状态确定MediaProjection捕获的bitmap尺寸
+        // rotation=0（竖屏）：bitmap是 短边x长边（如1264x2780）
+        // rotation=90/270（横屏）：bitmap是 长边x短边（如2780x1264）
+        val isLandscape = currentDisplayRotation == 90 || currentDisplayRotation == 270
+        val screenWidth = if (isLandscape) physicalHeight else physicalWidth
+        val screenHeight = if (isLandscape) physicalWidth else physicalHeight
 
         val region = when (captureRegionSpinner.selectedItemPosition) {
             1 -> {
