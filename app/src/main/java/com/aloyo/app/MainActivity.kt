@@ -35,7 +35,6 @@ import com.aloyo.common.PerformanceMetrics
 import com.aloyo.inference.NcnnInferenceEngine
 import com.aloyo.model.ModelManager
 import com.aloyo.overlay.OverlayManager
-import android.view.OrientationEventListener
 import java.io.File
 import java.util.zip.ZipInputStream
 
@@ -221,77 +220,8 @@ class MainActivity : AppCompatActivity() {
         initModelSpinner()
         initButtons()
 
-        // 屏幕旋转处理说明：
-        // OnePlus Android 15 上 Display.getRotation() 和 getRealSize() 都返回竖屏值
-        // 系统会自动旋转 overlay 窗口的视觉显示，但 canvas 坐标系仍是竖屏方向
-        // 使用 OrientationEventListener 检测物理设备旋转，旋转 canvas 坐标系以匹配显示方向
-
-        // 初始化设备旋转检测（使用加速度传感器）
-        orientationListener = object : OrientationEventListener(this) {
-            // 使用迟滞区间防止边界角度振荡
-            // 横屏进入：角度在 60°-120° 范围
-            // 横屏退出：角度在 0°-30° 或 150°-330° 范围
-            private val LANDSCAPE_ENTER_MIN = 60
-            private val LANDSCAPE_ENTER_MAX = 120
-            private val LANDSCAPE_EXIT_MIN = 30
-            private val LANDSCAPE_EXIT_MAX = 150
-
-            // 90°↔270° 切换迟滞：进入 270° 的区间比退出更窄
-            // 当前 90° → 切换到 270°：需要 orientation 在 250-290
-            // 当前 270° → 切换到 90°：需要 orientation < 230 或 > 310
-            private val ROT270_ENTER_MIN = 250
-            private val ROT270_ENTER_MAX = 290
-            private val ROT270_EXIT_MIN = 230
-            private val ROT270_EXIT_MAX = 310
-
-            override fun onOrientationChanged(orientation: Int) {
-                if (orientation == ORIENTATION_UNKNOWN) return
-
-                val wasLandscape = currentDisplayRotation == 90 || currentDisplayRotation == 270
-                val newRotation: Int
-
-                if (wasLandscape) {
-                    // 已在横屏：使用较宽松的退出区间（迟滞）
-                    if (orientation in LANDSCAPE_EXIT_MIN..LANDSCAPE_EXIT_MAX) {
-                        newRotation = 0  // 回到竖屏
-                    } else if (currentDisplayRotation == 270) {
-                        // 当前 270°：只在离开 230-310 范围时才切换到 90°
-                        if (orientation in ROT270_EXIT_MIN..ROT270_EXIT_MAX) {
-                            newRotation = 270  // 保持 270°
-                        } else {
-                            newRotation = 90   // 切换到 90°
-                        }
-                    } else {
-                        // 当前 90°：只在进入 250-290 范围时才切换到 270°
-                        if (orientation in ROT270_ENTER_MIN..ROT270_ENTER_MAX) {
-                            newRotation = 270  // 切换到 270°
-                        } else {
-                            newRotation = 90   // 保持 90°
-                        }
-                    }
-                } else {
-                    // 在竖屏：使用较严格的进入区间
-                    if (orientation in LANDSCAPE_ENTER_MIN..LANDSCAPE_ENTER_MAX) {
-                        newRotation = 90
-                    } else if (orientation in 240..300) {
-                        newRotation = 270
-                    } else {
-                        newRotation = 0
-                    }
-                }
-
-                if (newRotation != currentDisplayRotation) {
-                    currentDisplayRotation = newRotation
-                    logger.info(TAG, "Device rotation changed: $newRotation° (orientation=$orientation)")
-                    overlayManager.setDisplayRotation(newRotation)
-                    // 旋转后重新计算截屏区域坐标（MediaProjection捕获的是物理屏幕实际像素）
-                    if (isCapturing) {
-                        applyCaptureRegion()
-                    }
-                }
-            }
-        }
-        orientationListener?.enable()
+        // 默认横屏模式：启动时直接设置为横屏，无需传感器检测
+        currentDisplayRotation = 90
 
         logger.info(TAG, "MainActivity created")
     }
@@ -1212,10 +1142,9 @@ class MainActivity : AppCompatActivity() {
     // 上次旋转检查时间（避免每帧都检查，每3秒检查一次）
     private var lastRotationCheckTime = 0L
 
-    // 设备旋转检测（使用加速度传感器，因为 OnePlus Android 15 上 Display.getRotation() 始终返回 0）
-    private var orientationListener: OrientationEventListener? = null
+    // 默认横屏模式，固定为90度
     @Volatile
-    private var currentDisplayRotation: Int = 0  // 0=竖屏, 90=横屏（顺时针）, 270=横屏（逆时针）
+    private var currentDisplayRotation: Int = 90  // 固定横屏
 
     /**
      * 处理截屏帧回调
@@ -1380,8 +1309,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        orientationListener?.disable()
-        orientationListener = null
         stopCapture()
         inferenceEngine.release()
         overlayManager.release()
