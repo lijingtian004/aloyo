@@ -1055,21 +1055,15 @@ class MainActivity : AppCompatActivity() {
      */
     private fun applyCaptureRegion() {
         // 获取物理屏幕尺寸
+        // MediaProjection捕获的是设备实际方向的bitmap，直接使用物理尺寸
         val windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
         @Suppress("DEPRECATION")
         val display = windowManager.defaultDisplay
         val realSize = android.graphics.Point()
         @Suppress("DEPRECATION")
         display.getRealSize(realSize)
-        val physicalWidth = minOf(realSize.x, realSize.y)  // 物理短边
-        val physicalHeight = maxOf(realSize.x, realSize.y)  // 物理长边
-
-        // 根据当前旋转状态确定MediaProjection捕获的bitmap尺寸
-        // rotation=0（竖屏）：bitmap是 短边x长边（如1264x2780）
-        // rotation=90/270（横屏）：bitmap是 长边x短边（如2780x1264）
-        val isLandscape = currentDisplayRotation == 90 || currentDisplayRotation == 270
-        val screenWidth = if (isLandscape) physicalHeight else physicalWidth
-        val screenHeight = if (isLandscape) physicalWidth else physicalHeight
+        val screenWidth = minOf(realSize.x, realSize.y)  // 短边
+        val screenHeight = maxOf(realSize.x, realSize.y)  // 长边
 
         val region = when (captureRegionSpinner.selectedItemPosition) {
             1 -> {
