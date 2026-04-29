@@ -11,7 +11,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.provider.Settings
-import android.view.OrientationEventListener
 import android.view.View
 import android.view.WindowManager
 import android.widget.ArrayAdapter
@@ -220,31 +219,6 @@ class MainActivity : AppCompatActivity() {
         initViews()
         initModelSpinner()
         initButtons()
-
-        // 初始化设备旋转检测
-        // 根据设备实际方向设置rotation，用于overlay坐标变换
-        orientationListener = object : OrientationEventListener(this) {
-            override fun onOrientationChanged(orientation: Int) {
-                if (orientation == ORIENTATION_UNKNOWN) return
-
-                // 简单逻辑：横屏范围设90，其他设0
-                val newRotation = if (orientation in 60..120 || orientation in 240..300) {
-                    90  // 横屏
-                } else {
-                    0   // 竖屏
-                }
-
-                if (newRotation != currentDisplayRotation) {
-                    currentDisplayRotation = newRotation
-                    logger.info(TAG, "Device rotation changed: $newRotation° (orientation=$orientation)")
-                    overlayManager.setDisplayRotation(newRotation)
-                    if (isCapturing) {
-                        applyCaptureRegion()
-                    }
-                }
-            }
-        }
-        orientationListener?.enable()
 
         logger.info(TAG, "MainActivity created")
     }
@@ -1165,10 +1139,15 @@ class MainActivity : AppCompatActivity() {
     // 上次旋转检查时间（避免每帧都检查，每3秒检查一次）
     private var lastRotationCheckTime = 0L
 
-    // 设备旋转检测
-    private var orientationListener: OrientationEventListener? = null
-    @Volatile
-    private var currentDisplayRotation: Int = 0  // 0=竖屏, 90=横屏
+    // 当前屏幕旋转状态（根据屏幕宽高动态判断）
+    private val currentDisplayRotation: Int
+        get() {
+            val wm = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
+            val point = android.graphics.Point()
+            @Suppress("DEPRECATION")
+            wm.defaultDisplay.getRealSize(point)
+            return if (point.x > point.y) 90 else 0
+        }
 
     /**
      * 处理截屏帧回调
@@ -1333,8 +1312,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        orientationListener?.disable()
-        orientationListener = null
         stopCapture()
         inferenceEngine.release()
         overlayManager.release()
