@@ -283,11 +283,13 @@ class MainActivity : AppCompatActivity() {
                     if (!isSystemHandlingRotation()) {
                         val isLandscape = newRotation == 90 || newRotation == 270
                         if (isLandscape) {
-                            // 横屏：更新 overlay 为横屏尺寸，重置 canvas rotation
                             overlayManager.updateOverlaySize(portraitScreenHeight, portraitScreenWidth)
                         } else {
-                            // 竖屏：更新 overlay 为竖屏尺寸
                             overlayManager.updateOverlaySize(portraitScreenWidth, portraitScreenHeight)
+                        }
+                        // overlay 方向变化后重新计算截屏区域（宽高比变化）
+                        if (isCapturing) {
+                            applyCaptureRegion()
                         }
                     }
                 }
