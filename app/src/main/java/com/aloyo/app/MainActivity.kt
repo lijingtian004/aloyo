@@ -1322,20 +1322,27 @@ class MainActivity : AppCompatActivity() {
                             y2 = det.y2 + captureRegion.y
                         )
                     } else det
-                    // 旋转变换到 overlay 空间（用竖屏全屏尺寸）
+                    // 旋转变换到 overlay 空间
+                    // 只变换两个对角点，取 min/max（自动交换 w/h）
                     when (coordRotation) {
-                        1 -> withOffset.copy(
-                            x1 = portraitScreenHeight - withOffset.y1,
-                            y1 = withOffset.x1,
-                            x2 = portraitScreenHeight - withOffset.y2,
-                            y2 = withOffset.x2
-                        )
-                        3 -> withOffset.copy(
-                            x1 = withOffset.y1,
-                            y1 = portraitScreenWidth - withOffset.x1,
-                            x2 = withOffset.y2,
-                            y2 = portraitScreenWidth - withOffset.x2
-                        )
+                        1 -> {
+                            // 90° CW: (x,y) → (H-y, x)
+                            val a = floatArrayOf(portraitScreenHeight - withOffset.y1, withOffset.x1)
+                            val b = floatArrayOf(portraitScreenHeight - withOffset.y2, withOffset.x2)
+                            withOffset.copy(
+                                x1 = minOf(a[0], b[0]), y1 = minOf(a[1], b[1]),
+                                x2 = maxOf(a[0], b[0]), y2 = maxOf(a[1], b[1])
+                            )
+                        }
+                        3 -> {
+                            // 270° CW: (x,y) → (y, W-x)
+                            val a = floatArrayOf(withOffset.y1, portraitScreenWidth - withOffset.x1)
+                            val b = floatArrayOf(withOffset.y2, portraitScreenWidth - withOffset.x2)
+                            withOffset.copy(
+                                x1 = minOf(a[0], b[0]), y1 = minOf(a[1], b[1]),
+                                x2 = maxOf(a[0], b[0]), y2 = maxOf(a[1], b[1])
+                            )
+                        }
                         else -> withOffset
                     }
                 }

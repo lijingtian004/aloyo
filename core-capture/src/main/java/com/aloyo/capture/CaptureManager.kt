@@ -324,7 +324,6 @@ class CaptureManager(private val context: Context) : ICaptureSource {
         val ry: Int
         if (bitmap.width > bitmap.height) {
             // 横屏 bitmap：区域坐标从竖屏变换到横屏
-            // 竖屏 (x,y) → 横屏 (bitmapW - regionH - y, x)
             rx = (bitmap.width - region.height - region.y).coerceIn(0, bitmap.width - 1)
             ry = region.x.coerceIn(0, bitmap.height - 1)
         } else {
