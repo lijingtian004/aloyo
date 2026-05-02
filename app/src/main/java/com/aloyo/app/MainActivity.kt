@@ -267,9 +267,10 @@ class MainActivity : AppCompatActivity() {
                     logger.info(TAG, "Device rotation changed: $newRotation° (orientation=$orientation)")
                     // 只在系统不处理旋转时才旋转 overlay canvas：
                     // - OnePlus 自动旋转开：Activity 重建，不需要 canvas 旋转
-                    // - OnePlus 自动旋转关：overlay 被系统视觉旋转，需要 canvas 旋转抵消
+                    // - OnePlus 自动旋转关 + 竖屏 overlay：系统旋转 overlay，需要 canvas 旋转抵消
+                    // - OnePlus 自动旋转关 + 横屏 overlay：系统不旋转，不需要 canvas 旋转
                     // - 标准设备：系统已旋转 Activity，canvas 旋转会导致双重旋转
-                    if (!isSystemHandlingRotation()) {
+                    if (!isSystemHandlingRotation() && !overlayManager.isOverlayLandscape()) {
                         overlayManager.setDisplayRotation(newRotation)
                     }
                 }
@@ -1096,9 +1097,21 @@ class MainActivity : AppCompatActivity() {
         // 显示悬浮窗
         overlayManager.show()
         // 立即应用当前旋转状态（设备可能已经在横屏）
-        // 只在系统不处理旋转时（OnePlus）才设置 canvas 旋转
         if (currentDisplayRotation != 0 && !isSystemHandlingRotation()) {
-            overlayManager.setDisplayRotation(currentDisplayRotation)
+            // OnePlus 关闭自动旋转：强制横屏 overlay，不设 canvas rotation
+            val wm = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
+            @Suppress("DEPRECATION")
+            val display = wm.defaultDisplay
+            val realSize = android.graphics.Point()
+            @Suppress("DEPRECATION")
+            display.getRealSize(realSize)
+            val w = minOf(realSize.x, realSize.y)
+            val h = maxOf(realSize.x, realSize.y)
+            overlayManager.refreshNavigationBarState(h, w)
+            // 横屏 overlay 不需要 canvas rotation（isOverlayLandscape 为 true 时 onDraw 不旋转）
+            if (!overlayManager.isOverlayLandscape()) {
+                overlayManager.setDisplayRotation(currentDisplayRotation)
+            }
         }
 
         isCapturing = true
@@ -1266,22 +1279,33 @@ class MainActivity : AppCompatActivity() {
                 lastRotationCheckTime = now
                 if (systemRotated) {
                     overlayManager.refreshNavigationBarState()
+                } else if (onePlusAutoRotateOff) {
+                    // 横屏时传入横屏尺寸，使 overlay 窗口为横屏（系统不旋转横屏 overlay）
+                    overlayManager.refreshNavigationBarState(screenHeight, screenWidth)
                 } else {
                     overlayManager.refreshNavigationBarState(screenWidth, screenHeight)
                 }
             }
 
-            // 设置源尺寸（推理坐标映射的目标尺寸）
-            // 检测框坐标已变换回竖屏坐标系，overlay 始终为竖屏尺寸
-            // 因此源尺寸始终使用竖屏尺寸
-            overlayManager.setSourceSize(screenWidth, screenHeight)
+            // 判断 overlay 是否为横屏尺寸（OnePlus 关闭自动旋转时，refreshNavigationBarState 强制横屏）
+            val overlayLandscape = onePlusAutoRotateOff && overlayManager.isOverlayLandscape()
+
+            // 设置源尺寸
+            // 横屏 overlay：源尺寸 = bitmap 尺寸（横屏），坐标直接映射
+            // 竖屏 overlay：源尺寸 = 竖屏尺寸，坐标需先变换到竖屏空间
+            if (overlayLandscape) {
+                overlayManager.setSourceSize(screenHeight, screenWidth)  // 横屏 bitmap 尺寸
+            } else {
+                overlayManager.setSourceSize(screenWidth, screenHeight)  // 竖屏尺寸
+            }
 
             // 执行推理
             val (detections, metrics) = inferenceEngine.inferWithMetrics(bitmap)
 
-            // 坐标变换：AUTO_MIRROR 旋转了 bitmap 内容，推理坐标在旋转空间
-            // 需要反向变换回竖屏坐标，才能正确映射到 overlay
-            val needTransform = (systemRotated || onePlusAutoRotateOff) && coordRotation != 0
+            // 坐标变换
+            // 横屏 overlay（OnePlus 关闭自动旋转）：不需要变换，直接使用 bitmap 坐标
+            // 竖屏 overlay：需要变换回竖屏坐标（配合 canvas rotation）
+            val needTransform = (systemRotated || (onePlusAutoRotateOff && !overlayLandscape)) && coordRotation != 0
             val rotatedDetections = if (needTransform) {
                 detections.map { det ->
                     when (coordRotation) {
