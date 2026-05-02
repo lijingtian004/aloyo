@@ -358,27 +358,23 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
             // 检测是否发生了方向变化（宽高互换）
             val isOrientationChanged = (params.width > params.height) != (realSize.width > realSize.height)
 
-            if (isOrientationChanged) {
-                // 方向变化了，必须重新创建overlay窗口
-                android.util.Log.i(TAG, "Orientation changed, recreating overlay window: ${params.width}x${params.height} -> ${realSize.width}x${realSize.height}")
-                recreateDetectionOverlay(forcedWidth, forcedHeight)
-
-                // 横屏 overlay：系统不旋转，不需要 canvas rotation
-                // 重置 rotation 防止 onDraw 做多余的 canvas 旋转
-                if (isOverlayLandscape()) {
-                    overlayView?.setDisplayRotation(0)
-                    forceLandscapeOnce = true
-                    android.util.Log.i(TAG, "Landscape overlay: reset canvas rotation to 0, forceLandscapeOnce=true")
-                }
-            } else if (params.width != realSize.width || params.height != realSize.height) {
-                // 只是尺寸微调（如导航栏显示/隐藏），更新布局参数即可
+            if (isOrientationChanged || params.width != realSize.width || params.height != realSize.height) {
+                // 方向变化或尺寸变化：用 updateViewLayout 更新，不重建窗口
+                // 重建窗口（removeView + addView）在 OnePlus 上导致 ANR 崩溃
+                android.util.Log.i(TAG, "Overlay orientation/size changed, updating layout: ${params.width}x${params.height} -> ${realSize.width}x${realSize.height}")
                 params.width = realSize.width
                 params.height = realSize.height
                 try {
                     windowManager.updateViewLayout(overlayView, params)
-                    android.util.Log.i(TAG, "Overlay size updated to ${realSize.width}x${realSize.height}")
                 } catch (e: Exception) {
-                    android.util.Log.w(TAG, "Failed to update overlay size", e)
+                    android.util.Log.w(TAG, "Failed to update overlay layout", e)
+                }
+
+                // 横屏 overlay：系统不旋转，不需要 canvas rotation
+                if (realSize.width > realSize.height) {
+                    overlayView?.setDisplayRotation(0)
+                    forceLandscapeOnce = true
+                    android.util.Log.i(TAG, "Landscape overlay: reset canvas rotation to 0, forceLandscapeOnce=true")
                 }
             }
         }

@@ -1295,8 +1295,10 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            // 判断 overlay 是否为横屏尺寸（OnePlus 关闭自动旋转时，refreshNavigationBarState 强制横屏）
-            val overlayLandscape = onePlusAutoRotateOff && overlayManager.isOverlayLandscape()
+            // 判断 overlay 是否为横屏尺寸
+            // forceLandscapeOnce: 一旦锁定横屏，整个会话期间保持横屏
+            // isOverlayLandscape: 当前 overlay 实际尺寸
+            val overlayLandscape = overlayManager.forceLandscapeOnce || overlayManager.isOverlayLandscape()
 
             // 设置源尺寸
             // 横屏 overlay：源尺寸 = bitmap 尺寸（横屏），坐标直接映射
