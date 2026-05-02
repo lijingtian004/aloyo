@@ -3,7 +3,6 @@ package com.aloyo.capture
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.Matrix
 import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
@@ -319,38 +318,22 @@ class CaptureManager(private val context: Context) : ICaptureSource {
     /**
      * 裁剪Bitmap到指定截屏区域
      * 区域坐标始终为竖屏坐标系，当 bitmap 为横屏时变换为横屏坐标
-     * 竖屏 bitmap 裁剪后旋转 90° CW，让推理引擎看到横屏画面
      */
     private fun cropBitmap(bitmap: Bitmap, region: CaptureRegion): Bitmap {
         val rx: Int
         val ry: Int
-        val shouldRotate: Boolean
         if (bitmap.width > bitmap.height) {
             // 横屏 bitmap：区域坐标从竖屏变换到横屏
             rx = (bitmap.width - region.height - region.y).coerceIn(0, bitmap.width - 1)
             ry = region.x.coerceIn(0, bitmap.height - 1)
-            shouldRotate = false
         } else {
-            // 竖屏 bitmap：直接裁剪
             rx = region.x.coerceIn(0, bitmap.width - 1)
             ry = region.y.coerceIn(0, bitmap.height - 1)
-            shouldRotate = true
         }
         val w = region.width.coerceIn(1, bitmap.width - rx)
         val h = region.height.coerceIn(1, bitmap.height - ry)
 
-        val cropped = Bitmap.createBitmap(bitmap, rx, ry, w, h)
-
-        // 竖屏 bitmap 裁剪后旋转 90° CW
-        // 让推理引擎看到横屏画面，检测框自然就是横屏样式的
-        return if (shouldRotate) {
-            val matrix = Matrix().apply { postRotate(90f) }
-            val rotated = Bitmap.createBitmap(cropped, 0, 0, cropped.width, cropped.height, matrix, true)
-            if (rotated !== cropped) cropped.recycle()
-            rotated
-        } else {
-            cropped
-        }
+        return Bitmap.createBitmap(bitmap, rx, ry, w, h)
     }
 
     /**
