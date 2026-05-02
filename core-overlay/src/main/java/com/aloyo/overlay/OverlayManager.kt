@@ -376,14 +376,6 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
                     android.util.Log.w(TAG, "Failed to update overlay size", e)
                 }
             }
-
-                // 横屏 overlay：系统不旋转，不需要 canvas rotation
-                if (realSize.width > realSize.height) {
-                    overlayView?.setDisplayRotation(0)
-                    forceLandscapeOnce = true
-                    android.util.Log.i(TAG, "Landscape overlay: reset canvas rotation to 0, forceLandscapeOnce=true")
-                }
-            }
         }
 
         // 同步更新控制面板位置，确保横竖屏切换后控制面板在合适位置
