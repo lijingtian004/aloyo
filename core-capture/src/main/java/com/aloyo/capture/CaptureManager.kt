@@ -317,16 +317,24 @@ class CaptureManager(private val context: Context) : ICaptureSource {
 
     /**
      * 裁剪Bitmap到指定截屏区域
-     * 确保裁剪区域在Bitmap范围内
+     * 区域坐标始终为竖屏坐标系，当 bitmap 为横屏时变换为横屏坐标
      */
     private fun cropBitmap(bitmap: Bitmap, region: CaptureRegion): Bitmap {
-        // 确保裁剪区域在Bitmap范围内
-        val x = region.x.coerceIn(0, bitmap.width - 1)
-        val y = region.y.coerceIn(0, bitmap.height - 1)
-        val w = region.width.coerceIn(1, bitmap.width - x)
-        val h = region.height.coerceIn(1, bitmap.height - y)
+        val rx: Int
+        val ry: Int
+        if (bitmap.width > bitmap.height) {
+            // 横屏 bitmap：区域坐标从竖屏变换到横屏
+            // 竖屏 (x,y) → 横屏 (bitmapW - regionH - y, x)
+            rx = (bitmap.width - region.height - region.y).coerceIn(0, bitmap.width - 1)
+            ry = region.x.coerceIn(0, bitmap.height - 1)
+        } else {
+            rx = region.x.coerceIn(0, bitmap.width - 1)
+            ry = region.y.coerceIn(0, bitmap.height - 1)
+        }
+        val w = region.width.coerceIn(1, bitmap.width - rx)
+        val h = region.height.coerceIn(1, bitmap.height - ry)
 
-        return Bitmap.createBitmap(bitmap, x, y, w, h)
+        return Bitmap.createBitmap(bitmap, rx, ry, w, h)
     }
 
     /**

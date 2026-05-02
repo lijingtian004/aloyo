@@ -1129,19 +1129,12 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * 根据UI选择应用截屏区域
-     * 始终使用竖屏坐标系（OnePlus Android 15 上 getRealSize 始终返回竖屏值）
-     * 坐标变换在 onCaptureFrame 中处理
+     * 始终使用竖屏坐标系（bitmap 在 OnePlus 上始终是竖屏方向）
+     * 横屏 overlay 时，坐标变换在 onCaptureFrame 中处理
      */
     private fun applyCaptureRegion() {
-        // 获取屏幕尺寸（始终返回竖屏尺寸）
-        val windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
-        @Suppress("DEPRECATION")
-        val display = windowManager.defaultDisplay
-        val realSize = android.graphics.Point()
-        @Suppress("DEPRECATION")
-        display.getRealSize(realSize)
-        val screenWidth = minOf(realSize.x, realSize.y)  // 短边 = 宽
-        val screenHeight = maxOf(realSize.x, realSize.y)  // 长边 = 高
+        val screenWidth = portraitScreenWidth
+        val screenHeight = portraitScreenHeight
 
         val region = when (captureRegionSpinner.selectedItemPosition) {
             1 -> {
