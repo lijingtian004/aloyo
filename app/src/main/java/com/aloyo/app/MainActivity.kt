@@ -221,10 +221,19 @@ class MainActivity : AppCompatActivity() {
         initModelSpinner()
         initButtons()
 
-        // 缓存竖屏屏幕尺寸（getRealScreenSize 在 OnePlus 上始终返回竖屏值）
-        val dm = resources.displayMetrics
-        portraitScreenWidth = minOf(dm.widthPixels, dm.heightPixels)
-        portraitScreenHeight = maxOf(dm.widthPixels, dm.heightPixels)
+        // 缓存竖屏屏幕尺寸（用 WindowManager 获取含刘海和导航栏的真实尺寸）
+        val wm = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
+        val bounds = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            wm.currentWindowMetrics.bounds
+        } else {
+            @Suppress("DEPRECATION")
+            val pt = android.graphics.Point()
+            @Suppress("DEPRECATION")
+            wm.defaultDisplay.getRealSize(pt)
+            android.graphics.Rect(0, 0, pt.x, pt.y)
+        }
+        portraitScreenWidth = minOf(bounds.width(), bounds.height())
+        portraitScreenHeight = maxOf(bounds.width(), bounds.height())
 
         // 屏幕旋转处理说明：
         // OnePlus Android 15 上 Display.getRotation() 和 getRealSize() 都返回竖屏值
@@ -1295,18 +1304,12 @@ class MainActivity : AppCompatActivity() {
             val overlayLandscape = overlayManager.isOverlayLandscape()
             val sameOrientation = bitmapLandscape == overlayLandscape
 
-            // 设置源尺寸
-            // 方向一致：源 = bitmap 尺寸，直接映射
-            // 方向不一致：源 = overlay 尺寸（变换后坐标在 overlay 空间）
-            if (sameOrientation) {
-                overlayManager.setSourceSize(bitmap.width, bitmap.height)
-            } else {
-                val params = overlayManager.getOverlayLayoutParams()
-                if (params != null) {
-                    overlayManager.setSourceSize(params.width, params.height)
-                } else {
-                    overlayManager.setSourceSize(bitmap.width, bitmap.height)
-                }
+            // 设置源尺寸 = overlay 尺寸（检测坐标最终映射到 overlay 空间）
+            // 方向一致：坐标直接映射，源=overlay → scale=1.0
+            // 方向不一致：坐标旋转变换到 overlay 空间，源=overlay → scale=1.0
+            val params = overlayManager.getOverlayLayoutParams()
+            if (params != null) {
+                overlayManager.setSourceSize(params.width, params.height)
             }
 
             // 执行推理
@@ -1318,6 +1321,7 @@ class MainActivity : AppCompatActivity() {
             val needTransform = !sameOrientation && coordRotation != 0
             val finalDetections = if (needTransform) {
                 // 方向不一致：先在 bitmap 空间加偏移，再变换到 overlay 空间
+                // 注意：用全屏尺寸（非裁剪 bitmap 尺寸）做旋转变换
                 detections.map { det ->
                     // 加截屏区域偏移（bitmap 空间）
                     val withOffset = if (!captureRegion.isFullScreen) {
@@ -1328,19 +1332,19 @@ class MainActivity : AppCompatActivity() {
                             y2 = det.y2 + captureRegion.y
                         )
                     } else det
-                    // 旋转变换到 overlay 空间
+                    // 旋转变换到 overlay 空间（用竖屏全屏尺寸）
                     when (coordRotation) {
                         1 -> withOffset.copy(
-                            x1 = bitmap.height - withOffset.y1,
+                            x1 = portraitScreenHeight - withOffset.y1,
                             y1 = withOffset.x1,
-                            x2 = bitmap.height - withOffset.y2,
+                            x2 = portraitScreenHeight - withOffset.y2,
                             y2 = withOffset.x2
                         )
                         3 -> withOffset.copy(
                             x1 = withOffset.y1,
-                            y1 = bitmap.width - withOffset.x1,
+                            y1 = portraitScreenWidth - withOffset.x1,
                             x2 = withOffset.y2,
-                            y2 = bitmap.width - withOffset.x2
+                            y2 = portraitScreenWidth - withOffset.x2
                         )
                         else -> withOffset
                     }
