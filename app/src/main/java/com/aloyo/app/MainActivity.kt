@@ -1251,7 +1251,12 @@ class MainActivity : AppCompatActivity() {
             // 坐标变换需要的旋转值：
             // 标准设备：用 display.rotation（系统值，Activity 重建后立即正确）
             // OnePlus 自动旋转关：用 currentDisplayRotation（传感器值，display.rotation 始终为 0）
-            val coordRotation = if (systemRotated) display.rotation else currentDisplayRotation
+            // 归一化：传感器角度(0/90/270) → display.rotation 值(0/1/3)
+            val coordRotation = if (systemRotated) display.rotation else when (currentDisplayRotation) {
+                90 -> 1
+                270 -> 3
+                else -> 0
+            }
 
             // 定期刷新导航栏状态
             // OnePlus：传入强制尺寸（getRealScreenSize 可能返回旧值）
