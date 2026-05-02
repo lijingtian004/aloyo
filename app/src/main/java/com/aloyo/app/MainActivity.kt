@@ -1307,58 +1307,46 @@ class MainActivity : AppCompatActivity() {
 
             // 坐标变换：bitmap 和 overlay 方向不一致 + 有旋转值时才变换
             // 先加截屏区域偏移（在 bitmap 空间），再做旋转变换
+            // 所有路径都：先在竖屏空间加偏移，再变换到 overlay 空间
             val captureRegion = currentCaptureRegion
-            val needTransform = !sameOrientation && coordRotation != 0
-            val finalDetections = if (needTransform) {
-                // 方向不一致：先在 bitmap 空间加偏移，再变换到 overlay 空间
-                // 注意：用全屏尺寸（非裁剪 bitmap 尺寸）做旋转变换
-                detections.map { det ->
-                    // 加截屏区域偏移（bitmap 空间）
-                    val withOffset = if (!captureRegion.isFullScreen) {
-                        det.copy(
-                            x1 = det.x1 + captureRegion.x,
-                            y1 = det.y1 + captureRegion.y,
-                            x2 = det.x2 + captureRegion.x,
-                            y2 = det.y2 + captureRegion.y
-                        )
-                    } else det
-                    // 旋转变换到 overlay 空间
-                    // 只变换两个对角点，取 min/max（自动交换 w/h）
-                    when (coordRotation) {
-                        1 -> {
-                            // 90° CW: (x,y) → (H-y, x)
-                            val a = floatArrayOf(portraitScreenHeight - withOffset.y1, withOffset.x1)
-                            val b = floatArrayOf(portraitScreenHeight - withOffset.y2, withOffset.x2)
-                            withOffset.copy(
-                                x1 = minOf(a[0], b[0]), y1 = minOf(a[1], b[1]),
-                                x2 = maxOf(a[0], b[0]), y2 = maxOf(a[1], b[1])
-                            )
-                        }
-                        3 -> {
-                            // 270° CW: (x,y) → (y, W-x)
-                            val a = floatArrayOf(withOffset.y1, portraitScreenWidth - withOffset.x1)
-                            val b = floatArrayOf(withOffset.y2, portraitScreenWidth - withOffset.x2)
-                            withOffset.copy(
-                                x1 = minOf(a[0], b[0]), y1 = minOf(a[1], b[1]),
-                                x2 = maxOf(a[0], b[0]), y2 = maxOf(a[1], b[1])
-                            )
-                        }
-                        else -> withOffset
-                    }
+            val finalDetections = detections.map { det ->
+                // 步骤1：加截屏区域偏移（始终在竖屏空间）
+                val withOffset = if (!captureRegion.isFullScreen) {
+                    det.copy(
+                        x1 = det.x1 + captureRegion.x,
+                        y1 = det.y1 + captureRegion.y,
+                        x2 = det.x2 + captureRegion.x,
+                        y2 = det.y2 + captureRegion.y
+                    )
+                } else det
+
+                // 步骤2：从竖屏空间变换到 overlay 空间
+                // 竖屏 bitmap + 竖屏 overlay：不需要变换
+                // 横屏 bitmap（任何 overlay）：90° CW 变换（竖屏偏移→横屏空间）
+                // 竖屏 bitmap + 横屏 overlay：用 coordRotation 变换
+                val transformRotation = when {
+                    bitmapLandscape -> 1  // 横屏 bitmap：竖屏偏移需变换到横屏空间
+                    !sameOrientation && coordRotation != 0 -> coordRotation  // 竖屏 bitmap + 横屏 overlay
+                    else -> 0  // 竖屏 bitmap + 竖屏 overlay：不需要变换
                 }
-            } else {
-                // 方向一致：直接加偏移
-                if (!captureRegion.isFullScreen) {
-                    detections.map { det ->
-                        det.copy(
-                            x1 = det.x1 + captureRegion.x,
-                            y1 = det.y1 + captureRegion.y,
-                            x2 = det.x2 + captureRegion.x,
-                            y2 = det.y2 + captureRegion.y
+                when (transformRotation) {
+                    1 -> {
+                        val a = floatArrayOf(portraitScreenHeight - withOffset.y1, withOffset.x1)
+                        val b = floatArrayOf(portraitScreenHeight - withOffset.y2, withOffset.x2)
+                        withOffset.copy(
+                            x1 = minOf(a[0], b[0]), y1 = minOf(a[1], b[1]),
+                            x2 = maxOf(a[0], b[0]), y2 = maxOf(a[1], b[1])
                         )
                     }
-                } else {
-                    detections
+                    3 -> {
+                        val a = floatArrayOf(withOffset.y1, portraitScreenWidth - withOffset.x1)
+                        val b = floatArrayOf(withOffset.y2, portraitScreenWidth - withOffset.x2)
+                        withOffset.copy(
+                            x1 = minOf(a[0], b[0]), y1 = minOf(a[1], b[1]),
+                            x2 = maxOf(a[0], b[0]), y2 = maxOf(a[1], b[1])
+                        )
+                    }
+                    else -> withOffset
                 }
             }
 
