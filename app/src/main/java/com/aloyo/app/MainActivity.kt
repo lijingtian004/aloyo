@@ -221,19 +221,16 @@ class MainActivity : AppCompatActivity() {
         initModelSpinner()
         initButtons()
 
-        // 缓存竖屏屏幕尺寸（用 WindowManager 获取含刘海和导航栏的真实尺寸）
+        // 缓存竖屏屏幕尺寸（用 getRealMetrics 获取含刘海和导航栏的真实尺寸）
+        // 注意：currentWindowMetrics.bounds 在 OnePlus 上不含导航栏（返回 2584 而非 2780）
+        // 必须用 getRealMetrics 才能获取完整屏幕尺寸
         val wm = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
-        val bounds = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            wm.currentWindowMetrics.bounds
-        } else {
-            @Suppress("DEPRECATION")
-            val pt = android.graphics.Point()
-            @Suppress("DEPRECATION")
-            wm.defaultDisplay.getRealSize(pt)
-            android.graphics.Rect(0, 0, pt.x, pt.y)
-        }
-        portraitScreenWidth = minOf(bounds.width(), bounds.height())
-        portraitScreenHeight = maxOf(bounds.width(), bounds.height())
+        @Suppress("DEPRECATION")
+        val dm = android.util.DisplayMetrics()
+        @Suppress("DEPRECATION")
+        wm.defaultDisplay.getRealMetrics(dm)
+        portraitScreenWidth = minOf(dm.widthPixels, dm.heightPixels)
+        portraitScreenHeight = maxOf(dm.widthPixels, dm.heightPixels)
 
         // 屏幕旋转处理说明：
         // OnePlus Android 15 上 Display.getRotation() 和 getRealSize() 都返回竖屏值

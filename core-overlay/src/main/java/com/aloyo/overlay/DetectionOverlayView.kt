@@ -295,6 +295,10 @@ class DetectionOverlayView(context: Context) : View(context) {
         if (showCaptureRegion && !captureRegion.isFullScreen && srcWidth > 0 && srcHeight > 0) {
             if (isRotated) {
                 drawCaptureRegionRotated(canvas, scaleX, scaleY, rotation, srcWidth, srcHeight, effectiveW, effectiveH)
+            } else if (viewW > viewH && captureRegion.y + captureRegion.height > viewH) {
+                // 横屏 overlay + 竖屏区域坐标：需要变换
+                // 竖屏 (x,y) → 横屏 (viewW - regionH - y, x)
+                drawCaptureRegionTransformed(canvas, viewW, viewH)
             } else {
                 drawCaptureRegion(canvas, scaleX, scaleY, viewW, viewH)
             }
@@ -336,6 +340,32 @@ class DetectionOverlayView(context: Context) : View(context) {
         val labelText = "${captureRegion.width}×${captureRegion.height}"
         val textWidth = captureRegionLabelPaint.measureText(labelText)
         val textHeight = captureRegionLabelPaint.fontMetrics.let { it.descent - it.ascent }
+        canvas.drawText(labelText, rx1 + 4f, ry1 - 4f, captureRegionLabelPaint)
+    }
+
+    /**
+     * 绘制横屏 overlay 上的竖屏截屏区域框（坐标变换后绘制）
+     * 竖屏 (x,y) → 横屏 (viewW - regionH - y, x)
+     */
+    private fun drawCaptureRegionTransformed(canvas: Canvas, viewW: Int, viewH: Int) {
+        val region = captureRegion
+        // 竖屏坐标变换到横屏 overlay：(x,y) → (viewW - regionH - y, x)
+        val rx1 = (viewW - region.height - region.y).toFloat()
+        val ry1 = region.x.toFloat()
+        val rx2 = rx1 + region.width
+        val ry2 = ry1 + region.height
+
+        // 绘制区域外遮罩
+        canvas.drawRect(0f, 0f, viewW.toFloat(), ry1, captureRegionMaskPaint)
+        canvas.drawRect(0f, ry2, viewW.toFloat(), viewH.toFloat(), captureRegionMaskPaint)
+        canvas.drawRect(0f, ry1, rx1, ry2, captureRegionMaskPaint)
+        canvas.drawRect(rx2, ry1, viewW.toFloat(), ry2, captureRegionMaskPaint)
+
+        // 绘制虚线边框
+        canvas.drawRect(rx1, ry1, rx2, ry2, captureRegionPaint)
+
+        // 绘制标签
+        val labelText = "${region.width}×${region.height}"
         canvas.drawText(labelText, rx1 + 4f, ry1 - 4f, captureRegionLabelPaint)
     }
 
