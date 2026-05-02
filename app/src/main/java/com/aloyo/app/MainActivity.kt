@@ -1135,45 +1135,29 @@ class MainActivity : AppCompatActivity() {
         val screenWidth = portraitScreenWidth
         val screenHeight = portraitScreenHeight
 
-        // 横屏 overlay 时：裁剪区域需要匹配 overlay 宽高比
-        // 竖屏空间中的 "正方形" 在横屏 overlay 上会被拉伸
-        // 需要在竖屏空间中使用 landscape 比例的裁剪区域
-        val isLandscapeOverlay = overlayManager.isOverlayLandscape()
-        val aspectRatio = if (isLandscapeOverlay) {
-            screenHeight.toFloat() / screenWidth.toFloat()  // 横屏 overlay 的宽高比
-        } else {
-            1f  // 竖屏 overlay：正方形
-        }
-
         val region = when (captureRegionSpinner.selectedItemPosition) {
             1 -> {
-                val baseSize = 256
-                val w = baseSize
-                val h = (baseSize * aspectRatio).toInt().coerceAtLeast(1)
-                val x = ((screenWidth - w) / 2).coerceAtLeast(0)
-                val y = ((screenHeight - h) / 2).coerceAtLeast(0)
-                CaptureRegion(x, y, w, h)
+                val size = 256
+                val x = ((screenWidth - size) / 2).coerceAtLeast(0)
+                val y = ((screenHeight - size) / 2).coerceAtLeast(0)
+                CaptureRegion(x, y, size, size)
             }
             2 -> {
-                val baseSize = 320
-                val w = baseSize
-                val h = (baseSize * aspectRatio).toInt().coerceAtLeast(1)
-                val x = ((screenWidth - w) / 2).coerceAtLeast(0)
-                val y = ((screenHeight - h) / 2).coerceAtLeast(0)
-                CaptureRegion(x, y, w, h)
+                val size = 320
+                val x = ((screenWidth - size) / 2).coerceAtLeast(0)
+                val y = ((screenHeight - size) / 2).coerceAtLeast(0)
+                CaptureRegion(x, y, size, size)
             }
             3 -> {
-                val baseSize = 640
-                val w = baseSize
-                val h = (baseSize * aspectRatio).toInt().coerceAtLeast(1)
-                val x = ((screenWidth - w) / 2).coerceAtLeast(0)
-                val y = ((screenHeight - h) / 2).coerceAtLeast(0)
-                CaptureRegion(x, y, w, h)
+                val size = 640
+                val x = ((screenWidth - size) / 2).coerceAtLeast(0)
+                val y = ((screenHeight - size) / 2).coerceAtLeast(0)
+                CaptureRegion(x, y, size, size)
             }
             4 -> {
                 val minDimension = minOf(screenWidth, screenHeight)
                 val w = (minDimension * 0.75).toInt()
-                val h = (w * aspectRatio).toInt().coerceAtLeast(1)
+                val h = w
                 val x = ((screenWidth - w) / 2).coerceAtLeast(0)
                 val y = ((screenHeight - h) / 2).coerceAtLeast(0)
                 CaptureRegion(x, y, w, h)
