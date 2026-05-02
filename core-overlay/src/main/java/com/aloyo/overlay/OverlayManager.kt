@@ -105,11 +105,21 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
         // 如果外部传入了强制尺寸，优先使用外部传入的值
         // 原因：在某些设备上（如OnePlus/Android 15），当应用未随方向旋转时，
         // WindowManager.currentWindowMetrics 可能返回旧方向的尺寸
-        val realScreenSize = if (forcedWidth > 0 && forcedHeight > 0) {
+        var realScreenSize = if (forcedWidth > 0 && forcedHeight > 0) {
             android.util.Log.i(TAG, "Using forced screen size: ${forcedWidth}x${forcedHeight}")
             ScreenSize(forcedWidth, forcedHeight)
         } else {
             getRealScreenSize()
+        }
+
+        // 强制 overlay 窗口始终使用竖屏尺寸（width < height）
+        // 系统会自动旋转 overlay 的视觉显示（横屏时内容自动旋转为横屏）
+        // canvas rotation 用于坐标系补偿，而非窗口尺寸变化
+        // 如果不强制竖屏，横屏时 getRealScreenSize 返回横屏尺寸，overlay 被重建为横屏，
+        // 系统不再旋转它，canvas rotation 导致双重旋转
+        if (realScreenSize.width > realScreenSize.height) {
+            realScreenSize = ScreenSize(realScreenSize.height, realScreenSize.width)
+            android.util.Log.i(TAG, "Forced portrait overlay size: ${realScreenSize.width}x${realScreenSize.height}")
         }
 
         // 使用真实全屏尺寸显式设置窗口大小，而非MATCH_PARENT

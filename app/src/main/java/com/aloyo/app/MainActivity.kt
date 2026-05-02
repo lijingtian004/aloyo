@@ -1098,16 +1098,6 @@ class MainActivity : AppCompatActivity() {
         // 立即应用当前旋转状态（设备可能已经在横屏）
         // 只在系统不处理旋转时（OnePlus）才设置 canvas 旋转
         if (currentDisplayRotation != 0 && !isSystemHandlingRotation()) {
-            // 先刷新 overlay 窗口尺寸到横屏，再设置旋转
-            val wm = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
-            @Suppress("DEPRECATION")
-            val display = wm.defaultDisplay
-            val realSize = android.graphics.Point()
-            @Suppress("DEPRECATION")
-            display.getRealSize(realSize)
-            val w = minOf(realSize.x, realSize.y)
-            val h = maxOf(realSize.x, realSize.y)
-            overlayManager.refreshNavigationBarState(h, w)
             overlayManager.setDisplayRotation(currentDisplayRotation)
         }
 
@@ -1118,27 +1108,19 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * 根据UI选择应用截屏区域
-     * 横屏时（OnePlus关闭自动旋转）基于横屏坐标系计算，与bitmap方向一致
-     * 竖屏时基于竖屏坐标系计算
+     * 始终使用竖屏坐标系（OnePlus Android 15 上所有显示API都返回竖屏尺寸）
+     * 系统会自动旋转 overlay 窗口内容，无需手动处理横屏
      */
     private fun applyCaptureRegion() {
-        // 获取屏幕尺寸
+        // 获取屏幕尺寸（始终返回竖屏尺寸）
         val windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
         @Suppress("DEPRECATION")
         val display = windowManager.defaultDisplay
         val realSize = android.graphics.Point()
         @Suppress("DEPRECATION")
         display.getRealSize(realSize)
-        var screenWidth = minOf(realSize.x, realSize.y)  // 短边 = 宽
-        var screenHeight = maxOf(realSize.x, realSize.y)  // 长边 = 高
-
-        // OnePlus 关闭自动旋转横屏：getRealSize 返回竖屏值，但 bitmap 是横屏方向
-        // 需要交换宽高，使截屏区域基于实际 bitmap 坐标系计算
-        if (isOnePlusAutoRotateOff()) {
-            val tmp = screenWidth
-            screenWidth = screenHeight
-            screenHeight = tmp
-        }
+        val screenWidth = minOf(realSize.x, realSize.y)  // 短边 = 宽
+        val screenHeight = maxOf(realSize.x, realSize.y)  // 长边 = 高
 
         val region = when (captureRegionSpinner.selectedItemPosition) {
             1 -> {
@@ -1279,23 +1261,18 @@ class MainActivity : AppCompatActivity() {
             // 定期刷新导航栏状态
             // OnePlus：传入强制尺寸（getRealScreenSize 可能返回旧值）
             // 标准设备：不传（getRealScreenSize 返回当前正确值）
-            // 横屏时交换宽高，确保 overlay 窗口使用正确的横屏尺寸
             val now = System.currentTimeMillis()
             if (now - lastRotationCheckTime >= 3000) {
                 lastRotationCheckTime = now
                 if (systemRotated) {
                     overlayManager.refreshNavigationBarState()
-                } else if (onePlusAutoRotateOff) {
-                    // OnePlus 关闭自动旋转横屏：getRealScreenSize 返回竖屏值，强制用横屏尺寸
-                    overlayManager.refreshNavigationBarState(screenHeight, screenWidth)
                 } else {
                     overlayManager.refreshNavigationBarState(screenWidth, screenHeight)
                 }
             }
 
             // 设置源尺寸（推理坐标映射的目标尺寸）
-            // 检测框坐标在 onCaptureFrame 中已变换回竖屏坐标系
-            // overlay 的 canvas rotation 会将竖屏坐标映射到旋转后的屏幕
+            // 检测框坐标已变换回竖屏坐标系，overlay 始终为竖屏尺寸
             // 因此源尺寸始终使用竖屏尺寸
             overlayManager.setSourceSize(screenWidth, screenHeight)
 
