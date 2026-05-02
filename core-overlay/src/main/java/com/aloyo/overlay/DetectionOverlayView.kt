@@ -352,6 +352,8 @@ class DetectionOverlayView(context: Context) : View(context) {
         // 竖屏坐标变换到横屏 overlay：(x,y) → (viewW - regionH - y, x)
         val rx1 = (viewW - region.height - region.y).toFloat()
         val ry1 = region.x.toFloat()
+        onLog?.invoke("CaptureRegionTransformed: portrait=(${region.x},${region.y},${region.width},${region.height}), " +
+                "landscape=(${rx1.toInt()},${ry1.toInt()},${region.width},${region.height}), viewW=$viewW")
         val rx2 = rx1 + region.width
         val ry2 = ry1 + region.height
 

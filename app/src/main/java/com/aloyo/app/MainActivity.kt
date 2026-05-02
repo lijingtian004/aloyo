@@ -1358,6 +1358,18 @@ class MainActivity : AppCompatActivity() {
                 offsetDetections
             }
 
+            // 诊断日志：每3秒打印一次坐标变换详情
+            if (finalDetections.isNotEmpty() && now - lastInferenceLogTime >= 3000) {
+                val raw = detections.firstOrNull()
+                val final = finalDetections.firstOrNull()
+                if (raw != null && final != null) {
+                    logger.info(TAG, "CoordTransform: bitmapLandscape=$bitmapLandscape, sameOrientation=$sameOrientation, " +
+                            "raw=(${String.format("%.0f", raw.x1)},${String.format("%.0f", raw.y1)}), " +
+                            "region=(${captureRegion.x},${captureRegion.y}), " +
+                            "final=(${String.format("%.0f", final.x1)},${String.format("%.0f", final.y1)})")
+                }
+            }
+
             // 首次推理时记录NCNN输出诊断信息到应用日志
             if (!hasLoggedNcnnDiag) {
                 val engine = inferenceEngine
