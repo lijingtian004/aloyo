@@ -1334,10 +1334,12 @@ class MainActivity : AppCompatActivity() {
             }
 
             // 坐标旋转变换：竖屏 bitmap + 横屏 overlay 时需要
+            // 变换两个对角点取 min/max（自动交换 w/h）
             val finalDetections = if (!sameOrientation && coordRotation != 0) {
                 offsetDetections.map { det ->
-                    when (coordRotation) {
+                    val transformed = when (coordRotation) {
                         1 -> {
+                            // 90° CW: (x,y) → (H-y, x)
                             val a = floatArrayOf(portraitScreenHeight - det.y1, det.x1)
                             val b = floatArrayOf(portraitScreenHeight - det.y2, det.x2)
                             det.copy(
@@ -1346,6 +1348,7 @@ class MainActivity : AppCompatActivity() {
                             )
                         }
                         3 -> {
+                            // 270° CW: (x,y) → (y, W-x)
                             val a = floatArrayOf(det.y1, portraitScreenWidth - det.x1)
                             val b = floatArrayOf(det.y2, portraitScreenWidth - det.x2)
                             det.copy(
@@ -1354,6 +1357,22 @@ class MainActivity : AppCompatActivity() {
                             )
                         }
                         else -> det
+                    }
+                    // 确保宽 > 高（横屏样式）
+                    val w = transformed.x2 - transformed.x1
+                    val h = transformed.y2 - transformed.y1
+                    if (w < h) {
+                        // 宽 < 高：交换，保持中心
+                        val cx = (transformed.x1 + transformed.x2) / 2
+                        val cy = (transformed.y1 + transformed.y2) / 2
+                        val newW = h  // 原来的高变成宽
+                        val newH = w  // 原来的宽变成高
+                        transformed.copy(
+                            x1 = cx - newW / 2, y1 = cy - newH / 2,
+                            x2 = cx + newW / 2, y2 = cy + newH / 2
+                        )
+                    } else {
+                        transformed
                     }
                 }
             } else {
