@@ -24,3 +24,12 @@ local.properties
 /core-logger/build/
 gradle-temp/
 *.log
+
+# Obsidian
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian-git-data
+.smart-connections/
+.trash/
+Thumbs.db
+desktop.ini

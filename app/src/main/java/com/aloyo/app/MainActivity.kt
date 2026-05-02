@@ -265,7 +265,11 @@ class MainActivity : AppCompatActivity() {
                 if (newRotation != currentDisplayRotation) {
                     currentDisplayRotation = newRotation
                     logger.info(TAG, "Device rotation changed: $newRotation° (orientation=$orientation)")
-                    overlayManager.setDisplayRotation(newRotation)
+                    // 只在系统不处理旋转时才旋转 overlay canvas（如 OnePlus Android 15）
+                    // 标准设备上系统已旋转 Activity，canvas 旋转会导致双重旋转
+                    if (!isSystemHandlingRotation()) {
+                        overlayManager.setDisplayRotation(newRotation)
+                    }
                 }
             }
         }
@@ -1090,7 +1094,8 @@ class MainActivity : AppCompatActivity() {
         // 显示悬浮窗
         overlayManager.show()
         // 立即应用当前旋转状态（设备可能已经在横屏）
-        if (currentDisplayRotation != 0) {
+        // 只在系统不处理旋转时（OnePlus）才设置 canvas 旋转
+        if (currentDisplayRotation != 0 && !isSystemHandlingRotation()) {
             overlayManager.setDisplayRotation(currentDisplayRotation)
         }
 
@@ -1189,6 +1194,17 @@ class MainActivity : AppCompatActivity() {
     private var currentDisplayRotation: Int = 0  // 0=竖屏, 90=横屏（顺时针）, 270=横屏（逆时针）
 
     /**
+     * 判断系统是否在处理屏幕旋转
+     * OnePlus Android 15 上 Display.getRotation() 始终返回 0，系统不旋转 Activity
+     * 标准设备上 Display.getRotation() 返回实际旋转值（90/270），系统已旋转 Activity
+     */
+    private fun isSystemHandlingRotation(): Boolean {
+        val wm = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
+        @Suppress("DEPRECATION")
+        return wm.defaultDisplay.rotation != 0
+    }
+
+    /**
      * 处理截屏帧回调
      * 将截屏帧送入推理引擎，然后将结果显示在悬浮窗上
      */
@@ -1209,25 +1225,65 @@ class MainActivity : AppCompatActivity() {
             val screenWidth = minOf(realSize.x, realSize.y)  // 短边 = 宽
             val screenHeight = maxOf(realSize.x, realSize.y)  // 长边 = 高
 
+            // 判断系统是否在处理旋转（OnePlus 上始终 false，标准设备上横屏时 true）
+            val systemRotated = isSystemHandlingRotation()
+            val displayRotation = if (systemRotated) display.rotation else 0
+
             // 定期刷新导航栏状态
+            // 只在系统不处理旋转时传入强制尺寸（OnePlus 需要，标准设备不需要）
             val now = System.currentTimeMillis()
             if (now - lastRotationCheckTime >= 3000) {
                 lastRotationCheckTime = now
-                overlayManager.refreshNavigationBarState(screenWidth, screenHeight)
+                if (systemRotated) {
+                    overlayManager.refreshNavigationBarState()
+                } else {
+                    overlayManager.refreshNavigationBarState(screenWidth, screenHeight)
+                }
             }
 
-            // 设置源尺寸（竖屏坐标系，与 overlay 和 bitmap 一致）
-            overlayManager.setSourceSize(screenWidth, screenHeight)
+            // 设置源尺寸
+            // 系统处理旋转时（标准设备横屏）：overlay 窗口为横屏尺寸，源尺寸也应为横屏
+            // 系统不处理旋转时（OnePlus）：overlay 窗口为竖屏尺寸，源尺寸为竖屏
+            if (systemRotated && (displayRotation == 1 || displayRotation == 3)) {
+                overlayManager.setSourceSize(screenHeight, screenWidth)  // 横屏：长边=宽
+            } else {
+                overlayManager.setSourceSize(screenWidth, screenHeight)  // 竖屏：短边=宽
+            }
 
             // 执行推理
             val (detections, metrics) = inferenceEngine.inferWithMetrics(bitmap)
+
+            // 在系统处理旋转的设备上（标准设备横屏时）：
+            // AUTO_MIRROR 会旋转 bitmap 内容，推理坐标在旋转后的 bitmap 空间
+            // 需要将坐标反向变换回竖屏空间，才能与 overlay 的源尺寸匹配
+            val rotatedDetections = if (systemRotated && displayRotation != 0) {
+                detections.map { det ->
+                    when (displayRotation) {
+                        1 -> det.copy(  // 90° CW: (x,y) → (srcH-y, x)
+                            x1 = screenHeight - det.y1,
+                            y1 = det.x1,
+                            x2 = screenHeight - det.y2,
+                            y2 = det.x2
+                        )
+                        3 -> det.copy(  // 270° CW: (x,y) → (y, srcW-x)
+                            x1 = det.y1,
+                            y1 = screenWidth - det.x1,
+                            x2 = det.y2,
+                            y2 = screenWidth - det.x2
+                        )
+                        else -> det
+                    }
+                }
+            } else {
+                detections
+            }
 
             // 如果使用了截屏区域，检测框坐标需要加上区域偏移量
             // 因为推理是在裁剪后的Bitmap上进行的，坐标是相对于裁剪区域的
             // 但overlay显示在全屏上，需要将坐标映射回全屏空间
             val captureRegion = currentCaptureRegion
             val offsetDetections = if (!captureRegion.isFullScreen) {
-                detections.map { det ->
+                rotatedDetections.map { det ->
                     det.copy(
                         x1 = det.x1 + captureRegion.x,
                         y1 = det.y1 + captureRegion.y,
@@ -1236,7 +1292,7 @@ class MainActivity : AppCompatActivity() {
                     )
                 }
             } else {
-                detections
+                rotatedDetections
             }
 
             // 首次推理时记录NCNN输出诊断信息到应用日志
