@@ -339,12 +339,9 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
     fun refreshNavigationBarState(forcedWidth: Int = 0, forcedHeight: Int = 0) {
         updateNavigationBarInfo()
 
-        // forceLandscapeOnce：首次强制横屏后，不再重建 overlay 回竖屏
-        // 避免每 3 秒用竖屏尺寸重建导致崩溃
-        if (forceLandscapeOnce) {
-            android.util.Log.d(TAG, "refreshNavigationBarState: forceLandscapeOnce=true, skipping orientation check")
-            return
-        }
+        // forceLandscapeOnce：防止 overlay 被重建回竖屏（重建导致 ANR）
+        // 但允许 updateViewLayout 更新尺寸（包括回竖屏）
+        // 不再 early return，让 updateViewLayout 处理尺寸变化
 
         // 优先使用外部传入的强制尺寸，避免WindowManager返回旧尺寸
         val realSize = if (forcedWidth > 0 && forcedHeight > 0) {
