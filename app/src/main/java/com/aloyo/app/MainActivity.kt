@@ -1120,26 +1120,19 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * 根据UI选择应用截屏区域
-     * 横屏 overlay 时使用横屏坐标系（与 bitmap 方向一致）
-     * 竖屏 overlay 时使用竖屏坐标系
+     * 始终使用竖屏坐标系（OnePlus Android 15 上 getRealSize 始终返回竖屏值）
+     * 坐标变换在 onCaptureFrame 中处理
      */
     private fun applyCaptureRegion() {
-        // 获取屏幕尺寸
+        // 获取屏幕尺寸（始终返回竖屏尺寸）
         val windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
         @Suppress("DEPRECATION")
         val display = windowManager.defaultDisplay
         val realSize = android.graphics.Point()
         @Suppress("DEPRECATION")
         display.getRealSize(realSize)
-        var screenWidth = minOf(realSize.x, realSize.y)  // 短边 = 宽
-        var screenHeight = maxOf(realSize.x, realSize.y)  // 长边 = 高
-
-        // 横屏 overlay：bitmap 是横屏方向，截屏区域需要基于横屏坐标
-        if (overlayManager.isOverlayLandscape()) {
-            val tmp = screenWidth
-            screenWidth = screenHeight
-            screenHeight = tmp
-        }
+        val screenWidth = minOf(realSize.x, realSize.y)  // 短边 = 宽
+        val screenHeight = maxOf(realSize.x, realSize.y)  // 长边 = 高
 
         val region = when (captureRegionSpinner.selectedItemPosition) {
             1 -> {
@@ -1296,62 +1289,76 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            // 判断 overlay 是否为横屏尺寸（以实际 overlay 窗口尺寸为准）
+            // 判断 bitmap 和 overlay 方向是否一致
+            // 不一致时需要坐标变换，一致时直接映射
+            val bitmapLandscape = bitmap.width > bitmap.height
             val overlayLandscape = overlayManager.isOverlayLandscape()
+            val sameOrientation = bitmapLandscape == overlayLandscape
 
             // 设置源尺寸
-            // 横屏 overlay：源尺寸 = bitmap 尺寸（横屏），坐标直接映射
-            // 竖屏 overlay：源尺寸 = 竖屏尺寸，坐标需先变换到竖屏空间
-            if (overlayLandscape) {
-                overlayManager.setSourceSize(screenHeight, screenWidth)  // 横屏 bitmap 尺寸
+            // 方向一致：源 = bitmap 尺寸，直接映射
+            // 方向不一致：源 = overlay 尺寸（变换后坐标在 overlay 空间）
+            if (sameOrientation) {
+                overlayManager.setSourceSize(bitmap.width, bitmap.height)
             } else {
-                overlayManager.setSourceSize(screenWidth, screenHeight)  // 竖屏尺寸
+                val params = overlayManager.getOverlayLayoutParams()
+                if (params != null) {
+                    overlayManager.setSourceSize(params.width, params.height)
+                } else {
+                    overlayManager.setSourceSize(bitmap.width, bitmap.height)
+                }
             }
 
             // 执行推理
             val (detections, metrics) = inferenceEngine.inferWithMetrics(bitmap)
 
-            // 坐标变换
-            // 横屏 overlay（OnePlus 关闭自动旋转）：不需要变换，直接使用 bitmap 坐标
-            // 竖屏 overlay：需要变换回竖屏坐标（配合 canvas rotation）
-            val needTransform = (systemRotated || (onePlusAutoRotateOff && !overlayLandscape)) && coordRotation != 0
-            val rotatedDetections = if (needTransform) {
+            // 坐标变换：bitmap 和 overlay 方向不一致 + 有旋转值时才变换
+            // 先加截屏区域偏移（在 bitmap 空间），再做旋转变换
+            val captureRegion = currentCaptureRegion
+            val needTransform = !sameOrientation && coordRotation != 0
+            val finalDetections = if (needTransform) {
+                // 方向不一致：先在 bitmap 空间加偏移，再变换到 overlay 空间
                 detections.map { det ->
+                    // 加截屏区域偏移（bitmap 空间）
+                    val withOffset = if (!captureRegion.isFullScreen) {
+                        det.copy(
+                            x1 = det.x1 + captureRegion.x,
+                            y1 = det.y1 + captureRegion.y,
+                            x2 = det.x2 + captureRegion.x,
+                            y2 = det.y2 + captureRegion.y
+                        )
+                    } else det
+                    // 旋转变换到 overlay 空间
                     when (coordRotation) {
-                        1 -> det.copy(  // 90° CW: (x,y) → (srcH-y, x)
-                            x1 = screenHeight - det.y1,
-                            y1 = det.x1,
-                            x2 = screenHeight - det.y2,
-                            y2 = det.x2
+                        1 -> withOffset.copy(
+                            x1 = bitmap.height - withOffset.y1,
+                            y1 = withOffset.x1,
+                            x2 = bitmap.height - withOffset.y2,
+                            y2 = withOffset.x2
                         )
-                        3 -> det.copy(  // 270° CW: (x,y) → (y, srcW-x)
-                            x1 = det.y1,
-                            y1 = screenWidth - det.x1,
-                            x2 = det.y2,
-                            y2 = screenWidth - det.x2
+                        3 -> withOffset.copy(
+                            x1 = withOffset.y1,
+                            y1 = bitmap.width - withOffset.x1,
+                            x2 = withOffset.y2,
+                            y2 = bitmap.width - withOffset.x2
                         )
-                        else -> det
+                        else -> withOffset
                     }
                 }
             } else {
-                detections
-            }
-
-            // 如果使用了截屏区域，检测框坐标需要加上区域偏移量
-            // 因为推理是在裁剪后的Bitmap上进行的，坐标是相对于裁剪区域的
-            // 但overlay显示在全屏上，需要将坐标映射回全屏空间
-            val captureRegion = currentCaptureRegion
-            val offsetDetections = if (!captureRegion.isFullScreen) {
-                rotatedDetections.map { det ->
-                    det.copy(
-                        x1 = det.x1 + captureRegion.x,
-                        y1 = det.y1 + captureRegion.y,
-                        x2 = det.x2 + captureRegion.x,
-                        y2 = det.y2 + captureRegion.y
-                    )
+                // 方向一致：直接加偏移
+                if (!captureRegion.isFullScreen) {
+                    detections.map { det ->
+                        det.copy(
+                            x1 = det.x1 + captureRegion.x,
+                            y1 = det.y1 + captureRegion.y,
+                            x2 = det.x2 + captureRegion.x,
+                            y2 = det.y2 + captureRegion.y
+                        )
+                    }
+                } else {
+                    detections
                 }
-            } else {
-                rotatedDetections
             }
 
             // 首次推理时记录NCNN输出诊断信息到应用日志
@@ -1366,7 +1373,7 @@ class MainActivity : AppCompatActivity() {
                             logger.info(TAG, line)
                         }
                         // 也记录前3个检测的原始坐标
-                        offsetDetections.take(3).forEachIndexed { idx, det ->
+                        finalDetections.take(3).forEachIndexed { idx, det ->
                             logger.info(TAG, "  det[$idx]: x1=${det.x1}, y1=${det.y1}, x2=${det.x2}, y2=${det.y2}, label=${det.label}, conf=${det.confidence}")
                         }
                     }
@@ -1374,7 +1381,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             // 更新悬浮窗（使用偏移后的检测框坐标）
-            overlayManager.updateDetections(offsetDetections, metrics.copy(captureLatencyMs = captureTimeMs))
+            overlayManager.updateDetections(finalDetections, metrics.copy(captureLatencyMs = captureTimeMs))
 
             // 更新UI上的性能指标
             updateMetricsUI(metrics)
