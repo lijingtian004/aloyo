@@ -513,6 +513,35 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
     }
 
     /**
+     * 直接更新 overlay 窗口尺寸（不依赖 getRealScreenSize）
+     * 用于 OnePlus 关闭自动旋转场景，传感器检测到横屏后直接设置横屏尺寸
+     */
+    fun updateOverlaySize(newWidth: Int, newHeight: Int) {
+        val params = overlayLayoutParams ?: return
+        if (params.width == newWidth && params.height == newHeight) return
+
+        android.util.Log.i(TAG, "updateOverlaySize: ${params.width}x${params.height} -> ${newWidth}x${newHeight}")
+        params.width = newWidth
+        params.height = newHeight
+        try {
+            windowManager.updateViewLayout(overlayView, params)
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "updateOverlaySize failed", e)
+        }
+
+        // 横屏 overlay：重置 canvas rotation（系统不旋转横屏 overlay）
+        // 竖屏 overlay：清除 forceLandscapeOnce 标志
+        if (newWidth > newHeight) {
+            overlayView?.setDisplayRotation(0)
+            forceLandscapeOnce = true
+        } else {
+            forceLandscapeOnce = false
+        }
+
+        updateNavigationBarInfo()
+    }
+
+    /**
      * 当前 overlay 窗口是否为横屏尺寸（width > height）
      * 用于判断是否需要 canvas rotation 和坐标变换
      */
