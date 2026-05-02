@@ -52,6 +52,11 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
     var isPaused: Boolean = false
         private set
 
+    // 横屏锁定：设为 true 后，overlay 始终保持横屏尺寸，不会被重建回竖屏
+    // 用于 OnePlus 关闭自动旋转场景：系统不旋转 overlay，必须用横屏 overlay 匹配横屏 bitmap
+    @Volatile
+    var forceLandscapeOnce: Boolean = false
+
     // 暂停回调
     var onPauseToggle: ((paused: Boolean) -> Unit)? = null
 
@@ -259,6 +264,7 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
 
             isShowing = false
             isPaused = false
+            forceLandscapeOnce = false
             android.util.Log.i(TAG, "Overlay hidden")
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Error hiding overlay", e)
@@ -333,6 +339,13 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
     fun refreshNavigationBarState(forcedWidth: Int = 0, forcedHeight: Int = 0) {
         updateNavigationBarInfo()
 
+        // forceLandscapeOnce：首次强制横屏后，不再重建 overlay 回竖屏
+        // 避免每 3 秒用竖屏尺寸重建导致崩溃
+        if (forceLandscapeOnce) {
+            android.util.Log.d(TAG, "refreshNavigationBarState: forceLandscapeOnce=true, skipping orientation check")
+            return
+        }
+
         // 优先使用外部传入的强制尺寸，避免WindowManager返回旧尺寸
         val realSize = if (forcedWidth > 0 && forcedHeight > 0) {
             ScreenSize(forcedWidth, forcedHeight)
@@ -354,7 +367,8 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
                 // 重置 rotation 防止 onDraw 做多余的 canvas 旋转
                 if (isOverlayLandscape()) {
                     overlayView?.setDisplayRotation(0)
-                    android.util.Log.i(TAG, "Landscape overlay: reset canvas rotation to 0")
+                    forceLandscapeOnce = true
+                    android.util.Log.i(TAG, "Landscape overlay: reset canvas rotation to 0, forceLandscapeOnce=true")
                 }
             } else if (params.width != realSize.width || params.height != realSize.height) {
                 // 只是尺寸微调（如导航栏显示/隐藏），更新布局参数即可

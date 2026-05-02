@@ -1107,6 +1107,7 @@ class MainActivity : AppCompatActivity() {
             display.getRealSize(realSize)
             val w = minOf(realSize.x, realSize.y)
             val h = maxOf(realSize.x, realSize.y)
+            overlayManager.forceLandscapeOnce = true
             overlayManager.refreshNavigationBarState(h, w)
             // 横屏 overlay 不需要 canvas rotation（isOverlayLandscape 为 true 时 onDraw 不旋转）
             if (!overlayManager.isOverlayLandscape()) {
@@ -1121,19 +1122,26 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * 根据UI选择应用截屏区域
-     * 始终使用竖屏坐标系（OnePlus Android 15 上所有显示API都返回竖屏尺寸）
-     * 系统会自动旋转 overlay 窗口内容，无需手动处理横屏
+     * 横屏 overlay 时使用横屏坐标系（与 bitmap 方向一致）
+     * 竖屏 overlay 时使用竖屏坐标系
      */
     private fun applyCaptureRegion() {
-        // 获取屏幕尺寸（始终返回竖屏尺寸）
+        // 获取屏幕尺寸
         val windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
         @Suppress("DEPRECATION")
         val display = windowManager.defaultDisplay
         val realSize = android.graphics.Point()
         @Suppress("DEPRECATION")
         display.getRealSize(realSize)
-        val screenWidth = minOf(realSize.x, realSize.y)  // 短边 = 宽
-        val screenHeight = maxOf(realSize.x, realSize.y)  // 长边 = 高
+        var screenWidth = minOf(realSize.x, realSize.y)  // 短边 = 宽
+        var screenHeight = maxOf(realSize.x, realSize.y)  // 长边 = 高
+
+        // 横屏 overlay：bitmap 是横屏方向，截屏区域需要基于横屏坐标
+        if (overlayManager.isOverlayLandscape()) {
+            val tmp = screenWidth
+            screenWidth = screenHeight
+            screenHeight = tmp
+        }
 
         val region = when (captureRegionSpinner.selectedItemPosition) {
             1 -> {
