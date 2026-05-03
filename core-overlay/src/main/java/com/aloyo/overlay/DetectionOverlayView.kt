@@ -539,16 +539,16 @@ class DetectionOverlayView(context: Context) : View(context) {
         val bottom: Float
 
         if (rotation == 270) {
-            left = srcH - maxOf(detection.y1, detection.y2)
+            left = srcH.toFloat() - maxOf(detection.y1, detection.y2)
             top = minOf(detection.x1, detection.x2)
-            right = srcH - minOf(detection.y1, detection.y2)
+            right = srcH.toFloat() - minOf(detection.y1, detection.y2)
             bottom = maxOf(detection.x1, detection.x2)
         } else {
             // rotation == 90
             left = minOf(detection.y1, detection.y2)
-            top = srcW - maxOf(detection.x1, detection.x2)
+            top = srcW.toFloat() - maxOf(detection.x1, detection.x2)
             right = maxOf(detection.y1, detection.y2)
-            bottom = srcW - minOf(detection.x1, detection.x2)
+            bottom = srcW.toFloat() - minOf(detection.x1, detection.x2)
         }
 
         canvas.drawRect(left, top, right, bottom, boxPaint)
@@ -581,16 +581,16 @@ class DetectionOverlayView(context: Context) : View(context) {
         val bottom: Float
 
         if (rotation == 270) {
-            left = srcH - (region.y + region.height)
+            left = (srcH - region.y - region.height).toFloat()
             top = region.x.toFloat()
-            right = srcH - region.y
+            right = (srcH - region.y).toFloat()
             bottom = (region.x + region.width).toFloat()
         } else {
             // rotation == 90
             left = region.y.toFloat()
-            top = srcW - (region.x + region.width)
+            top = (srcW - region.x - region.width).toFloat()
             right = (region.y + region.height).toFloat()
-            bottom = srcW - region.x
+            bottom = (srcW - region.x).toFloat()
         }
 
         val viewW = width
