@@ -488,8 +488,8 @@ class DetectionOverlayView(context: Context) : View(context) {
         val y2 = detection.x2
 
         // 调试日志
-        onLog?.invoke("drawDetectionLandscape: portrait=(${detection.x1.toInt()},${detection.y1.toInt()}), " +
-                "landscape=(${x1.toInt()},${y1.toInt()})")
+        onLog?.invoke("drawDetectionLandscape: portrait=(${detection.x1.toInt()},${detection.y1.toInt()},${detection.x2.toInt()},${detection.y2.toInt()}), " +
+                "landscape=(${x1.toInt()},${y1.toInt()},${x2.toInt()},${y2.toInt()})")
 
         // 确保坐标有序
         val left = minOf(x1, x2)
