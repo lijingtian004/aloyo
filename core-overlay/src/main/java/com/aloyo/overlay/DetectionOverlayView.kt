@@ -477,19 +477,19 @@ class DetectionOverlayView(context: Context) : View(context) {
     /**
      * 绘制横屏 overlay 时的检测结果
      * 将竖屏源坐标变换到横屏 canvas 坐标系
-     * 变换公式：竖屏 (x, y) → 横屏 (viewW - srcH + y, x)
+     * 变换公式：竖屏 (x, y) → 横屏 (y, x)（当 viewW = srcH 时）
      */
     private fun drawDetectionLandscape(canvas: Canvas, detection: Detection,
                                         viewW: Int, viewH: Int, srcW: Int, srcH: Int) {
-        // 竖屏坐标变换到横屏 canvas：(x,y) → (viewW - srcH + y, x)
-        val x1 = (viewW - srcH + detection.y1).toFloat()
+        // 竖屏坐标变换到横屏 canvas：(x,y) → (y, x)
+        val x1 = detection.y1
         val y1 = detection.x1
-        val x2 = (viewW - srcH + detection.y2).toFloat()
+        val x2 = detection.y2
         val y2 = detection.x2
 
         // 调试日志
         onLog?.invoke("drawDetectionLandscape: portrait=(${detection.x1.toInt()},${detection.y1.toInt()}), " +
-                "landscape=(${x1.toInt()},${y1.toInt()}), viewW=$viewW, srcH=$srcH")
+                "landscape=(${x1.toInt()},${y1.toInt()})")
 
         // 确保坐标有序
         val left = minOf(x1, x2)
