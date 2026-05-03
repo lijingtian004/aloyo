@@ -352,26 +352,15 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
         val params = overlayLayoutParams
 
         if (params != null && overlayView != null) {
-            val isOrientationChanged = (params.width > params.height) != (realSize.width > realSize.height)
-
-            val nowMs = System.currentTimeMillis()
-            if (isOrientationChanged && (nowMs - lastRecreateTimeMs > RECREATE_DEBOUNCE_MS)) {
-                // 方向变化：必须重建 overlay（updateViewLayout 在 OnePlus 上不改变尺寸）
-                // 防抖：避免频繁重建导致 ANR
-                lastRecreateTimeMs = nowMs
-                android.util.Log.i(TAG, "Orientation changed, recreating overlay: ${params.width}x${params.height} -> ${realSize.width}x${realSize.height}")
-                recreateDetectionOverlay(forcedWidth, forcedHeight)
-                // 横屏 overlay：重置 canvas rotation
-                if (realSize.width > realSize.height) {
-                    overlayView?.setDisplayRotation(0)
-                }
-            } else if (params.width != realSize.width || params.height != realSize.height) {
-                // 非方向变化（如导航栏显示/隐藏）：updateViewLayout 即可
+            // overlay 始终保持竖屏尺寸（1264x2780），不因方向变化重建
+            // 横屏显示通过 canvas rotation 实现
+            // 只处理非方向性的尺寸微调（如导航栏显示/隐藏）
+            if (params.width != realSize.width && params.height != realSize.height) {
+                // 两个维度都变了才更新（排除方向变化的情况）
                 params.width = realSize.width
                 params.height = realSize.height
                 try {
                     windowManager.updateViewLayout(overlayView, params)
-                    android.util.Log.i(TAG, "Overlay size updated to ${realSize.width}x${realSize.height}")
                 } catch (e: Exception) {
                     android.util.Log.w(TAG, "Failed to update overlay size", e)
                 }

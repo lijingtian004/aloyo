@@ -281,16 +281,8 @@ class MainActivity : AppCompatActivity() {
                     // - OnePlus 自动旋转关：需要手动更新 overlay 尺寸和 canvas rotation
                     // - 标准设备：系统已旋转 Activity，不需要处理
                     if (!isSystemHandlingRotation()) {
-                        val isLandscape = newRotation == 90 || newRotation == 270
-                        if (isLandscape) {
-                            overlayManager.updateOverlaySize(portraitScreenHeight, portraitScreenWidth)
-                        } else {
-                            overlayManager.updateOverlaySize(portraitScreenWidth, portraitScreenHeight)
-                        }
-                        // overlay 方向变化后重新计算截屏区域（宽高比变化）
-                        if (isCapturing) {
-                            applyCaptureRegion()
-                        }
+                        // overlay 始终竖屏尺寸，横屏通过 canvas rotation 实现
+                        overlayManager.setDisplayRotation(newRotation)
                     }
                 }
             }
@@ -1117,8 +1109,7 @@ class MainActivity : AppCompatActivity() {
         overlayManager.show()
         // 立即应用当前旋转状态（设备可能已经在横屏）
         if (currentDisplayRotation != 0 && !isSystemHandlingRotation()) {
-            // OnePlus 关闭自动旋转：强制横屏 overlay（updateOverlaySize 自动重置 canvas rotation）
-            overlayManager.updateOverlaySize(portraitScreenHeight, portraitScreenWidth)
+            overlayManager.setDisplayRotation(currentDisplayRotation)
         }
 
         isCapturing = true
@@ -1290,104 +1281,34 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            // 判断 bitmap 和 overlay 方向是否一致
-            // 不一致时需要坐标变换，一致时直接映射
-            val bitmapLandscape = bitmap.width > bitmap.height
-            val overlayLandscape = overlayManager.isOverlayLandscape()
-            val sameOrientation = bitmapLandscape == overlayLandscape
-
-            // 设置源尺寸 = overlay 尺寸（检测坐标最终映射到 overlay 空间）
-            // 方向一致：坐标直接映射，源=overlay → scale=1.0
-            // 方向不一致：坐标旋转变换到 overlay 空间，源=overlay → scale=1.0
-            val params = overlayManager.getOverlayLayoutParams()
-            if (params != null) {
-                overlayManager.setSourceSize(params.width, params.height)
-            }
+            // overlay 始终竖屏 (1264x2780)，源尺寸 = 竖屏全屏尺寸
+            overlayManager.setSourceSize(portraitScreenWidth, portraitScreenHeight)
 
             // 执行推理
             val (detections, metrics) = inferenceEngine.inferWithMetrics(bitmap)
 
-            // 坐标变换：bitmap 和 overlay 方向不一致 + 有旋转值时才变换
-            // 先加截屏区域偏移（在 bitmap 空间），再做旋转变换
-            // 截屏区域偏移：在 bitmap 空间中加（bitmap 可能是横屏的）
+            // 截屏区域偏移（始终在竖屏空间）
             val captureRegion = currentCaptureRegion
-            val offsetDetections = if (!captureRegion.isFullScreen) {
-                // 计算 bitmap 空间中的偏移（竖屏区域坐标变换到 bitmap 方向）
-                val ox: Float
-                val oy: Float
-                if (bitmapLandscape) {
-                    // 横屏 bitmap：竖屏 (x,y) → 横屏 (bitmapW-regionH-y, x)
-                    ox = (bitmap.width - captureRegion.height - captureRegion.y).toFloat()
-                    oy = captureRegion.x.toFloat()
-                } else {
-                    ox = captureRegion.x.toFloat()
-                    oy = captureRegion.y.toFloat()
-                }
+            val finalDetections = if (!captureRegion.isFullScreen) {
                 detections.map { det ->
                     det.copy(
-                        x1 = det.x1 + ox, y1 = det.y1 + oy,
-                        x2 = det.x2 + ox, y2 = det.y2 + oy
+                        x1 = det.x1 + captureRegion.x, y1 = det.y1 + captureRegion.y,
+                        x2 = det.x2 + captureRegion.x, y2 = det.y2 + captureRegion.y
                     )
                 }
             } else {
                 detections
             }
 
-            // 坐标旋转变换：竖屏 bitmap + 横屏 overlay 时需要
-            // 变换两个对角点取 min/max（自动交换 w/h）
-            val finalDetections = if (!sameOrientation && coordRotation != 0) {
-                offsetDetections.map { det ->
-                    val transformed = when (coordRotation) {
-                        1 -> {
-                            // 90° CW: (x,y) → (H-y, x)
-                            val a = floatArrayOf(portraitScreenHeight - det.y1, det.x1)
-                            val b = floatArrayOf(portraitScreenHeight - det.y2, det.x2)
-                            det.copy(
-                                x1 = minOf(a[0], b[0]), y1 = minOf(a[1], b[1]),
-                                x2 = maxOf(a[0], b[0]), y2 = maxOf(a[1], b[1])
-                            )
-                        }
-                        3 -> {
-                            // 270° CW: (x,y) → (y, W-x)
-                            val a = floatArrayOf(det.y1, portraitScreenWidth - det.x1)
-                            val b = floatArrayOf(det.y2, portraitScreenWidth - det.x2)
-                            det.copy(
-                                x1 = minOf(a[0], b[0]), y1 = minOf(a[1], b[1]),
-                                x2 = maxOf(a[0], b[0]), y2 = maxOf(a[1], b[1])
-                            )
-                        }
-                        else -> det
-                    }
-                    // 确保宽 > 高（横屏样式）
-                    val w = transformed.x2 - transformed.x1
-                    val h = transformed.y2 - transformed.y1
-                    if (w < h) {
-                        // 宽 < 高：交换，保持中心
-                        val cx = (transformed.x1 + transformed.x2) / 2
-                        val cy = (transformed.y1 + transformed.y2) / 2
-                        val newW = h  // 原来的高变成宽
-                        val newH = w  // 原来的宽变成高
-                        transformed.copy(
-                            x1 = cx - newW / 2, y1 = cy - newH / 2,
-                            x2 = cx + newW / 2, y2 = cy + newH / 2
-                        )
-                    } else {
-                        transformed
-                    }
-                }
-            } else {
-                offsetDetections
-            }
-
             // 诊断日志：每3秒打印一次坐标变换详情
             if (finalDetections.isNotEmpty() && now - lastInferenceLogTime >= 3000) {
                 val raw = detections.firstOrNull()
-                val final = finalDetections.firstOrNull()
-                if (raw != null && final != null) {
-                    logger.info(TAG, "CoordTransform: bitmapLandscape=$bitmapLandscape, sameOrientation=$sameOrientation, " +
+                val finalDet = finalDetections.firstOrNull()
+                if (raw != null && finalDet != null) {
+                    logger.info(TAG, "CoordTransform: " +
                             "raw=(${String.format("%.0f", raw.x1)},${String.format("%.0f", raw.y1)}), " +
                             "region=(${captureRegion.x},${captureRegion.y}), " +
-                            "final=(${String.format("%.0f", final.x1)},${String.format("%.0f", final.y1)})")
+                            "final=(${String.format("%.0f", finalDet.x1)},${String.format("%.0f", finalDet.y1)})")
                 }
             }
 
