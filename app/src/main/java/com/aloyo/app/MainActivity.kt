@@ -280,10 +280,7 @@ class MainActivity : AppCompatActivity() {
                     // - OnePlus 自动旋转开：Activity 重建，不需要处理
                     // - OnePlus 自动旋转关：需要手动更新 overlay 尺寸和 canvas rotation
                     // - 标准设备：系统已旋转 Activity，不需要处理
-                    if (!isSystemHandlingRotation()) {
-                        // overlay 始终竖屏尺寸，横屏通过 canvas rotation 实现
-                        overlayManager.setDisplayRotation(newRotation)
-                    }
+                    overlayManager.setDisplayRotation(newRotation)
                 }
             }
         }
