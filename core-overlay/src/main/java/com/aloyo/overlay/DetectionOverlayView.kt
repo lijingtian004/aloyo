@@ -231,7 +231,7 @@ class DetectionOverlayView(context: Context) : View(context) {
         // 当设备横屏时，系统会旋转显示内容，但 canvas 坐标系不变
         // 需要手动旋转 canvas 并变换坐标，使绘制内容匹配实际显示方向
         val rotation = displayRotation
-        val isRotated = rotation == 90 || rotation == 270
+        val isLandscapeOverlay = viewW > viewH
 
         // 始终绘制诊断边框
         canvas.drawRect(0f, 0f, viewW.toFloat(), viewH.toFloat(), diagBorderPaint)
@@ -255,32 +255,26 @@ class DetectionOverlayView(context: Context) : View(context) {
             return
         }
 
-        // overlay 始终竖屏 (1264x2780)，src 也始终竖屏 (1264x2780)
-        // 设备旋转时，对坐标做变换后直接绘制在竖屏 canvas 上
-        // 不使用 canvas rotation，避免位置错开
-
-        // 绘制检测框
-        for (detection in detections) {
-            if (isRotated) {
-                drawDetectionRotatedDirect(canvas, detection, rotation, srcWidth, srcHeight)
-            } else {
+        // 横屏 overlay 时：坐标变换后绘制
+        // 竖屏 overlay 时：直接绘制
+        if (isLandscapeOverlay) {
+            for (detection in detections) {
+                drawDetectionLandscape(canvas, detection, viewW, viewH, srcWidth, srcHeight, rotation)
+            }
+            metrics?.let { drawMetrics(canvas, it) }
+            if (showCaptureRegion && !captureRegion.isFullScreen && srcWidth > 0 && srcHeight > 0) {
+                drawCaptureRegionTransformed(canvas, viewW, viewH)
+            }
+        } else {
+            for (detection in detections) {
                 drawDetection(canvas, detection, 1f, 1f)
             }
-        }
-
-        // 绘制性能指标
-        metrics?.let { drawMetrics(canvas, it) }
-
-        // 绘制截屏区域框
-        if (showCaptureRegion && !captureRegion.isFullScreen && srcWidth > 0 && srcHeight > 0) {
-            if (isRotated) {
-                drawCaptureRegionRotatedDirect(canvas, rotation, srcWidth, srcHeight)
-            } else {
+            metrics?.let { drawMetrics(canvas, it) }
+            if (showCaptureRegion && !captureRegion.isFullScreen && srcWidth > 0 && srcHeight > 0) {
                 drawCaptureRegion(canvas, 1f, 1f, viewW, viewH)
             }
         }
 
-        // 始终绘制状态指示器
         drawStatusIndicator(canvas, viewW, viewH)
     }
 
@@ -471,22 +465,26 @@ class DetectionOverlayView(context: Context) : View(context) {
     /**
      * 绘制横屏 overlay 时的检测结果
      * 将竖屏源坐标变换到横屏 canvas 坐标系
-     * 变换公式：竖屏 (x, y) → 横屏 (y, x)（当 viewW = srcH 时）
+     * 变换公式：
+     * 270° 旋转：(x, y) → (y, srcW - x)
+     * 90° 旋转：(x, y) → (srcH - y, x)
      */
     private fun drawDetectionLandscape(canvas: Canvas, detection: Detection,
                                         viewW: Int, viewH: Int, srcW: Int, srcH: Int,
-                                        scaleX: Float, scaleY: Float) {
-        // 竖屏坐标变换到横屏 canvas：(x,y) → (y, x)
-        // 变换后坐标范围：x: 0-srcH(=viewW), y: 0-srcW(=viewH)
-        // 不需要缩放，直接使用
-        val x1 = detection.y1
-        val y1 = detection.x1
-        val x2 = detection.y2
-        val y2 = detection.x2
+                                        rotation: Int) {
+        val x1: Float
+        val y1: Float
+        val x2: Float
+        val y2: Float
 
-        // 调试日志
-        onLog?.invoke("drawDetectionLandscape: portrait=(${detection.x1.toInt()},${detection.y1.toInt()},${detection.x2.toInt()},${detection.y2.toInt()}), " +
-                "landscape=(${x1.toInt()},${y1.toInt()},${x2.toInt()},${y2.toInt()})")
+        if (rotation == 270) {
+            x1 = detection.y1; y1 = srcW - detection.x1
+            x2 = detection.y2; y2 = srcW - detection.x2
+        } else {
+            // rotation == 90
+            x1 = srcH - detection.y1; y1 = detection.x1
+            x2 = srcH - detection.y2; y2 = detection.x2
+        }
 
         // 确保坐标有序
         val left = minOf(x1, x2)
