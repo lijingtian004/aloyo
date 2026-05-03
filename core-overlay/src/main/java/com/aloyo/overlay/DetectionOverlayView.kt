@@ -281,9 +281,14 @@ class DetectionOverlayView(context: Context) : View(context) {
         val scaleY = if (srcHeight > 0) effectiveH.toFloat() / srcHeight else 1f
 
         // 绘制检测框（需要变换坐标从竖屏源空间到旋转后的 canvas 空间）
+        val isLandscapeOverlay = viewW > viewH
         for (detection in detections) {
             if (isRotated) {
                 drawDetectionRotated(canvas, detection, scaleX, scaleY, rotation, srcWidth, srcHeight)
+            } else if (isLandscapeOverlay) {
+                // 横屏 overlay + 竖屏坐标：需要变换
+                // 竖屏 (x,y) → 横屏 (viewW - srcH + y, x)
+                drawDetectionLandscape(canvas, detection, viewW, viewH, srcWidth, srcHeight)
             } else {
                 drawDetection(canvas, detection, scaleX, scaleY)
             }
@@ -494,6 +499,47 @@ class DetectionOverlayView(context: Context) : View(context) {
         )
 
         // 绘制标签文字
+        canvas.drawText(labelText, labelX + 4f, labelY + textHeight, textPaint)
+    }
+
+    /**
+     * 绘制横屏 overlay 时的检测结果
+     * 将竖屏源坐标变换到横屏 canvas 坐标系
+     * 变换公式：竖屏 (x, y) → 横屏 (viewW - srcH + y, x)
+     */
+    private fun drawDetectionLandscape(canvas: Canvas, detection: Detection,
+                                        viewW: Int, viewH: Int, srcW: Int, srcH: Int) {
+        // 竖屏坐标变换到横屏 canvas：(x,y) → (viewW - srcH + y, x)
+        val x1 = (viewW - srcH + detection.y1).toFloat()
+        val y1 = detection.x1
+        val x2 = (viewW - srcH + detection.y2).toFloat()
+        val y2 = detection.x2
+
+        // 确保坐标有序
+        val left = minOf(x1, x2)
+        val top = minOf(y1, y2)
+        val right = maxOf(x1, x2)
+        val bottom = maxOf(y1, y2)
+
+        // 绘制边界框
+        canvas.drawRect(left, top, right, bottom, boxPaint)
+
+        // 如果不显示标签，只绘制框
+        if (!config.showLabel) return
+
+        // 绘制标签背景和文字
+        val labelText = if (config.showConfidence) {
+            "${detection.label} ${(detection.confidence * 100).toInt()}%"
+        } else {
+            detection.label
+        }
+
+        val textWidth = textPaint.measureText(labelText)
+        val textHeight = textPaint.fontMetrics.let { it.descent - it.ascent }
+        val labelX = left
+        val labelY = top - textHeight - 4f
+
+        canvas.drawRect(labelX, labelY, labelX + textWidth + 8f, labelY + textHeight + 4f, textBgPaint)
         canvas.drawText(labelText, labelX + 4f, labelY + textHeight, textPaint)
     }
 
