@@ -483,14 +483,16 @@ class DetectionOverlayView(context: Context) : View(context) {
                                         viewW: Int, viewH: Int, srcW: Int, srcH: Int,
                                         scaleX: Float, scaleY: Float) {
         // 竖屏坐标变换到横屏 canvas：(x,y) → (y, x)
-        val x1 = detection.y1 * scaleX
-        val y1 = detection.x1 * scaleY
-        val x2 = detection.y2 * scaleX
-        val y2 = detection.x2 * scaleY
+        // 变换后坐标范围：x: 0-srcH(=viewW), y: 0-srcW(=viewH)
+        // 不需要缩放，直接使用
+        val x1 = detection.y1
+        val y1 = detection.x1
+        val x2 = detection.y2
+        val y2 = detection.x2
 
         // 调试日志
         onLog?.invoke("drawDetectionLandscape: portrait=(${detection.x1.toInt()},${detection.y1.toInt()},${detection.x2.toInt()},${detection.y2.toInt()}), " +
-                "landscape=(${x1.toInt()},${y1.toInt()},${x2.toInt()},${y2.toInt()}), scale=${String.format("%.2f", scaleX)}x${String.format("%.2f", scaleY)}")
+                "landscape=(${x1.toInt()},${y1.toInt()},${x2.toInt()},${y2.toInt()})")
 
         // 确保坐标有序
         val left = minOf(x1, x2)
