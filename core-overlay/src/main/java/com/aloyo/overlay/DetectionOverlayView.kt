@@ -215,7 +215,8 @@ class DetectionOverlayView(context: Context) : View(context) {
     fun setDisplayRotation(degrees: Int) {
         if (this.displayRotation != degrees) {
             this.displayRotation = degrees
-            invalidate()
+            // 必须在主线程执行 invalidate，避免 CalledFromWrongThreadException
+            post { invalidate() }
         }
     }
 
@@ -509,11 +510,23 @@ class DetectionOverlayView(context: Context) : View(context) {
         val (rx1, ry1) = transformCoord(detection.x1, detection.y1, rotation, srcW, srcH)
         val (rx2, ry2) = transformCoord(detection.x2, detection.y2, rotation, srcW, srcH)
 
+        // transformCoord 已经将坐标变换到旋转后的 canvas 坐标系
+        // 旋转后的坐标范围：x: 0-srcH, y: 0-srcW（对于 90/270°）
+        // 需要缩放到 canvas 的有效绘制区域
+        val viewW = width
+        val viewH = height
+        val effectiveW = if (rotation == 90 || rotation == 270) viewH else viewW
+        val effectiveH = if (rotation == 90 || rotation == 270) viewW else viewH
+
+        // 旋转后坐标已经在正确的范围内，只需要缩放到 canvas 尺寸
+        val finalScaleX = effectiveW.toFloat() / srcH.toFloat()
+        val finalScaleY = effectiveH.toFloat() / srcW.toFloat()
+
         // 确保坐标有序（旋转后可能反转）
-        val left = minOf(rx1, rx2) * scaleX
-        val top = minOf(ry1, ry2) * scaleY
-        val right = maxOf(rx1, rx2) * scaleX
-        val bottom = maxOf(ry1, ry2) * scaleY
+        val left = minOf(rx1, rx2) * finalScaleX
+        val top = minOf(ry1, ry2) * finalScaleY
+        val right = maxOf(rx1, rx2) * finalScaleX
+        val bottom = maxOf(ry1, ry2) * finalScaleY
 
         canvas.drawRect(left, top, right, bottom, boxPaint)
 

@@ -357,18 +357,21 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
             // 只处理非方向性的尺寸微调（如导航栏显示/隐藏）
             if (params.width != realSize.width && params.height != realSize.height) {
                 // 两个维度都变了才更新（排除方向变化的情况）
-                params.width = realSize.width
-                params.height = realSize.height
-                try {
-                    windowManager.updateViewLayout(overlayView, params)
-                } catch (e: Exception) {
-                    android.util.Log.w(TAG, "Failed to update overlay size", e)
+                // 必须在主线程执行 windowManager.updateViewLayout
+                mainHandler.post {
+                    params.width = realSize.width
+                    params.height = realSize.height
+                    try {
+                        windowManager.updateViewLayout(overlayView, params)
+                    } catch (e: Exception) {
+                        android.util.Log.w(TAG, "Failed to update overlay size", e)
+                    }
                 }
             }
         }
 
         // 同步更新控制面板位置，确保横竖屏切换后控制面板在合适位置
-        updateControlPanelPositionForOrientation()
+        mainHandler.post { updateControlPanelPositionForOrientation() }
     }
 
     /**
@@ -512,24 +515,28 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
         if (params.width == newWidth && params.height == newHeight) return
 
         android.util.Log.i(TAG, "updateOverlaySize: ${params.width}x${params.height} -> ${newWidth}x${newHeight}")
-        params.width = newWidth
-        params.height = newHeight
-        try {
-            windowManager.updateViewLayout(overlayView, params)
-        } catch (e: Exception) {
-            android.util.Log.w(TAG, "updateOverlaySize failed", e)
-        }
 
-        // 横屏 overlay：重置 canvas rotation（系统不旋转横屏 overlay）
-        // 竖屏 overlay：清除 forceLandscapeOnce 标志
-        if (newWidth > newHeight) {
-            overlayView?.setDisplayRotation(0)
-            forceLandscapeOnce = true
-        } else {
-            forceLandscapeOnce = false
-        }
+        // 必须在主线程执行 windowManager.updateViewLayout
+        mainHandler.post {
+            params.width = newWidth
+            params.height = newHeight
+            try {
+                windowManager.updateViewLayout(overlayView, params)
+            } catch (e: Exception) {
+                android.util.Log.w(TAG, "updateOverlaySize failed", e)
+            }
 
-        updateNavigationBarInfo()
+            // 横屏 overlay：重置 canvas rotation（系统不旋转横屏 overlay）
+            // 竖屏 overlay：清除 forceLandscapeOnce 标志
+            if (newWidth > newHeight) {
+                overlayView?.setDisplayRotation(0)
+                forceLandscapeOnce = true
+            } else {
+                forceLandscapeOnce = false
+            }
+
+            updateNavigationBarInfo()
+        }
     }
 
     /**
