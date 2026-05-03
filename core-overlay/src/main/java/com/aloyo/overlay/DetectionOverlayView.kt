@@ -492,6 +492,9 @@ class DetectionOverlayView(context: Context) : View(context) {
         val right = maxOf(x1, x2)
         val bottom = maxOf(y1, y2)
 
+        // 调试日志
+        onLog?.invoke("drawDetectionLandscape: rot=$rotation, portrait=(${detection.x1.toInt()},${detection.y1.toInt()}), landscape=(${left.toInt()},${top.toInt()},${right.toInt()},${bottom.toInt()})")
+
         // 绘制边界框
         canvas.drawRect(left, top, right, bottom, boxPaint)
 
