@@ -257,6 +257,8 @@ class DetectionOverlayView(context: Context) : View(context) {
 
         // 计算坐标映射比例
         val isLandscapeOverlay = viewW > viewH
+        val isDeviceRotated = displayRotation == 90 || displayRotation == 270
+        val needTransform = isLandscapeOverlay || isDeviceRotated
         val effectiveW = viewW
         val effectiveH = viewH
         val scaleX = if (srcWidth > 0) effectiveW.toFloat() / srcWidth else 1f
@@ -264,8 +266,8 @@ class DetectionOverlayView(context: Context) : View(context) {
 
         // 绘制检测框
         for (detection in detections) {
-            if (isLandscapeOverlay) {
-                // 横屏 overlay：统一使用坐标变换，不使用 canvas rotation
+            if (needTransform) {
+                // 横屏 overlay 或设备旋转：使用坐标变换
                 // 竖屏 (x,y) → 横屏 (y, x)
                 drawDetectionLandscape(canvas, detection, viewW, viewH, srcWidth, srcHeight, scaleX, scaleY)
             } else {
@@ -278,8 +280,8 @@ class DetectionOverlayView(context: Context) : View(context) {
 
         // 绘制截屏区域框
         if (showCaptureRegion && !captureRegion.isFullScreen && srcWidth > 0 && srcHeight > 0) {
-            if (isLandscapeOverlay) {
-                // 横屏 overlay：统一使用坐标变换
+            if (needTransform) {
+                // 横屏 overlay 或设备旋转：使用坐标变换
                 drawCaptureRegionTransformed(canvas, viewW, viewH)
             } else {
                 drawCaptureRegion(canvas, scaleX, scaleY, viewW, viewH)
