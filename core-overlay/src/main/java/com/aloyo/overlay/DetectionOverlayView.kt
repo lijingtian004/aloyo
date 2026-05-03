@@ -266,8 +266,8 @@ class DetectionOverlayView(context: Context) : View(context) {
         for (detection in detections) {
             if (isLandscapeOverlay) {
                 // 横屏 overlay：统一使用坐标变换，不使用 canvas rotation
-                // 竖屏 (x,y) → 横屏 (viewW - srcH + y, x)
-                drawDetectionLandscape(canvas, detection, viewW, viewH, srcWidth, srcHeight)
+                // 竖屏 (x,y) → 横屏 (y, x)
+                drawDetectionLandscape(canvas, detection, viewW, viewH, srcWidth, srcHeight, scaleX, scaleY)
             } else {
                 drawDetection(canvas, detection, scaleX, scaleY)
             }
@@ -480,16 +480,17 @@ class DetectionOverlayView(context: Context) : View(context) {
      * 变换公式：竖屏 (x, y) → 横屏 (y, x)（当 viewW = srcH 时）
      */
     private fun drawDetectionLandscape(canvas: Canvas, detection: Detection,
-                                        viewW: Int, viewH: Int, srcW: Int, srcH: Int) {
+                                        viewW: Int, viewH: Int, srcW: Int, srcH: Int,
+                                        scaleX: Float, scaleY: Float) {
         // 竖屏坐标变换到横屏 canvas：(x,y) → (y, x)
-        val x1 = detection.y1
-        val y1 = detection.x1
-        val x2 = detection.y2
-        val y2 = detection.x2
+        val x1 = detection.y1 * scaleX
+        val y1 = detection.x1 * scaleY
+        val x2 = detection.y2 * scaleX
+        val y2 = detection.x2 * scaleY
 
         // 调试日志
         onLog?.invoke("drawDetectionLandscape: portrait=(${detection.x1.toInt()},${detection.y1.toInt()},${detection.x2.toInt()},${detection.y2.toInt()}), " +
-                "landscape=(${x1.toInt()},${y1.toInt()},${x2.toInt()},${y2.toInt()})")
+                "landscape=(${x1.toInt()},${y1.toInt()},${x2.toInt()},${y2.toInt()}), scale=${String.format("%.2f", scaleX)}x${String.format("%.2f", scaleY)}")
 
         // 确保坐标有序
         val left = minOf(x1, x2)
