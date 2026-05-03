@@ -512,29 +512,26 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
      */
     fun updateOverlaySize(newWidth: Int, newHeight: Int) {
         val params = overlayLayoutParams ?: return
-        if (params.width == newWidth && params.height == newHeight) return
 
-        android.util.Log.i(TAG, "updateOverlaySize: ${params.width}x${params.height} -> ${newWidth}x${newHeight}")
+        // overlay 始终竖屏尺寸，不切换横竖屏
+        // 强制使用竖屏尺寸（短边 x 长边）
+        val portraitW = minOf(newWidth, newHeight)
+        val portraitH = maxOf(newWidth, newHeight)
+        if (params.width == portraitW && params.height == portraitH) return
+
+        android.util.Log.i(TAG, "updateOverlaySize: ${params.width}x${params.height} -> ${portraitW}x${portraitH}")
 
         // 必须在主线程执行 windowManager.updateViewLayout
         mainHandler.post {
-            params.width = newWidth
-            params.height = newHeight
+            params.width = portraitW
+            params.height = portraitH
             try {
                 windowManager.updateViewLayout(overlayView, params)
             } catch (e: Exception) {
                 android.util.Log.w(TAG, "updateOverlaySize failed", e)
             }
 
-            // 横屏 overlay：重置 canvas rotation（系统不旋转横屏 overlay）
-            // 竖屏 overlay：清除 forceLandscapeOnce 标志
-            if (newWidth > newHeight) {
-                overlayView?.setDisplayRotation(0)
-                forceLandscapeOnce = true
-            } else {
-                forceLandscapeOnce = false
-            }
-
+            forceLandscapeOnce = false
             updateNavigationBarInfo()
         }
     }

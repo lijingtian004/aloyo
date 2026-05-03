@@ -1266,22 +1266,13 @@ class MainActivity : AppCompatActivity() {
                 else -> 0
             }
 
-            // 定期刷新导航栏状态和 overlay 尺寸
+            // 定期刷新导航栏状态
+            // overlay 始终竖屏尺寸，不因旋转切换横竖屏
+            // 坐标变换在 DetectionOverlayView 中处理
             val now = System.currentTimeMillis()
             if (now - lastRotationCheckTime >= 3000) {
                 lastRotationCheckTime = now
-                if (systemRotated) {
-                    overlayManager.refreshNavigationBarState()
-                } else {
-                    // OnePlus 或其他设备：直接用传感器方向设置 overlay 尺寸
-                    if (currentDisplayRotation == 90 || currentDisplayRotation == 270) {
-                        // 横屏：设置横屏尺寸
-                        overlayManager.updateOverlaySize(screenHeight, screenWidth)
-                    } else {
-                        // 竖屏：恢复竖屏尺寸
-                        overlayManager.updateOverlaySize(portraitScreenWidth, portraitScreenHeight)
-                    }
-                }
+                overlayManager.refreshNavigationBarState()
             }
 
             // overlay 始终竖屏 (1264x2780)，源尺寸 = 竖屏全屏尺寸

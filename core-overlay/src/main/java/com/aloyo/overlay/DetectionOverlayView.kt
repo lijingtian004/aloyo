@@ -230,6 +230,19 @@ class DetectionOverlayView(context: Context) : View(context) {
         // overlay 窗口始终使用竖屏尺寸（如 1264x2780）
         // 当设备横屏时，系统会旋转显示内容，但 canvas 坐标系不变
         // 需要手动旋转 canvas 并变换坐标，使绘制内容匹配实际显示方向
+        val rotation = displayRotation
+        val isRotated = rotation == 90 || rotation == 270
+
+        // 设备旋转时：旋转 canvas，使绘制内容匹配实际显示方向
+        if (isRotated) {
+            canvas.save()
+            if (rotation == 90) {
+                canvas.rotate(270f, viewW / 2f, viewH / 2f)
+            } else {
+                canvas.rotate(90f, viewW / 2f, viewH / 2f)
+            }
+        }
+
         // 始终绘制诊断边框（确认悬浮窗可见）
         canvas.drawRect(0f, 0f, viewW.toFloat(), viewH.toFloat(), diagBorderPaint)
 
@@ -242,7 +255,7 @@ class DetectionOverlayView(context: Context) : View(context) {
             val sample = detections.firstOrNull()
             val msg = "onDraw: count=$drawCount, view=${viewW}x${viewH}, src=${srcWidth}x${srcHeight}, " +
                     "scale=${String.format("%.2f", scaleX)}x${String.format("%.2f", scaleY)}, " +
-                    "dets=${detections.size}, hasData=$hasReceivedData, rotation=$displayRotation, " +
+                    "dets=${detections.size}, hasData=$hasReceivedData, rotation=$rotation, " +
                     "sample=${sample?.let { "x1=${it.x1},y1=${it.y1},x2=${it.x2},y2=${it.y2},label=${it.label}" } ?: "none"}"
             onLog?.invoke(msg)
             lastDrawLogTime = now
@@ -252,27 +265,17 @@ class DetectionOverlayView(context: Context) : View(context) {
         if (!hasReceivedData) {
             drawWaitingHint(canvas)
             drawStatusIndicator(canvas, viewW, viewH)
+            if (isRotated) canvas.restore()
             return
         }
 
-        // 计算坐标映射比例
-        val isLandscapeOverlay = viewW > viewH
-        val isDeviceRotated = displayRotation == 90 || displayRotation == 270
-        val needTransform = isLandscapeOverlay || isDeviceRotated
-        val effectiveW = viewW
-        val effectiveH = viewH
-        val scaleX = if (srcWidth > 0) effectiveW.toFloat() / srcWidth else 1f
-        val scaleY = if (srcHeight > 0) effectiveH.toFloat() / srcHeight else 1f
+        // 计算坐标映射比例（overlay 始终竖屏，src 始终竖屏，1:1 映射）
+        val scaleX = if (srcWidth > 0) viewW.toFloat() / srcWidth else 1f
+        val scaleY = if (srcHeight > 0) viewH.toFloat() / srcHeight else 1f
 
-        // 绘制检测框
+        // 绘制检测框（坐标不需要变换，canvas rotation 处理旋转）
         for (detection in detections) {
-            if (needTransform) {
-                // 横屏 overlay 或设备旋转：使用坐标变换
-                // 竖屏 (x,y) → 横屏 (y, x)
-                drawDetectionLandscape(canvas, detection, viewW, viewH, srcWidth, srcHeight, scaleX, scaleY)
-            } else {
-                drawDetection(canvas, detection, scaleX, scaleY)
-            }
+            drawDetection(canvas, detection, scaleX, scaleY)
         }
 
         // 绘制性能指标
@@ -280,16 +283,15 @@ class DetectionOverlayView(context: Context) : View(context) {
 
         // 绘制截屏区域框
         if (showCaptureRegion && !captureRegion.isFullScreen && srcWidth > 0 && srcHeight > 0) {
-            if (needTransform) {
-                // 横屏 overlay 或设备旋转：使用坐标变换
-                drawCaptureRegionTransformed(canvas, viewW, viewH)
-            } else {
-                drawCaptureRegion(canvas, scaleX, scaleY, viewW, viewH)
-            }
+            drawCaptureRegion(canvas, scaleX, scaleY, viewW, viewH)
         }
 
         // 始终绘制状态指示器
         drawStatusIndicator(canvas, viewW, viewH)
+
+        if (isRotated) {
+            canvas.restore()
+        }
     }
 
     /**
