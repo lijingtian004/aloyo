@@ -1274,6 +1274,8 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     overlayManager.updateOverlaySize(portraitScreenWidth, portraitScreenHeight)
                 }
+                // 确保 displayRotation 与当前旋转同步
+                overlayManager.setDisplayRotation(currentDisplayRotation)
             }
 
             // overlay 始终竖屏 (1264x2780)，源尺寸 = 竖屏全屏尺寸
