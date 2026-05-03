@@ -1275,7 +1275,13 @@ class MainActivity : AppCompatActivity() {
                 } else if (onePlusAutoRotateOff) {
                     // OnePlus 关闭自动旋转：直接用传感器方向设置 overlay 尺寸
                     // 不依赖 getRealScreenSize()（始终返回竖屏值）
-                    overlayManager.updateOverlaySize(screenHeight, screenWidth)
+                    if (currentDisplayRotation == 90 || currentDisplayRotation == 270) {
+                        // 横屏：设置横屏尺寸
+                        overlayManager.updateOverlaySize(screenHeight, screenWidth)
+                    } else {
+                        // 竖屏：恢复竖屏尺寸
+                        overlayManager.updateOverlaySize(portraitScreenWidth, portraitScreenHeight)
+                    }
                 } else {
                     overlayManager.refreshNavigationBarState(screenWidth, screenHeight)
                 }
