@@ -230,23 +230,6 @@ class DetectionOverlayView(context: Context) : View(context) {
         // overlay 窗口始终使用竖屏尺寸（如 1264x2780）
         // 当设备横屏时，系统会旋转显示内容，但 canvas 坐标系不变
         // 需要手动旋转 canvas 并变换坐标，使绘制内容匹配实际显示方向
-        val rotation = displayRotation
-        val isRotated = rotation == 90 || rotation == 270
-
-        if (isRotated) {
-            canvas.save()
-            // 系统会自动旋转 overlay 窗口的视觉显示
-            // 但 canvas 坐标系仍是竖屏方向
-            // 需要旋转 canvas 来抵消系统旋转，使绘制内容在物理屏幕上正确显示
-            // 90° 显示旋转（系统顺时针 90°）→ canvas 旋转 270° 顺时针抵消
-            // 270° 显示旋转（系统顺时针 270°）→ canvas 旋转 90° 顺时针抵消
-            if (rotation == 90) {
-                canvas.rotate(270f, viewW / 2f, viewH / 2f)
-            } else {
-                canvas.rotate(90f, viewW / 2f, viewH / 2f)
-            }
-        }
-
         // 始终绘制诊断边框（确认悬浮窗可见）
         canvas.drawRect(0f, 0f, viewW.toFloat(), viewH.toFloat(), diagBorderPaint)
 
@@ -259,7 +242,7 @@ class DetectionOverlayView(context: Context) : View(context) {
             val sample = detections.firstOrNull()
             val msg = "onDraw: count=$drawCount, view=${viewW}x${viewH}, src=${srcWidth}x${srcHeight}, " +
                     "scale=${String.format("%.2f", scaleX)}x${String.format("%.2f", scaleY)}, " +
-                    "dets=${detections.size}, hasData=$hasReceivedData, rotation=$rotation, " +
+                    "dets=${detections.size}, hasData=$hasReceivedData, rotation=$displayRotation, " +
                     "sample=${sample?.let { "x1=${it.x1},y1=${it.y1},x2=${it.x2},y2=${it.y2},label=${it.label}" } ?: "none"}"
             onLog?.invoke(msg)
             lastDrawLogTime = now
@@ -269,24 +252,20 @@ class DetectionOverlayView(context: Context) : View(context) {
         if (!hasReceivedData) {
             drawWaitingHint(canvas)
             drawStatusIndicator(canvas, viewW, viewH)
-            if (isRotated) canvas.restore()
             return
         }
 
         // 计算坐标映射比例
-        // 旋转后，canvas 坐标系变为 (viewH x viewW)，源坐标也需要变换
-        val effectiveW = if (isRotated) viewH else viewW
-        val effectiveH = if (isRotated) viewW else viewH
+        val isLandscapeOverlay = viewW > viewH
+        val effectiveW = viewW
+        val effectiveH = viewH
         val scaleX = if (srcWidth > 0) effectiveW.toFloat() / srcWidth else 1f
         val scaleY = if (srcHeight > 0) effectiveH.toFloat() / srcHeight else 1f
 
-        // 绘制检测框（需要变换坐标从竖屏源空间到旋转后的 canvas 空间）
-        val isLandscapeOverlay = viewW > viewH
+        // 绘制检测框
         for (detection in detections) {
-            if (isRotated) {
-                drawDetectionRotated(canvas, detection, scaleX, scaleY, rotation, srcWidth, srcHeight)
-            } else if (isLandscapeOverlay) {
-                // 横屏 overlay + 竖屏坐标：需要变换
+            if (isLandscapeOverlay) {
+                // 横屏 overlay：统一使用坐标变换，不使用 canvas rotation
                 // 竖屏 (x,y) → 横屏 (viewW - srcH + y, x)
                 drawDetectionLandscape(canvas, detection, viewW, viewH, srcWidth, srcHeight)
             } else {
@@ -299,11 +278,8 @@ class DetectionOverlayView(context: Context) : View(context) {
 
         // 绘制截屏区域框
         if (showCaptureRegion && !captureRegion.isFullScreen && srcWidth > 0 && srcHeight > 0) {
-            if (isRotated) {
-                drawCaptureRegionRotated(canvas, scaleX, scaleY, rotation, srcWidth, srcHeight, effectiveW, effectiveH)
-            } else if (viewW > viewH && captureRegion.y + captureRegion.height > viewH) {
-                // 横屏 overlay + 竖屏区域坐标：需要变换
-                // 竖屏 (x,y) → 横屏 (viewW - regionH - y, x)
+            if (isLandscapeOverlay) {
+                // 横屏 overlay：统一使用坐标变换
                 drawCaptureRegionTransformed(canvas, viewW, viewH)
             } else {
                 drawCaptureRegion(canvas, scaleX, scaleY, viewW, viewH)
@@ -311,11 +287,7 @@ class DetectionOverlayView(context: Context) : View(context) {
         }
 
         // 始终绘制状态指示器
-        drawStatusIndicator(canvas, if (isRotated) effectiveW else viewW, if (isRotated) effectiveH else viewH)
-
-        if (isRotated) {
-            canvas.restore()
-        }
+        drawStatusIndicator(canvas, viewW, viewH)
     }
 
     /**
