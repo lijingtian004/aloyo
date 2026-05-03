@@ -124,9 +124,12 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
         // 使用真实全屏尺寸显式设置窗口大小，而非MATCH_PARENT
         // MATCH_PARENT不包含导航栏区域，导致overlay底部留白
         // FLAG_LAYOUT_NO_LIMITS允许窗口延伸到系统装饰区域（刘海、导航栏）
+        // 始终使用竖屏尺寸（短边 x 长边），系统会自动旋转显示
+        val portraitW = minOf(realScreenSize.width, realScreenSize.height)
+        val portraitH = maxOf(realScreenSize.width, realScreenSize.height)
         overlayLayoutParams = WindowManager.LayoutParams(
-            realScreenSize.width,
-            realScreenSize.height,
+            portraitW,
+            portraitH,
             type,
             // 全屏检测层：不可触摸，让触摸穿透到下层应用
             WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
@@ -512,14 +515,17 @@ class OverlayManager(private val context: Context) : IOverlayRenderer {
      */
     fun updateOverlaySize(newWidth: Int, newHeight: Int) {
         val params = overlayLayoutParams ?: return
-        if (params.width == newWidth && params.height == newHeight) return
+        // 始终使用竖屏尺寸（短边 x 长边）
+        val portraitW = minOf(newWidth, newHeight)
+        val portraitH = maxOf(newWidth, newHeight)
+        if (params.width == portraitW && params.height == portraitH) return
 
-        android.util.Log.i(TAG, "updateOverlaySize: ${params.width}x${params.height} -> ${newWidth}x${newHeight}")
+        android.util.Log.i(TAG, "updateOverlaySize: ${params.width}x${params.height} -> ${portraitW}x${portraitH}")
 
         // 必须在主线程执行 windowManager.updateViewLayout
         mainHandler.post {
-            params.width = newWidth
-            params.height = newHeight
+            params.width = portraitW
+            params.height = portraitH
             try {
                 windowManager.updateViewLayout(overlayView, params)
             } catch (e: Exception) {

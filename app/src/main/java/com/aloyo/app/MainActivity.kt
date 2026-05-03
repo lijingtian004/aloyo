@@ -1263,19 +1263,11 @@ class MainActivity : AppCompatActivity() {
                 else -> 0
             }
 
-            // 定期刷新导航栏状态和 overlay 尺寸
-            // TYPE_APPLICATION_OVERLAY 不会被系统自动旋转，必须手动切换尺寸
+            // 定期刷新导航栏状态
             val now = System.currentTimeMillis()
-            if (now - lastRotationCheckTime >= 1000) {
+            if (now - lastRotationCheckTime >= 3000) {
                 lastRotationCheckTime = now
-                val isLandscape = currentDisplayRotation == 90 || currentDisplayRotation == 270
-                if (isLandscape) {
-                    overlayManager.updateOverlaySize(screenHeight, screenWidth)
-                } else {
-                    overlayManager.updateOverlaySize(portraitScreenWidth, portraitScreenHeight)
-                }
-                // 确保 displayRotation 与当前旋转同步
-                overlayManager.setDisplayRotation(currentDisplayRotation)
+                overlayManager.refreshNavigationBarState()
             }
 
             // overlay 始终竖屏 (1264x2780)，源尺寸 = 竖屏全屏尺寸
