@@ -230,6 +230,9 @@ class DetectionOverlayView(context: Context) : View(context) {
         // overlay 窗口始终使用竖屏尺寸（如 1264x2780）
         // 当设备横屏时，系统会旋转显示内容，但 canvas 坐标系不变
         // 需要手动旋转 canvas 并变换坐标，使绘制内容匹配实际显示方向
+        val rotation = displayRotation
+        val isLandscapeOverlay = viewW > viewH
+
         // 始终绘制诊断边框
         canvas.drawRect(0f, 0f, viewW.toFloat(), viewH.toFloat(), diagBorderPaint)
 
@@ -239,7 +242,7 @@ class DetectionOverlayView(context: Context) : View(context) {
         if (drawCount <= 3 || now - lastDrawLogTime >= 3000) {
             val sample = detections.firstOrNull()
             val msg = "onDraw: count=$drawCount, view=${viewW}x${viewH}, src=${srcWidth}x${srcHeight}, " +
-                    "dets=${detections.size}, hasData=$hasReceivedData, rotation=$displayRotation, " +
+                    "dets=${detections.size}, hasData=$hasReceivedData, rotation=$rotation, " +
                     "sample=${sample?.let { "x1=${it.x1},y1=${it.y1},x2=${it.x2},y2=${it.y2},label=${it.label}" } ?: "none"}"
             onLog?.invoke(msg)
             lastDrawLogTime = now
@@ -252,15 +255,17 @@ class DetectionOverlayView(context: Context) : View(context) {
             return
         }
 
-        // overlay 始终竖屏 (1264x2780)
-        // 坐标直接绘制，系统处理旋转显示
         // 计算坐标映射比例
         val scaleX = if (srcWidth > 0) viewW.toFloat() / srcWidth else 1f
         val scaleY = if (srcHeight > 0) viewH.toFloat() / srcHeight else 1f
 
         // 绘制检测框
         for (detection in detections) {
-            drawDetection(canvas, detection, scaleX, scaleY)
+            if (isLandscapeOverlay) {
+                drawDetectionLandscape(canvas, detection, viewW, viewH, srcWidth, srcHeight, rotation)
+            } else {
+                drawDetection(canvas, detection, scaleX, scaleY)
+            }
         }
 
         // 绘制性能指标
@@ -268,7 +273,11 @@ class DetectionOverlayView(context: Context) : View(context) {
 
         // 绘制截屏区域框
         if (showCaptureRegion && !captureRegion.isFullScreen && srcWidth > 0 && srcHeight > 0) {
-            drawCaptureRegion(canvas, scaleX, scaleY, viewW, viewH)
+            if (isLandscapeOverlay) {
+                drawCaptureRegionLandscape(canvas, viewW, viewH, srcWidth, srcHeight, rotation)
+            } else {
+                drawCaptureRegion(canvas, scaleX, scaleY, viewW, viewH)
+            }
         }
 
         drawStatusIndicator(canvas, viewW, viewH)
@@ -331,6 +340,46 @@ class DetectionOverlayView(context: Context) : View(context) {
         // 绘制标签
         val labelText = "${region.width}×${region.height}"
         canvas.drawText(labelText, rx1 + 4f, ry1 - 4f, captureRegionLabelPaint)
+    }
+
+    /**
+     * 绘制横屏 overlay 上的截屏区域框
+     * 将竖屏坐标变换到横屏 canvas 坐标系
+     */
+    private fun drawCaptureRegionLandscape(canvas: Canvas, viewW: Int, viewH: Int,
+                                            srcW: Int, srcH: Int, rotation: Int) {
+        val region = captureRegion
+        val left: Float
+        val top: Float
+        val right: Float
+        val bottom: Float
+
+        if (rotation == 270) {
+            // (x, y) → (y, srcW - x)
+            left = region.y.toFloat()
+            top = (srcW - region.x - region.width).toFloat()
+            right = (region.y + region.height).toFloat()
+            bottom = (srcW - region.x).toFloat()
+        } else {
+            // rotation == 90, (x, y) → (srcH - y, x)
+            left = (srcH - region.y - region.height).toFloat()
+            top = region.x.toFloat()
+            right = (srcH - region.y).toFloat()
+            bottom = (region.x + region.width).toFloat()
+        }
+
+        // 绘制区域外遮罩
+        canvas.drawRect(0f, 0f, viewW.toFloat(), top, captureRegionMaskPaint)
+        canvas.drawRect(0f, bottom, viewW.toFloat(), viewH.toFloat(), captureRegionMaskPaint)
+        canvas.drawRect(0f, top, left, bottom, captureRegionMaskPaint)
+        canvas.drawRect(right, top, viewW.toFloat(), bottom, captureRegionMaskPaint)
+
+        // 绘制虚线边框
+        canvas.drawRect(left, top, right, bottom, captureRegionPaint)
+
+        // 绘制标签
+        val labelText = "${region.width}×${region.height}"
+        canvas.drawText(labelText, left + 4f, top - 4f, captureRegionLabelPaint)
     }
 
     /**
